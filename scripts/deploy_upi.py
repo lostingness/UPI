@@ -120,7 +120,14 @@ def set_env(key, value, sensitive):
 
 
 def main():
-    env = read_env_local()
+    # Env vars are already set on the Vercel project (verified via
+    # filter_project_envs). .env.local does not exist in this checkout, so
+    # skip re-setting env vars instead of aborting — never invent values.
+    env = None
+    if os.path.exists(os.path.join(ROOT, ".env.local")):
+        env = read_env_local()
+    else:
+        print("== .env.local absent — skipping env-var setup (already set on project) ==")
     print("== create project ==")
     try:
         proj = call_tool("create_project", {
@@ -131,12 +138,13 @@ def main():
     except Exception as e:
         print("  create_project note (may already exist):", str(e)[:300])
 
-    print("== env vars ==")
-    set_env("DATABASE_URL", env["DATABASE_URL"], True)
-    set_env("SESSION_SECRET", env["SESSION_SECRET"], True)
-    set_env("ENCRYPTION_KEY", env["ENCRYPTION_KEY"], True)
-    set_env("CRON_SECRET", env["CRON_SECRET"], True)
-    set_env("APP_URL", APP_URL, False)
+    if env is not None:
+        print("== env vars ==")
+        set_env("DATABASE_URL", env["DATABASE_URL"], True)
+        set_env("SESSION_SECRET", env["SESSION_SECRET"], True)
+        set_env("ENCRYPTION_KEY", env["ENCRYPTION_KEY"], True)
+        set_env("CRON_SECRET", env["CRON_SECRET"], True)
+        set_env("APP_URL", APP_URL, False)
 
     print("== upload files ==")
     files = collect_files()
