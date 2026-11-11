@@ -111,9 +111,9 @@ Captured 11 November 2026 from a real production build with Playwright — deskt
 
 ### Landing page
 
-![Landing page hero, desktop 1440 px](docs/screenshots/landing-hero-desktop.jpg)
+![Landing page hero, desktop 1280 px](docs/screenshots/r4-final-light-1280.jpg)
 
-![Landing page, mobile 390 px](docs/screenshots/landing-mobile.jpg)
+![Landing page, mobile 390 px](docs/screenshots/r4-final-light-390.jpg)
 
 ### Pay screen (before the Round 4 compact redesign)
 
@@ -121,15 +121,15 @@ Captured 11 November 2026 from a real production build with Playwright — deskt
 
 *Pay screen for a real ₹500.00 order (desktop): "Order amount ₹500.00 / **Pay exactly ₹500.02**" — the payable amount (base + 2 paise) is what the QR and the UPI link carry.*
 
-![Pay screen with a real QR, mobile 390 px](docs/screenshots/pay-mobile.jpg)
+![Pay screen with a real QR, mobile 390 px](docs/screenshots/r4-final-pay-390.jpg)
 
 ### Merchant dashboard
 
-![Merchant dashboard, desktop 1440 px](docs/screenshots/dashboard-desktop.jpg)
+![Merchant dashboard, desktop 1440 px](docs/screenshots/r4-verify-dashboard-desktop-light.jpg)
 
 *Today ₹500.00, Total received ₹500.00, Pending / Review 2 / 1, success rate 100%, and the real recent-orders table.*
 
-![Merchant dashboard, mobile 390 px](docs/screenshots/dashboard-mobile.jpg)
+![Merchant dashboard, mobile 390 px](docs/screenshots/r4-verify-dashboard-mobile-light.jpg)
 
 ### QR settings, login, docs, setup, order detail
 
