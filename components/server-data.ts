@@ -97,12 +97,32 @@ async function apiBase(): Promise<string> {
   return gatewayConfig.appUrl.replace(/\/$/, "");
 }
 
+// Round 5 skeleton fix: every server-side self-fetch gets a hard 8 s
+// timeout. Before this, fetch() had no signal at all — if an internal API
+// route hung (e.g. its DB query stalled), the awaiting page never resolved
+// and the global loading.tsx skeleton stayed on screen forever with no
+// error and no retry. A timeout now fails fast: callers either surface
+// error.tsx (Try again) or the loading.tsx 15 s escape hatch.
+const FETCH_API_TIMEOUT_MS = 8000;
+
 async function fetchApi<T>(path: string): Promise<T | null> {
   const h = await headers();
-  const res = await fetch(`${await apiBase()}${path}`, {
-    headers: { cookie: h.get("cookie") ?? "", accept: "application/json" },
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${await apiBase()}${path}`, {
+      headers: { cookie: h.get("cookie") ?? "", accept: "application/json" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(FETCH_API_TIMEOUT_MS),
+    });
+  } catch (e) {
+    // Timeout / transport failure is NOT "not found": throw so the page
+    // fails into error.tsx (with Try again) instead of rendering a wrong
+    // 404 / empty state. Only 404/401/403 below map to null.
+    if (e instanceof Error && e.name === "TimeoutError") {
+      throw new Error(`API ${path} timed out after ${FETCH_API_TIMEOUT_MS}ms`);
+    }
+    throw e;
+  }
   // 404/401/403 → null: the caller decides (detail/settings pages show
   // notFound / "could not load"; listAdminMerchants relies on this because
   // the admin merchants page fetches before AdminShell runs the 900 s

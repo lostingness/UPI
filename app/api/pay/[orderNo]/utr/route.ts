@@ -1,5 +1,6 @@
 import { loadOrderByNo, loadAccount } from "@/lib/orders/check";
 import { submitCustomerUtr } from "@/lib/orders/utr";
+import { notifyOrderEvent } from "@/lib/notifications";
 import { utrSchema, parseBody } from "@/lib/validate";
 import { ApiError } from "@/lib/errors";
 import { ok, handleError, readJson, json } from "@/lib/http";
@@ -17,6 +18,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ orderNo
     const data = parseBody(utrSchema, body);
     const account = await loadAccount(order.payment_account_id);
     const updated = await submitCustomerUtr(order, account?.provider ?? null, data.utr);
+    // Merchant notification (Round 5, best-effort): a UTR is waiting for
+    // the merchant to approve or reject — the order is NOT paid yet.
+    await notifyOrderEvent("utr_submitted", updated);
     return ok({ status: updated.status, utr_attempts: updated.utr_attempts });
   } catch (e) { return handleError(e); }
 }

@@ -17,10 +17,10 @@ export const dynamic = "force-dynamic";
 
 function Section({ title, intro, children }: { title: string; intro: string; children: React.ReactNode }) {
   return (
-    <section className="grid grid-cols-1 gap-6 border-t border-slate-800 pt-10 first:border-t-0 first:pt-0 lg:grid-cols-3">
+    <section className="grid grid-cols-1 gap-6 border-t border-[var(--border)] pt-10 first:border-t-0 first:pt-0 lg:grid-cols-3">
       <div>
-        <h2 className="text-base font-semibold text-slate-100">{title}</h2>
-        <p className="mt-1 text-sm text-slate-400">{intro}</p>
+        <h2 className="text-base font-semibold text-[var(--text)]">{title}</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">{intro}</p>
       </div>
       <div className="card p-6 space-y-5 lg:col-span-2">{children}</div>
     </section>
@@ -62,11 +62,11 @@ export default async function SettingsPage() {
           </div>
           <div>
             <label className="label">API secret</label>
-            <input type="text" readOnly value="••••••••••••••••••••••••••••••••••••••••" disabled className="input font-mono text-slate-500" />
+            <input type="text" readOnly value="••••••••••••••••••••••••••••••••••••••••" disabled className="input font-mono text-[var(--muted)]" />
             <p className="help">Hidden for security. If you lost your secret, click “Regenerate” below to issue a new pair.</p>
           </div>
           <div className="flex items-center justify-between gap-4 rounded-lg bg-red-500/10 px-4 py-3 ring-1 ring-red-500/20">
-            <div className="text-sm text-red-300"><b>Regenerate keys</b><div className="text-xs text-red-300/70">Old keys stop working immediately.</div></div>
+            <div className="text-sm text-red-700 dark:text-red-300"><b>Regenerate keys</b><div className="text-xs text-red-700 dark:text-red-300/70">Old keys stop working immediately.</div></div>
             <RegenerateKeysButton />
           </div>
         </Section>
@@ -81,7 +81,7 @@ export default async function SettingsPage() {
                   <CopyButton text={s.sandboxApiKey} />
                 </div>
               </div>
-              <p className="text-sm text-slate-400">The Sandbox secret is stored encrypted and cannot be displayed again. Regenerate it if lost.</p>
+              <p className="text-sm text-[var(--muted)]">The Sandbox secret is stored encrypted and cannot be displayed again. Regenerate it if lost.</p>
               <div className="flex flex-wrap items-center gap-3">
                 <RegenerateKeysButton sandbox />
                 <RevokeSandboxKeysButton />
@@ -89,7 +89,7 @@ export default async function SettingsPage() {
             </>
           ) : (
             <>
-              <p className="text-sm text-slate-400">No sandbox keys yet. Generate a pair to test without real money.</p>
+              <p className="text-sm text-[var(--muted)]">No sandbox keys yet. Generate a pair to test without real money.</p>
               <RegenerateKeysButton sandbox />
             </>
           )}
@@ -99,7 +99,7 @@ export default async function SettingsPage() {
           <WebhookForm initial={s.webhookUrl} />
           <div>
             <label className="label">Webhook secret</label>
-            <input type="text" readOnly value="whsec_••••••••••••••••••••••••" disabled className="input font-mono text-slate-500" />
+            <input type="text" readOnly value="whsec_••••••••••••••••••••••••" disabled className="input font-mono text-[var(--muted)]" />
             <p className="help">Used to sign every webhook (HMAC-SHA256, t=…,v1=…). Regenerate it if it leaks.</p>
           </div>
           <RegenerateWebhookSecretButton />
@@ -128,7 +128,7 @@ export default async function SettingsPage() {
         </Section>
 
         <Section title="Security" intro="Change your password, or re-confirm it for admin pages.">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-[var(--muted)]">
             Changing your password logs out all other devices (the session embeds a prefix of your password hash).
             Admin pages additionally ask you to re-confirm your password every 15 minutes.
           </p>

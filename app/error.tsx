@@ -9,8 +9,8 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center px-4 py-10 text-center">
       <div className="card w-full p-6 sm:p-8">
-        <h1 className="text-xl font-medium text-slate-50">Something went wrong</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="text-xl font-medium text-[var(--text)]">Something went wrong</h1>
+        <p className="mt-1 text-sm text-[var(--muted)]">
           This page could not be loaded. Your payments and orders are safe — please try again.
         </p>
         {error?.digest ? <p className="meta mt-3">Error {error.digest}</p> : null}
@@ -23,7 +23,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           </Link>
         </div>
       </div>
-      <p className="mt-6 text-xs text-slate-600">UPI Gateway · Developed by Mohit 🩷</p>
+      <p className="mt-6 text-xs text-[var(--muted)]">UPI Gateway · Developed by Mohit 🩷</p>
     </div>
   );
 }

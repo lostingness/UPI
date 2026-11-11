@@ -21,7 +21,7 @@ export default function LogoutPage() {
   }, [router]);
   return (
     <GuestShell title="Logging out" subtitle={done ? "You have been logged out." : "Signing you out…"}>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-[var(--muted)]">
         {done ? "Redirecting to the login page…" : "Please wait."}
       </p>
     </GuestShell>

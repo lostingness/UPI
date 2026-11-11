@@ -10,13 +10,13 @@ import { apiFetch, postApi, type ApiResult } from "./api";
 export function FieldError({ errors, name }: { errors: Record<string, string[]> | null; name: string }) {
   const msgs = errors?.[name];
   if (!msgs?.length) return null;
-  return <p className="mt-1.5 text-xs text-red-400">{msgs.join(" ")}</p>;
+  return <p className="mt-1.5 text-xs text-red-700 dark:text-red-400">{msgs.join(" ")}</p>;
 }
 
 export function FormMessage({ message, ok }: { message: string | null; ok: boolean }) {
   if (!message) return null;
   return (
-    <div className={`rounded-lg px-4 py-3 text-sm ring-1 ${ok ? "bg-emerald-500/10 text-emerald-300 ring-emerald-500/30" : "bg-red-500/10 text-red-300 ring-red-500/30"}`}>
+    <div className={`rounded-lg px-4 py-3 text-sm ring-1 ${ok ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30" : "bg-red-500/10 text-red-700 dark:text-red-300 ring-red-500/30"}`}>
       {message}
     </div>
   );
@@ -104,7 +104,7 @@ export function ConfirmButton({
       >
         {busy ? "Working…" : children}
       </button>
-      {err && <span className="text-xs text-red-400">{err}</span>}
+      {err && <span className="text-xs text-red-700 dark:text-red-400">{err}</span>}
     </span>
   );
 }

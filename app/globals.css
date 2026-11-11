@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Round 5: Tailwind v4 `dark:` defaults to prefers-color-scheme, but this
+   app's theme is the `html.dark` class set by ThemeScript/localStorage.
+   Without this, every `dark:` utility (brand/status text) never applied
+   when the toggle said dark — e.g. brand-600 on the dark surface is 2.74:1.
+   Class-based dark mode makes `dark:` follow the toggle. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* UPI Gateway — Axion design system (Round 4).
    Light-first: near-monochrome #EFEFEF base, one orange accent, system
    type. Dark theme keeps the Round 3 Meridian navy (#020816) under
@@ -17,7 +24,10 @@
   --surface-2: #f6f6f4;
   --text: #111111;
   --muted: #555550;
-  --faint: #8a8a84;
+  /* Round 5: #8a8a84 was 3.02:1 on #EFEFEF (FAIL). #6b6b64 is 4.67:1 on
+     #EFEFEF, 5.37:1 on white, 4.96:1 on --surface-2 — AA in light theme.
+     Dark theme keeps its own lighter --faint below (6.43:1 on #141a2e). */
+  --faint: #6b6b64;
   --border: rgba(17, 17, 17, 0.12);
   --accent: #F26522;
   --accent-ink: #ffffff;
@@ -143,12 +153,14 @@ html.dark {
   .btn-secondary:hover { background: var(--surface); }
   .btn-dark { background: var(--text); color: var(--bg); }
   .btn-dark:hover { opacity: 0.88; }
-  .btn-success { @apply bg-emerald-600 text-white hover:bg-emerald-500; }
+  /* Round 5: white on emerald-600 is 3.77:1 (FAIL). emerald-700 is 5.48:1. */
+  .btn-success { @apply bg-emerald-700 text-white hover:bg-emerald-800; }
   .btn-danger {
-    background: transparent; color: #dc2626;
-    box-shadow: inset 0 0 0 1px rgb(220 38 38 / 0.4);
+    /* Round 5: #dc2626 was 4.20:1 on #EFEFEF (FAIL). #b91c1c is 5.63:1. */
+    background: transparent; color: #b91c1c;
+    box-shadow: inset 0 0 0 1px rgb(185 28 28 / 0.4);
   }
-  .btn-danger:hover { background: rgb(220 38 38 / 0.08); }
+  .btn-danger:hover { background: rgb(185 28 28 / 0.08); }
   html.dark .btn-danger { color: #fca5a5; }
   .btn-ghost { color: var(--muted); }
   .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
@@ -186,6 +198,10 @@ html.dark {
   .text-roll { display: inline-block; overflow: hidden; vertical-align: top; line-height: 1.25; height: 1.25em; }
   .text-roll > span { display: block; transition: transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1); will-change: transform; }
   .text-roll > span + span { color: var(--accent-text); }
+  /* Round 5: inside a filled accent button the roll's 2nd line sits on
+     --accent-strong (#C2410C) — accent-text there is 1.00:1 (light) /
+     2.22:1 (dark). White (--accent-ink) is 5.18:1 in both themes. */
+  .btn-expand .text-roll > span + span { color: var(--accent-ink); }
   a:hover .text-roll > span, button:hover .text-roll > span, .text-roll:hover > span { transform: translateY(-100%); }
   @media (prefers-reduced-motion: reduce) {
     .text-roll > span { transition: none; }

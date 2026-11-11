@@ -33,8 +33,8 @@ async function AdminBody() {
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-base font-medium text-slate-100">UTR review queue</h2>
-                <Link href="/admin/orders?status=review" className="text-sm font-medium text-brand-400 hover:text-brand-300">All review orders →</Link>
+                <h2 className="text-base font-medium text-[var(--text)]">UTR review queue</h2>
+                <Link href="/admin/orders?status=review" className="text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">All review orders →</Link>
               </div>
               <OrdersTable
                 orders={o.reviewQueue.map((r) => ({
@@ -50,13 +50,13 @@ async function AdminBody() {
             <div className="card p-5">
               <h2 className="card-title">Recent audit activity</h2>
               {o.recentAudit.length === 0 ? (
-                <p className="mt-3 text-sm text-slate-500">No audit events yet.</p>
+                <p className="mt-3 text-sm text-[var(--muted)]">No audit events yet.</p>
               ) : (
                 <ul className="mt-3 space-y-2.5 text-sm">
                   {o.recentAudit.map((a) => (
                     <li key={String(a.id)} className="flex justify-between gap-3">
-                      <span className="font-mono text-[13px] text-slate-200">{String(a.action)}</span>
-                      <span className="shrink-0 text-xs text-slate-500">{fmtDateTime(String(a.created_at))}</span>
+                      <span className="font-mono text-[13px] text-[var(--text)]">{String(a.action)}</span>
+                      <span className="shrink-0 text-xs text-[var(--muted)]">{fmtDateTime(String(a.created_at))}</span>
                     </li>
                   ))}
                 </ul>
@@ -81,9 +81,9 @@ async function AdminBody() {
                   ["/admin/transaction-debugger", "Transaction debugger", "Search by order, UTR or merchant; masked PII."],
                   ["/admin/audit-logs", "Audit logs", "Every admin action, newest first."],
                 ].map(([href, label, hint]) => (
-                  <Link key={href} href={href} className="rounded-lg bg-slate-800/50 px-4 py-3 ring-1 ring-slate-800 hover:bg-slate-800">
-                    <span className="font-medium text-slate-100">{label}</span>
-                    <span className="block text-xs text-slate-500">{hint}</span>
+                  <Link key={href} href={href} className="rounded-lg bg-[var(--surface-2)] px-4 py-3 ring-1 ring-[var(--border)] hover:bg-[var(--surface-2)]">
+                    <span className="font-medium text-[var(--text)]">{label}</span>
+                    <span className="block text-xs text-[var(--muted)]">{hint}</span>
                   </Link>
                 ))}
               </nav>

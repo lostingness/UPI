@@ -13,11 +13,11 @@ export function OrdersTable({ orders, baseHref = "/orders", emptyHint }: {
     return (
       <div className="card">
         <div className="flex flex-col items-center px-6 py-12 text-center">
-          <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/[0.03] text-[#f2b380] ring-1 ring-white/10">
+          <div className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--surface-2)] text-[var(--accent-text)] ring-1 ring-[var(--border)]">
             <Icon d={ICONS.receipt} className="h-6 w-6" />
           </div>
-          <p className="mt-4 text-sm font-medium text-[#f6f8fc]">No orders yet</p>
-          <p className="mt-1 max-w-sm text-sm text-slate-500">
+          <p className="mt-4 text-sm font-medium text-[var(--text)]">No orders yet</p>
+          <p className="mt-1 max-w-sm text-sm text-[var(--muted)]">
             {emptyHint ?? "Orders created from your dashboard or via the API will show up here."}
           </p>
         </div>
@@ -28,7 +28,7 @@ export function OrdersTable({ orders, baseHref = "/orders", emptyHint }: {
     <div className="card overflow-x-auto">
       <table className="w-full min-w-[720px] border-collapse">
         <thead>
-          <tr className="border-b border-white/10 bg-white/[0.02]">
+          <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
             <th className="th font-mono text-[11px] font-bold uppercase tracking-[0.08em]">Order</th>
             <th className="th text-right font-mono text-[11px] font-bold uppercase tracking-[0.08em]">Amount</th>
             <th className="th font-mono text-[11px] font-bold uppercase tracking-[0.08em]">Status</th>
@@ -37,23 +37,23 @@ export function OrdersTable({ orders, baseHref = "/orders", emptyHint }: {
             <th className="th font-mono text-[11px] font-bold uppercase tracking-[0.08em]">Created</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/5">
+        <tbody className="divide-y divide-[var(--border)]">
           {orders.map((o) => (
-            <tr key={String(o.order_no)} className="transition-colors duration-150 hover:bg-white/[0.03] focus-within:bg-white/[0.03]">
+            <tr key={String(o.order_no)} className="transition-colors duration-150 hover:bg-[var(--surface-2)] focus-within:bg-[var(--surface-2)]">
               <td className="td">
-                <Link href={`${baseHref}/${o.order_no}`} className="font-mono text-[13px] font-medium text-brand-400 underline-offset-4 hover:text-brand-300 hover:underline">
+                <Link href={`${baseHref}/${o.order_no}`} className="font-mono text-[13px] font-medium text-brand-600 dark:text-brand-400 underline-offset-4 hover:text-brand-700 dark:hover:text-brand-300 hover:underline">
                   {String(o.order_no)}
                 </Link>
-                {o.client_order_id && <div className="mt-0.5 font-mono text-xs text-slate-500">{String(o.client_order_id)}</div>}
+                {o.client_order_id && <div className="mt-0.5 font-mono text-xs text-[var(--muted)]">{String(o.client_order_id)}</div>}
               </td>
-              <td className="td text-right font-mono font-medium text-[#f6f8fc] tabular-nums">{inr(Number(o.amount))}</td>
+              <td className="td text-right font-mono font-medium text-[var(--text)] tabular-nums">{inr(Number(o.amount))}</td>
               <td className="td">
                 <StatusPill status={String(o.status)} />
                 {String(o.environment) === "sandbox" && <span className="ml-2"><StatusPill status="sandbox" label="Sandbox" /></span>}
               </td>
-              <td className="td text-slate-400">{o.account_label ? String(o.account_label) : "—"}</td>
-              <td className="td text-slate-400">{o.customer_name ? String(o.customer_name) : "—"}</td>
-              <td className="td whitespace-nowrap font-mono text-xs text-slate-500">{fmtDateTime(String(o.created_at))}</td>
+              <td className="td text-[var(--muted)]">{o.account_label ? String(o.account_label) : "—"}</td>
+              <td className="td text-[var(--muted)]">{o.customer_name ? String(o.customer_name) : "—"}</td>
+              <td className="td whitespace-nowrap font-mono text-xs text-[var(--muted)]">{fmtDateTime(String(o.created_at))}</td>
             </tr>
           ))}
         </tbody>
@@ -65,7 +65,7 @@ export function OrdersTable({ orders, baseHref = "/orders", emptyHint }: {
 export function Pagination({ page, hasMore, href }: { page: number; hasMore: boolean; href: (p: number) => string }) {
   return (
     <div className="mt-4 flex items-center justify-between text-sm">
-      <span className="font-mono text-xs text-slate-500">Page {page}</span>
+      <span className="font-mono text-xs text-[var(--muted)]">Page {page}</span>
       <span className="flex gap-2">
         {page > 1 && <Link href={href(page - 1)} className="btn btn-secondary btn-sm">← Previous</Link>}
         {hasMore && <Link href={href(page + 1)} className="btn btn-secondary btn-sm">Next →</Link>}

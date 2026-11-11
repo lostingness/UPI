@@ -30,13 +30,20 @@ function baseOrder(over: Partial<OrderRow> = {}): OrderRow {
   };
 }
 const ctx = { accountProvider: "paytm_business", accountId: 3, accountEnvironment: "live" };
-function paidResult(over: Partial<VerificationResult> = {}): VerificationResult {
-  const o = baseOrder();
+// NOTE (Round 5 integration): paidResult takes the SAME order object the
+// test passes to the validator. The validator requires originalExpiresAt
+// to timestamp-equal the order's original_expires_at to the millisecond,
+// so building a second baseOrder() inside paidResult raced a millisecond
+// boundary and flaked ("Original expiry deadline mismatch" instead of
+// the expected error) — 1 failure in the first full run, 5/5 passes in
+// isolation. Sharing one order removes the race; production validation
+// logic is untouched.
+function paidResult(over: Partial<VerificationResult> = {}, order: OrderRow = baseOrder()): VerificationResult {
   return {
     paid: true, utr: "123456789012", txnId: "TXN1", raw: {}, provider: "paytm_business",
-    orderId: 1, orderNumber: o.order_no, amount: "100.00", currency: "INR",
+    orderId: 1, orderNumber: order.order_no, amount: "100.00", currency: "INR",
     verifiedAt: new Date(), paymentAccountId: 3, environment: "live",
-    originalExpiresAt: new Date(o.original_expires_at!), occurredAt: new Date(), ...over,
+    originalExpiresAt: new Date(order.original_expires_at!), occurredAt: new Date(), ...over,
   };
 }
 
@@ -48,24 +55,29 @@ describe("UTR alone does not mark paid", () => {
     expect(validateVerificationEvidence(order, fake, ctx)).toBeTruthy();
   });
   it("a valid provider verification passes all evidence bindings", () => {
-    expect(validateVerificationEvidence(baseOrder(), paidResult(), ctx)).toBeNull();
+    const order = baseOrder();
+    expect(validateVerificationEvidence(order, paidResult({}, order), ctx)).toBeNull();
   });
   it("wrong amount is rejected", () => {
-    expect(validateVerificationEvidence(baseOrder(), paidResult({ amount: "99.00" }), ctx)).toMatch(/Amount/);
+    const order = baseOrder();
+    expect(validateVerificationEvidence(order, paidResult({ amount: "99.00" }, order), ctx)).toMatch(/Amount/);
   });
   it("wrong order number is rejected", () => {
-    expect(validateVerificationEvidence(baseOrder(), paidResult({ orderNumber: "ORDOTHER" }), ctx)).toMatch(/Order number/);
+    const order = baseOrder();
+    expect(validateVerificationEvidence(order, paidResult({ orderNumber: "ORDOTHER" }, order), ctx)).toMatch(/Order number/);
   });
   it("provider/account mismatch is rejected", () => {
-    expect(validateVerificationEvidence(baseOrder(), paidResult({ provider: "phonepe_pg" }), ctx)).toMatch(/Provider/);
-    expect(validateVerificationEvidence(baseOrder(), paidResult({ paymentAccountId: 99 }), ctx)).toMatch(/payment account/);
+    const order = baseOrder();
+    expect(validateVerificationEvidence(order, paidResult({ provider: "phonepe_pg" }, order), ctx)).toMatch(/Provider/);
+    expect(validateVerificationEvidence(order, paidResult({ paymentAccountId: 99 }, order), ctx)).toMatch(/payment account/);
   });
   it("evidence older than 24 h is rejected", () => {
-    expect(validateVerificationEvidence(baseOrder(), paidResult({ occurredAt: new Date(Date.now() - 25 * 3600 * 1000) }), ctx)).toMatch(/too old/);
+    const order = baseOrder();
+    expect(validateVerificationEvidence(order, paidResult({ occurredAt: new Date(Date.now() - 25 * 3600 * 1000) }, order), ctx)).toMatch(/too old/);
   });
   it("evidence after the late-payment grace window is rejected", () => {
     const order = baseOrder({ original_expires_at: new Date(Date.now() - 25 * 3600 * 1000).toISOString() });
-    expect(validateVerificationEvidence(order, paidResult({ originalExpiresAt: new Date(order.original_expires_at!) }), ctx)).toMatch(/grace window/);
+    expect(validateVerificationEvidence(order, paidResult({ originalExpiresAt: new Date(order.original_expires_at!) }, order), ctx)).toMatch(/grace window/);
   });
   it("submitting a UTR leaves the order in review (acceptsCustomerUtr is about submission, not payment)", () => {
     const order = baseOrder({ status: "pending" });

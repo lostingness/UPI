@@ -96,7 +96,7 @@ export function RegisterForm() {
       <button className="btn btn-primary w-full py-2.5" disabled={form.pending}>
         {form.pending ? "Creating account…" : "Create account →"}
       </button>
-      <p className="text-center text-xs text-slate-500">Payments go directly to your UPI account. We never hold your funds.</p>
+      <p className="text-center text-xs text-[var(--muted)]">Payments go directly to your UPI account. We never hold your funds.</p>
     </form>
   );
 }

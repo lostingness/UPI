@@ -15,6 +15,7 @@ import type { OrderRow } from "./types";
 import { acceptsCustomerUtr, payableAmountFor } from "./types";
 import { gatewayConfig } from "../config/gateway";
 import { releaseAllocation } from "./allocations";
+import { notifyOrderEvent } from "../notifications";
 
 export function normalizeUtr(utr: string): string { return utr.replace(/\s+/g, "").toUpperCase(); }
 
@@ -86,6 +87,12 @@ export async function rejectCustomerUtr(order: OrderRow, reason?: string): Promi
   if (!row) throw new ApiError(409, "Order status changed while rejecting the UTR");
   if (!attemptsLeft) {
     await recordOutboxEvent(sql, row, "order.expired");
+    // Merchant notification (Round 5 integration): the terminal
+    // reject→expired transition notifies exactly like the expiry sweep
+    // (lib/orders/expire.ts). A non-terminal rejection (attempts remain,
+    // order back to pending) notifies nothing — the customer already sees
+    // the review_note on the pay page. Best-effort, never blocks.
+    await notifyOrderEvent("order_expired", row);
     // Expired: the unique amount can be reused (row kept for audit).
     try { await releaseAllocation(sql, order.id, "expired"); } catch { /* best-effort */ }
   }

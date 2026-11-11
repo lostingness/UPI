@@ -33,7 +33,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
       actions={<RecheckButton orderNo={order.order_no} />}
     >
       {readOnly && (
-        <div className="mb-4 rounded-lg bg-amber-500/10 px-4 py-3 text-sm text-amber-300 ring-1 ring-amber-500/30">
+        <div className="mb-4 rounded-lg bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300 ring-1 ring-amber-500/30">
           Read-only view — {order.environment === "sandbox" ? "sandbox orders cannot be changed here." : "you are viewing this order as an administrator."}
         </div>
       )}
@@ -42,13 +42,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
           <div className="card p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-xs text-slate-500">Amount</div>
-                <div className="mt-1 font-mono text-3xl font-medium text-slate-50 tabular-nums">{inr(Number(order.amount))}</div>
-                {order.note && <p className="mt-2 text-sm text-slate-400">{order.note}</p>}
+                <div className="text-xs text-[var(--muted)]">Amount</div>
+                <div className="mt-1 font-mono font-medium tabular-nums text-[var(--text)] text-[clamp(1.5rem,7vw,1.875rem)]">{inr(Number(order.amount))}</div>
+                {order.note && <p className="mt-2 text-sm text-[var(--muted)]">{order.note}</p>}
               </div>
               <StatusPill status={order.status} />
             </div>
-            <dl className="mt-6 space-y-3 border-t border-slate-800 pt-5 text-sm">
+            <dl className="mt-6 space-y-3 border-t border-[var(--border)] pt-5 text-sm">
               {([
                 ["Order ID", order.order_no, true],
                 ["Client order ID", order.client_order_id, true],
@@ -67,17 +67,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
                 ["Created", fmtDateTime(order.created_at), false],
               ] as [string, string, boolean][]).map(([k, v, mono]) => (
                 <div key={k} className="flex justify-between gap-4">
-                  <dt className="shrink-0 text-slate-500">{k}</dt>
-                  <dd className={`min-w-0 text-right text-slate-200 ${mono ? "font-mono text-[13px] break-all" : ""}`}>{v}</dd>
+                  <dt className="shrink-0 text-[var(--muted)]">{k}</dt>
+                  {/* Round 5: long IDs/UPIs must wrap, never overflow 390px. */}
+                  <dd className={`min-w-0 text-right break-words [overflow-wrap:anywhere] text-[var(--text)] ${mono ? "font-mono text-[13px] break-all" : ""}`}>{v}</dd>
                 </div>
               ))}
               {order.review_note && (
-                <div className="rounded-lg bg-red-500/10 px-3 py-2 text-red-300 ring-1 ring-red-500/30">
+                <div className="rounded-lg bg-red-500/10 px-3 py-2 text-red-700 dark:text-red-300 ring-1 ring-red-500/30">
                   <strong>Review note:</strong> {order.review_note}
                 </div>
               )}
             </dl>
-            <div className="mt-6 space-y-3 border-t border-slate-800 pt-5">
+            <div className="mt-6 space-y-3 border-t border-[var(--border)] pt-5">
               <div>
                 <div className="label">Payment URL</div>
                 <div className="flex gap-2">
@@ -98,22 +99,22 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
           </div>
 
           <div className="card">
-            <div className="card-header"><h2 className="card-title">Webhook history</h2><span className="text-xs text-slate-500">Active + archived, newest first</span></div>
+            <div className="card-header"><h2 className="card-title">Webhook history</h2><span className="text-xs text-[var(--muted)]">Active + archived, newest first</span></div>
             {webhookHistory.length === 0 ? (
-              <p className="px-5 py-6 text-sm text-slate-500">No webhook attempts for this order yet.</p>
+              <p className="px-5 py-6 text-sm text-[var(--muted)]">No webhook attempts for this order yet.</p>
             ) : (
-              <div className="divide-y divide-slate-800/70">
+              <div className="divide-y divide-[var(--border)]">
                 {webhookHistory.map((l) => (
                   <div key={`${l.storage_tier}-${l.id}`} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
-                    <span className="font-mono text-[13px] text-slate-200">{l.event}</span>
-                    <span className="flex items-center gap-2 text-xs text-slate-500">
+                    <span className="font-mono text-[13px] text-[var(--text)]">{l.event}</span>
+                    <span className="flex items-center gap-2 text-xs text-[var(--muted)]">
                       <span>{l.storage_tier === "archive" ? "archived" : "active"}</span>
                       <span>attempt {l.attempt}</span>
                       <span>{l.response_code ? `HTTP ${l.response_code}` : "no response"}</span>
                       <StatusPill status={l.success ? "delivered" : "failed"} label={l.success ? "delivered" : "failed"} />
                       <span>{fmtDateTime(l.created_at)}</span>
                     </span>
-                    {l.error_label && <span className="w-full text-xs text-red-400">{l.error_label}</span>}
+                    {l.error_label && <span className="w-full text-xs text-red-700 dark:text-red-400">{l.error_label}</span>}
                   </div>
                 ))}
               </div>
@@ -126,7 +127,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
             <>
               <div className="card p-5">
                 <h2 className="card-title">Approve UTR</h2>
-                <p className="mt-1 text-xs text-slate-500">Customer submitted UTR <span className="font-mono text-slate-300">{order.customer_utr}</span> on {fmtDateTime(order.utr_submitted_at)}.</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">Customer submitted UTR <span className="font-mono text-[var(--text)]">{order.customer_utr}</span> on {fmtDateTime(order.utr_submitted_at)}.</p>
                 <div className="mt-4"><ApproveUtrForm orderNo={order.order_no} amount={String(order.amount)} /></div>
               </div>
               <div className="card p-5">
@@ -138,12 +139,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
           <div className="card p-5">
             <h2 className="card-title">Status timeline</h2>
             <ul className="mt-4 space-y-3 text-sm">
-              <li className="flex justify-between gap-3"><span className="text-slate-400">Created</span><span className="text-slate-200">{fmtDateTime(order.created_at)}</span></li>
-              {order.utr_submitted_at && <li className="flex justify-between gap-3"><span className="text-slate-400">UTR submitted</span><span className="text-slate-200">{fmtDateTime(order.utr_submitted_at)}</span></li>}
-              {order.paid_at && <li className="flex justify-between gap-3"><span className="text-slate-400">Paid</span><span className="text-slate-200">{fmtDateTime(order.paid_at)}</span></li>}
-              <li className="flex justify-between gap-3"><span className="text-slate-400">Current status</span><StatusPill status={order.status} /></li>
+              <li className="flex justify-between gap-3"><span className="text-[var(--muted)]">Created</span><span className="text-[var(--text)]">{fmtDateTime(order.created_at)}</span></li>
+              {order.utr_submitted_at && <li className="flex justify-between gap-3"><span className="text-[var(--muted)]">UTR submitted</span><span className="text-[var(--text)]">{fmtDateTime(order.utr_submitted_at)}</span></li>}
+              {order.paid_at && <li className="flex justify-between gap-3"><span className="text-[var(--muted)]">Paid</span><span className="text-[var(--text)]">{fmtDateTime(order.paid_at)}</span></li>}
+              <li className="flex justify-between gap-3"><span className="text-[var(--muted)]">Current status</span><StatusPill status={order.status} /></li>
             </ul>
-            <p className="mt-4 text-xs leading-relaxed text-slate-500">
+            <p className="mt-4 text-xs leading-relaxed text-[var(--muted)]">
               Merchant-side manual payment confirmation is disabled. Use provider verification or administrator review —
               a payment is never marked paid from this page alone.
             </p>

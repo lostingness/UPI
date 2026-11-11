@@ -20,7 +20,7 @@ export default async function NewAccountPage() {
       <div className="card max-w-2xl p-6">
         <CreateAccountForm />
       </div>
-      <p className="mt-4 max-w-2xl text-xs leading-relaxed text-slate-500">
+      <p className="mt-4 max-w-2xl text-xs leading-relaxed text-[var(--muted)]">
         Credentials are stored encrypted in the database and are never shown again. The first account you add becomes your default.
         Hosted gateways (PhonePe PG, Paytm PG) send customers to the provider&apos;s secure checkout; manual UPI and Paytm for Business are verified by the gateway.
       </p>

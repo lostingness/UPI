@@ -1,19 +1,44 @@
 // Layouts — public nav + footer, authed sidebar shell, guest shell.
 // Axion direction (Round 4): light #EFEFEF base + dark Meridian navy
 // under `html.dark`, system type, liquid-glass pill nav (LiquidNav owns
-// the scroll state and the mobile bottom sheet). All colours go through
-// the --bg/--surface/--text/--muted/--border vars in globals.css.
+// the scroll state and the mobile bottom sheet). Round 5: LiquidNav has a
+// FIXED height (60px mobile / 64px desktop, never shrinks on scroll) and
+// the mobile sheet is grouped with lucide icons + a user chip; the
+// dashboard links carry lucide icons + Merchant/Admin groups via
+// LUCIDE_FOR below. All colours go through the --bg/--surface/--text/
+// --muted/--border vars in globals.css.
 import Link from "next/link";
 import type { SessionUser } from "./server-data";
 import { Avatar, Icon, ICONS } from "./ui";
 import { LogoutButton } from "./layout-client";
-import { LiquidNav } from "./liquid-nav";
+import { SoundToggle } from "./sound-toggle";
+import { LiquidNav, type LiquidNavLink } from "./liquid-nav";
+import {
+  BookOpen,
+  Bug,
+  CreditCard,
+  FlaskConical,
+  IndianRupee,
+  Info,
+  LayoutDashboard,
+  ListOrdered,
+  MessagesSquare,
+  Plus,
+  QrCode,
+  ScrollText,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Webhook,
+  type LucideIcon,
+} from "lucide-react";
 
 export function Logo() {
   return (
     <Link href="/" className="flex touch-manipulation items-center gap-2.5">
-      <span className="grid h-8 w-8 place-items-center rounded-full bg-[#111111] text-[13px] font-semibold text-white ring-1 ring-white/25" aria-hidden="true">UG</span>
-      <span className="text-base font-medium text-[var(--text)]">UPI Gateway</span>
+      <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--text)] font-display text-[13px] font-semibold text-[var(--bg)] ring-1 ring-[var(--border)]" aria-hidden="true">UG</span>
+      <span className="font-display text-base font-semibold text-[var(--text)]">UPI Gateway</span>
     </Link>
   );
 }
@@ -48,13 +73,13 @@ export function SiteFooter() {
   );
 }
 
-const PUBLIC_LINKS = [
-  { href: "/#how", label: "How it works" },
-  { href: "/#qr", label: "QR methods" },
-  { href: "/#features", label: "Features" },
-  { href: "/#pricing", label: "Pricing" },
-  { href: "/#faq", label: "FAQ" },
-  { href: "/docs", label: "Docs" },
+const PUBLIC_LINKS: LiquidNavLink[] = [
+  { href: "/#how", label: "How it works", group: "Explore", icon: <Info className="h-4 w-4" aria-hidden="true" /> },
+  { href: "/#qr", label: "QR methods", group: "Explore", icon: <QrCode className="h-4 w-4" aria-hidden="true" /> },
+  { href: "/#features", label: "Features", group: "Explore", icon: <Sparkles className="h-4 w-4" aria-hidden="true" /> },
+  { href: "/#pricing", label: "Pricing", group: "Explore", icon: <IndianRupee className="h-4 w-4" aria-hidden="true" /> },
+  { href: "/#faq", label: "FAQ", group: "Explore", icon: <MessagesSquare className="h-4 w-4" aria-hidden="true" /> },
+  { href: "/docs", label: "Docs", group: "Explore", icon: <BookOpen className="h-4 w-4" aria-hidden="true" /> },
 ];
 
 export function PublicNav({ user }: { user: SessionUser | null }) {
@@ -112,6 +137,41 @@ function NavList({ links, active }: { links: { href: string; label: string; icon
   );
 }
 
+/** Lucide icons for the mobile sheet (the sidebar above uses the ICONS
+    path strings instead). One icon per dashboard route; unknown routes
+    simply get no icon. */
+const LUCIDE_FOR: Record<string, LucideIcon> = {
+  "/dashboard": LayoutDashboard,
+  "/orders": ListOrdered,
+  "/orders/new": Plus,
+  "/accounts": CreditCard,
+  "/settings": Settings,
+  "/sandbox": FlaskConical,
+  "/docs": BookOpen,
+  "/admin": ShieldCheck,
+  "/admin/merchants": Users,
+  "/admin/orders": ListOrdered,
+  "/admin/accounts": CreditCard,
+  "/admin/webhooks": Webhook,
+  "/admin/audit-logs": ScrollText,
+  "/admin/transaction-debugger": Bug,
+};
+
+function toNavLink(
+  l: { href: string; label: string },
+  group: string,
+  active: string,
+): LiquidNavLink {
+  const I = LUCIDE_FOR[l.href];
+  return {
+    href: l.href,
+    label: l.label,
+    active: active === l.href,
+    group,
+    icon: I ? <I className="h-4 w-4" aria-hidden="true" /> : undefined,
+  };
+}
+
 export function AppShell({
   user, active, title, subtitle, children, actions,
 }: {
@@ -119,7 +179,6 @@ export function AppShell({
   children: React.ReactNode; actions?: React.ReactNode;
 }) {
   const isAdmin = user.role === "admin";
-  const allLinks = isAdmin ? [...MERCHANT_LINKS, ...ADMIN_LINKS] : MERCHANT_LINKS;
   return (
     <div className="min-h-screen lg:flex">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] px-4 py-5 lg:flex">
@@ -143,6 +202,14 @@ export function AppShell({
               <div className="mt-0.5 font-mono text-xs text-[var(--accent-text)]">{user.role}</div>
             </div>
           </div>
+          {/* R5 INTEGRATION — sound toggle, mounted in the slot A2 left
+              for it (settings area, desktop sidebar). The mobile sheet
+              carries the same slot (see liquid-nav.tsx); the two instances
+              stay in sync via the upi-sounds-changed event. */}
+          <div data-nav-slot="sound-toggle" className="mt-3 flex items-center px-1">
+            <span className="text-xs text-[var(--muted)]">Payment sounds</span>
+            <span className="ml-auto"><SoundToggle /></span>
+          </div>
           <div className="mt-3 px-1"><LogoutButton /></div>
         </div>
       </aside>
@@ -150,11 +217,25 @@ export function AppShell({
       <div className="min-w-0 flex-1">
         <LiquidNav
           variant="dashboard"
-          links={allLinks.map(({ href, label }) => ({ href, label, active: active === href }))}
+          links={[
+            ...MERCHANT_LINKS.map((l) => toNavLink(l, "Merchant", active)),
+            ...(isAdmin ? ADMIN_LINKS.map((l) => toNavLink(l, "Admin", active)) : []),
+          ]}
           actions={
             <>
               <Avatar name={user.businessName ?? user.name} className="h-8 w-8 text-xs" />
               <LogoutButton compact />
+            </>
+          }
+          sheetActions={<LogoutButton compact />}
+          mobileUser={
+            <>
+              <Avatar name={user.businessName ?? user.name} className="h-9 w-9 text-xs" />
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium text-[var(--text)]">{user.businessName ?? user.name}</div>
+                <div className="truncate text-xs text-[var(--muted)]">{user.email}</div>
+                <div className="font-mono text-xs text-[var(--accent-text)]">{user.role}</div>
+              </div>
             </>
           }
         />

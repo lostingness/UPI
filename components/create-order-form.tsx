@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FieldError, FormMessage, useApiForm } from "@/components/forms";
+import { playOrderCreatedTick, unlockAudio } from "@/lib/sounds";
 
 export function CreateOrderForm({ accounts }: { accounts: { id: number; label: string; provider: string; is_active: boolean }[] }) {
   const router = useRouter();
@@ -24,6 +25,10 @@ export function CreateOrderForm({ accounts }: { accounts: { id: number; label: s
       className="space-y-5"
       onSubmit={async (e) => {
         e.preventDefault();
+        // Round 5: the submit click IS a user gesture — unlock audio here
+        // so the tick below (which plays after the server round-trip) can
+        // sound. The tick itself fires only on a confirmed 201.
+        unlockAudio();
         const res = await form.submit("/api/orders", {
           amount: amt,
           payment_account_id: accountId ? Number(accountId) : null,
@@ -31,7 +36,10 @@ export function CreateOrderForm({ accounts }: { accounts: { id: number; label: s
           customer_mobile: customerMobile || null,
           note: note || null,
         });
-        if (res.ok && res.data?.order_id) router.push(`/orders/${res.data.order_id}`);
+        if (res.ok && res.data?.order_id) {
+          playOrderCreatedTick();
+          router.push(`/orders/${res.data.order_id}`);
+        }
       }}
     >
       <FormMessage message={form.message} ok={false} />
@@ -39,7 +47,7 @@ export function CreateOrderForm({ accounts }: { accounts: { id: number; label: s
         <label htmlFor="o-amount" className="label">Amount (₹)</label>
         <input id="o-amount" type="number" min="1" max="100000" step="0.01" required placeholder="e.g. 499"
           className="input text-lg font-medium tabular-nums" value={amount} onChange={(e) => setAmount(e.target.value)} />
-        <p className="help">You are charging <strong className="text-slate-300">{preview}</strong> · ₹1 – ₹1,00,000</p>
+        <p className="help">You are charging <strong className="text-[var(--text)]">{preview}</strong> · ₹1 – ₹1,00,000</p>
         <FieldError errors={form.errors} name="amount" />
       </div>
       <div>

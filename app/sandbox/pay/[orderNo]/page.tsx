@@ -9,7 +9,7 @@ export default async function SandboxPayPage({ params }: { params: Promise<{ ord
   const { orderNo } = await params;
   if (!dbConfigured()) {
     return (
-      <main className="min-h-screen bg-slate-950 px-4 py-10">
+      <main className="min-h-screen bg-[var(--bg)] px-4 py-10">
         <div className="mx-auto max-w-lg"><DbNotConfigured context="Sandbox checkout needs the database." /></div>
       </main>
     );
@@ -17,11 +17,11 @@ export default async function SandboxPayPage({ params }: { params: Promise<{ ord
   const data = await getPayData(orderNo);
   if (!data || data.order.environment !== "sandbox") {
     return (
-      <main className="min-h-screen bg-slate-950 px-4 py-10">
+      <main className="min-h-screen bg-[var(--bg)] px-4 py-10">
         <div className="mx-auto max-w-lg">
           <div className="card p-8 text-center">
-            <h1 className="text-xl font-medium text-slate-50">Not a sandbox order</h1>
-            <p className="mt-2 text-sm text-slate-400">
+            <h1 className="text-xl font-medium text-[var(--text)]">Not a sandbox order</h1>
+            <p className="mt-2 text-sm text-[var(--muted)]">
               <span className="font-mono">{orderNo}</span> is not a sandbox (TST…) order. Sandbox checkout only works for test orders.
             </p>
             <Link href="/" className="btn btn-primary mt-6">Back home</Link>
@@ -32,7 +32,7 @@ export default async function SandboxPayPage({ params }: { params: Promise<{ ord
   }
   const { order } = data;
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-10">
+    <main className="min-h-screen bg-[var(--bg)] px-4 py-10">
       <SandboxPayClient
         orderNo={order.order_no} amount={String(order.amount)} clientOrderId={order.client_order_id}
         customerName={order.customer_name} status={order.status} createdAt={order.created_at}

@@ -29,6 +29,7 @@ import { recordOutboxEvent } from "../webhooks/outbox";
 import { getSql } from "../db";
 import { ApiError } from "../errors";
 import { releaseAllocation } from "./allocations";
+import { notifyOrderEvent } from "../notifications";
 
 export interface EvidenceContext {
   accountProvider: string;
@@ -98,5 +99,9 @@ export async function markPaidInDb(order: OrderRow, v: VerificationResult, ctx: 
   // confirmed payment — the expiry sweep reclaims it instead.
   try { await releaseAllocation(sql, order.id, "paid"); } catch { /* best-effort */ }
   await recordOutboxEvent(sql, paidOrder, "order.paid");
+  // Merchant notification (Round 5, best-effort — never blocks a payment).
+  // Only on a real transition: "already-paid" returns before this point,
+  // so a re-verified order never chimes twice.
+  await notifyOrderEvent("payment_received", paidOrder, { via: "provider" });
   return "paid";
 }

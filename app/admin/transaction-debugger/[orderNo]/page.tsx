@@ -27,12 +27,12 @@ async function DebuggerBody({ orderNo, adminId, ip }: { orderNo: string; adminId
         <div className="card p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-xs text-slate-500">Amount</div>
-              <div className="mt-1 font-mono text-3xl font-medium text-slate-50 tabular-nums">{inr(Number(order.amount))}</div>
+              <div className="text-xs text-[var(--muted)]">Amount</div>
+              <div className="mt-1 font-mono font-medium tabular-nums text-[var(--text)] text-[clamp(1.5rem,7vw,1.875rem)]">{inr(Number(order.amount))}</div>
             </div>
             <StatusPill status={order.status} />
           </div>
-          <dl className="mt-6 space-y-3 border-t border-slate-800 pt-5 text-sm">
+          <dl className="mt-6 space-y-3 border-t border-[var(--border)] pt-5 text-sm">
             {([
               ["Order ID", order.order_no, true],
               ["Client order ID", order.client_order_id, true],
@@ -50,12 +50,12 @@ async function DebuggerBody({ orderNo, adminId, ip }: { orderNo: string; adminId
               ["Created", fmtDateTime(order.created_at), false],
             ] as [string, string, boolean][]).map(([k, v, mono]) => (
               <div key={k} className="flex justify-between gap-4">
-                <dt className="shrink-0 text-slate-500">{k}</dt>
-                <dd className={`min-w-0 text-right text-slate-200 ${mono ? "font-mono text-[13px] break-all" : ""}`}>{v}</dd>
+                <dt className="shrink-0 text-[var(--muted)]">{k}</dt>
+                <dd className={`min-w-0 text-right break-words [overflow-wrap:anywhere] text-[var(--text)] ${mono ? "font-mono text-[13px] break-all" : ""}`}>{v}</dd>
               </div>
             ))}
             {providerError && (
-              <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300 ring-1 ring-red-500/30">
+              <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-300 ring-1 ring-red-500/30">
                 <strong>Provider error (sanitised):</strong> {providerError}
               </div>
             )}
@@ -64,20 +64,20 @@ async function DebuggerBody({ orderNo, adminId, ip }: { orderNo: string; adminId
         <div className="card">
           <div className="card-header"><h2 className="card-title">Webhook attempts ({webhookLogs.length})</h2></div>
           {webhookLogs.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-slate-500">No webhook attempts for this order yet.</p>
+            <p className="px-5 py-6 text-sm text-[var(--muted)]">No webhook attempts for this order yet.</p>
           ) : (
-            <div className="divide-y divide-slate-800/70">
+            <div className="divide-y divide-[var(--border)]">
               {webhookLogs.map((l) => (
                 <div key={`${l.storage_tier}-${l.id}`} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
-                  <span className="font-mono text-[13px] text-slate-200">{l.event}</span>
-                  <span className="flex items-center gap-2 text-xs text-slate-500">
+                  <span className="font-mono text-[13px] text-[var(--text)]">{l.event}</span>
+                  <span className="flex items-center gap-2 text-xs text-[var(--muted)]">
                     <span>{l.storage_tier === "archive" ? "archived" : "active"}</span>
                     <span>attempt {l.attempt}</span>
                     <span>{l.response_code ? `HTTP ${l.response_code}` : "no response"}</span>
                     <StatusPill status={l.success ? "delivered" : "failed"} label={l.success ? "delivered" : "failed"} />
                     <span>{fmtDateTime(l.created_at)}</span>
                   </span>
-                  {l.error_label && <span className="w-full text-xs text-red-400">{l.error_label}</span>}
+                  {l.error_label && <span className="w-full text-xs text-red-700 dark:text-red-400">{l.error_label}</span>}
                 </div>
               ))}
             </div>
@@ -86,12 +86,12 @@ async function DebuggerBody({ orderNo, adminId, ip }: { orderNo: string; adminId
       </div>
       <div className="card h-fit p-5">
         <h2 className="card-title">Timeline</h2>
-        <ol className="mt-4 space-y-3 border-l-2 border-slate-800 pl-4 text-sm">
+        <ol className="mt-4 space-y-3 border-l-2 border-[var(--border)] pl-4 text-sm">
           {timeline.map((t, i) => (
             <li key={`${t.event}-${i}`} className="relative">
-              <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500 ring-2 ring-slate-900" />
-              <div className="font-mono text-[13px] text-slate-100">{t.event}</div>
-              <div className="text-xs text-slate-500">{fmtDateTime(t.at)}</div>
+              <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500 ring-2 ring-[var(--surface)]" />
+              <div className="font-mono text-[13px] text-[var(--text)]">{t.event}</div>
+              <div className="text-xs text-[var(--muted)]">{fmtDateTime(t.at)}</div>
             </li>
           ))}
         </ol>

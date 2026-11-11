@@ -116,15 +116,15 @@ export function QrSettings() {
     }
   }
 
-  if (loading) return <p className="text-sm text-slate-400">Loading QR settings</p>;
+  if (loading) return <p className="text-sm text-[var(--muted)]">Loading QR settings</p>;
 
   const totalPages = Math.max(1, Math.ceil(allocTotal / 20));
 
   return (
     <div className="space-y-6">
       <form className="space-y-4" onSubmit={save}>
-        {message && <p className="text-sm text-emerald-300">{message}</p>}
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {message && <p className="text-sm text-emerald-700 dark:text-emerald-300">{message}</p>}
+        {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
         <div>
           <label htmlFor="qr-method" className="label">QR method</label>
           <select id="qr-method" className="input w-auto" value={method} onChange={(e) => setMethod(e.target.value as QrMethod)}>
@@ -154,15 +154,15 @@ export function QrSettings() {
 
       {settings && (
         <div className="flex flex-wrap gap-6 text-sm">
-          <span className="text-slate-400">Active allocations <span className="text-slate-100 tabular-nums">{settings.active_allocations}</span></span>
-          <span className="text-slate-400">Released today <span className="text-slate-100 tabular-nums">{settings.released_today}</span></span>
-          <span className="text-slate-400">Expired today <span className="text-slate-100 tabular-nums">{settings.expired_today}</span></span>
+          <span className="text-[var(--muted)]">Active allocations <span className="text-[var(--text)] tabular-nums">{settings.active_allocations}</span></span>
+          <span className="text-[var(--muted)]">Released today <span className="text-[var(--text)] tabular-nums">{settings.released_today}</span></span>
+          <span className="text-[var(--muted)]">Expired today <span className="text-[var(--text)] tabular-nums">{settings.expired_today}</span></span>
         </div>
       )}
 
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="text-sm font-medium text-slate-200">Amount allocations</h3>
+          <h3 className="text-sm font-medium text-[var(--text)]">Amount allocations</h3>
           <select className="input w-auto" value={allocStatus} onChange={(e) => changeAllocFilter(e.target.value)} aria-label="Filter allocations by status">
             <option value="">All statuses</option>
             <option value="active">Active</option>
@@ -171,12 +171,12 @@ export function QrSettings() {
           </select>
         </div>
         {allocations.length === 0 ? (
-          <p className="text-sm text-slate-400">No allocations yet</p>
+          <p className="text-sm text-[var(--muted)]">No allocations yet</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-slate-400">
+                <tr className="text-left text-[var(--muted)]">
                   <th className="py-2 pr-4 font-medium">Order</th>
                   <th className="py-2 pr-4 font-medium">Order amount</th>
                   <th className="py-2 pr-4 font-medium">Payable amount</th>
@@ -191,7 +191,7 @@ export function QrSettings() {
                     <td className="py-2 pr-4 tabular-nums">{inr(a.base_amount)}</td>
                     <td className="py-2 pr-4 tabular-nums">{inr(a.payable_amount)}</td>
                     <td className="py-2 pr-4">{a.status}</td>
-                    <td className="py-2 text-slate-400">{new Date(a.expires_at).toLocaleString("en-IN")}</td>
+                    <td className="py-2 text-[var(--muted)]">{new Date(a.expires_at).toLocaleString("en-IN")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -201,14 +201,14 @@ export function QrSettings() {
         {totalPages > 1 && (
           <div className="mt-3 flex items-center gap-2">
             <button className="btn btn-secondary btn-sm" disabled={allocPage <= 1} onClick={() => changeAllocPage(allocPage - 1)}>Previous</button>
-            <span className="text-xs text-slate-400">Page {allocPage} of {totalPages}</span>
+            <span className="text-xs text-[var(--muted)]">Page {allocPage} of {totalPages}</span>
             <button className="btn btn-secondary btn-sm" disabled={allocPage >= totalPages} onClick={() => changeAllocPage(allocPage + 1)}>Next</button>
           </div>
         )}
       </div>
 
-      <p className="text-sm text-slate-400">
-        Payment accounts are managed on the <a className="text-slate-200 underline" href="/accounts">Accounts</a> page
+      <p className="text-sm text-[var(--muted)]">
+        Payment accounts are managed on the <a className="text-[var(--text)] underline" href="/accounts">Accounts</a> page
       </p>
     </div>
   );

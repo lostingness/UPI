@@ -27,28 +27,28 @@ export default function SandboxPayClient({ orderNo, amount, clientOrderId, custo
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-5 rounded-xl bg-amber-500/10 px-5 py-4 text-center text-sm font-medium text-amber-300 ring-1 ring-amber-500/30">
+      <div className="mb-5 rounded-xl bg-amber-500/10 px-5 py-4 text-center text-sm font-medium text-amber-700 dark:text-amber-300 ring-1 ring-amber-500/30">
         Sandbox — test transaction, no real money
       </div>
       <section className="card p-6 ring-amber-500/30">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-medium text-slate-50">Payment simulator</h1>
-            <p className="mt-1 text-sm text-slate-400">Choose one controlled outcome for this test order.</p>
+            <h1 className="text-xl font-medium text-[var(--text)]">Payment simulator</h1>
+            <p className="mt-1 text-sm text-[var(--muted)]">Choose one controlled outcome for this test order.</p>
           </div>
           <StatusPill status={status} />
         </div>
-        <dl className="mt-6 grid gap-3 rounded-xl bg-slate-800/60 p-4 text-sm sm:grid-cols-2">
-          <div><dt className="text-slate-500">TEST order</dt><dd className="font-mono font-medium text-slate-100">{orderNo}</dd></div>
-          <div><dt className="text-slate-500">Client reference</dt><dd className="font-mono font-medium text-slate-100">{clientOrderId}</dd></div>
-          <div><dt className="text-slate-500">Amount</dt><dd className="font-medium text-slate-100">{inr(Number(amount))}</dd></div>
-          <div><dt className="text-slate-500">Customer</dt><dd className="text-slate-100">{customerName ?? "Test customer"}</dd></div>
-          <div><dt className="text-slate-500">Created</dt><dd className="text-slate-100">{fmtDateTime(createdAt)}</dd></div>
-          <div><dt className="text-slate-500">Status</dt><dd className="text-slate-100">{status}</dd></div>
+        <dl className="mt-6 grid gap-3 rounded-xl bg-[var(--surface-2)] p-4 text-sm sm:grid-cols-2">
+          <div><dt className="text-[var(--muted)]">TEST order</dt><dd className="font-mono font-medium text-[var(--text)]">{orderNo}</dd></div>
+          <div><dt className="text-[var(--muted)]">Client reference</dt><dd className="font-mono font-medium text-[var(--text)]">{clientOrderId}</dd></div>
+          <div><dt className="text-[var(--muted)]">Amount</dt><dd className="font-medium text-[var(--text)]">{inr(Number(amount))}</dd></div>
+          <div><dt className="text-[var(--muted)]">Customer</dt><dd className="text-[var(--text)]">{customerName ?? "Test customer"}</dd></div>
+          <div><dt className="text-[var(--muted)]">Created</dt><dd className="text-[var(--text)]">{fmtDateTime(createdAt)}</dd></div>
+          <div><dt className="text-[var(--muted)]">Status</dt><dd className="text-[var(--text)]">{status}</dd></div>
         </dl>
         <div className="mt-5"><FormMessage message={form.message} ok={false} /></div>
         {form.ok && form.data && (
-          <div className="mt-5 rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300 ring-1 ring-emerald-500/30">
+          <div className="mt-5 rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/30">
             Simulated outcome applied — order is now <strong>{form.data.status}</strong>.
           </div>
         )}
@@ -66,18 +66,18 @@ export default function SandboxPayClient({ orderNo, amount, clientOrderId, custo
                 >
                   {form.pending && picked === o.outcome ? "Simulating…" : o.label}
                 </button>
-                <p className="mt-1.5 text-center text-[11px] text-slate-500">{o.hint}</p>
+                <p className="mt-1.5 text-center text-[11px] text-[var(--muted)]">{o.hint}</p>
               </div>
             ))}
           </div>
         ) : (
-          <div className="mt-6 rounded-lg bg-slate-800/60 px-4 py-3 text-center text-sm text-slate-400">
+          <div className="mt-6 rounded-lg bg-[var(--surface-2)] px-4 py-3 text-center text-sm text-[var(--muted)]">
             This TEST order is complete ({status}). Create another Sandbox order to simulate a different outcome.
           </div>
         )}
       </section>
-      <p className="mt-4 text-center text-xs text-slate-500">
-        Sandbox orders are created with sandbox API credentials (<code className="kbd">test_key_…</code>) via <code className="kbd">POST /api/v1/orders</code>. See <a href="/docs" className="font-medium text-brand-400">API docs</a>.
+      <p className="mt-4 text-center text-xs text-[var(--muted)]">
+        Sandbox orders are created with sandbox API credentials (<code className="kbd">test_key_…</code>) via <code className="kbd">POST /api/v1/orders</code>. See <a href="/docs" className="font-medium text-brand-600 dark:text-brand-400">API docs</a>.
       </p>
     </div>
   );

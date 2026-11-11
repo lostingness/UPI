@@ -17,15 +17,40 @@ import { markPaidInDb } from "./mark-paid";
 import { expireOrderInDb } from "./expire";
 import crypto from "node:crypto";
 
+// Round 5 skeleton fix: the Neon HTTP driver has no query timeout, so a
+// stalled/suspended database endpoint used to hang these lookups forever —
+// and the pay page / status routes awaiting them never resolved, leaving
+// the global loading.tsx skeleton on screen with no error and no retry.
+// Race each lookup against a hard timeout so callers fail fast into
+// error.tsx (pay page, Try again) or a 500 the client poll retries
+// (status routes) instead of hanging. The underlying query keeps running
+// in the background (it cannot be cancelled), but the response is no
+// longer held hostage by it.
+const ORDER_LOOKUP_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 export async function loadOrderByNo(orderNo: string): Promise<OrderRow | null> {
   const sql = getSql();
-  const row = first<OrderRow>(await sql`SELECT * FROM orders WHERE order_no = ${orderNo}`);
+  const row = first<OrderRow>(await withTimeout(
+    sql`SELECT * FROM orders WHERE order_no = ${orderNo}`,
+    ORDER_LOOKUP_TIMEOUT_MS, "loadOrderByNo",
+  ));
   return row ?? null;
 }
 export async function loadAccount(accountId: number | null): Promise<AccountRow | null> {
   if (!accountId) return null;
   const sql = getSql();
-  const row = first<AccountRow>(await sql`SELECT * FROM payment_accounts WHERE id = ${accountId}`);
+  const row = first<AccountRow>(await withTimeout(
+    sql`SELECT * FROM payment_accounts WHERE id = ${accountId}`,
+    ORDER_LOOKUP_TIMEOUT_MS, "loadAccount",
+  ));
   return row ?? null;
 }
 

@@ -22,8 +22,8 @@ export function RecheckButton({ orderNo }: { orderNo: string }) {
       >
         {form.pending ? "Checking…" : "Recheck status"}
       </button>
-      {form.message && <span className="text-xs text-red-400">{form.message}</span>}
-      {form.ok && form.data && <span className="text-xs text-emerald-300">Status: {form.data.status}</span>}
+      {form.message && <span className="text-xs text-red-700 dark:text-red-400">{form.message}</span>}
+      {form.ok && form.data && <span className="text-xs text-emerald-700 dark:text-emerald-300">Status: {form.data.status}</span>}
     </span>
   );
 }
@@ -45,7 +45,7 @@ export function ApproveUtrForm({ orderNo, amount }: { orderNo: string; amount: s
       }}
     >
       <FormMessage message={form.message} ok={form.ok} />
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[var(--muted)]">
         Approve only after matching this UTR and the exact amount in your bank statement.
         The server re-verifies before the order is marked paid.
       </p>
@@ -92,7 +92,7 @@ export function RejectUtrForm({ orderNo }: { orderNo: string }) {
       <button className="btn btn-danger w-full" disabled={form.pending}>
         {form.pending ? "Rejecting…" : "Reject UTR"}
       </button>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[var(--muted)]">
         Rejecting re-pends the order with a fresh expiry (or expires it when attempts are exhausted) and tells the customer to try again.
       </p>
     </form>

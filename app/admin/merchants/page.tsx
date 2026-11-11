@@ -30,28 +30,28 @@ async function MerchantsBody({ page }: { page: number }) {
             <div className="card overflow-x-auto">
               <table className="w-full min-w-[720px] border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800">
+                  <tr className="border-b border-[var(--border)]">
                     <th className="th">Merchant</th><th className="th">Live orders</th><th className="th">Paid</th>
                     <th className="th">Paid amount</th><th className="th">Joined</th><th className="th">Status</th><th className="th"> </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/70">
+                <tbody className="divide-y divide-[var(--border)]">
                   {merchants.map((m) => (
-                    <tr key={String(m.id)} className="hover:bg-slate-800/40">
+                    <tr key={String(m.id)} className="hover:bg-[var(--surface-2)]">
                       <td className="td">
                         <div className="flex items-center gap-3">
                           <Avatar name={String(m.business_name ?? m.name)} className="h-9 w-9 text-xs" />
                           <div className="min-w-0">
-                            <div className="truncate font-medium text-slate-100">{String(m.business_name ?? m.name)}</div>
-                            <div className="truncate text-xs text-slate-500">{String(m.email)}</div>
+                            <div className="truncate font-medium text-[var(--text)]">{String(m.business_name ?? m.name)}</div>
+                            <div className="truncate text-xs text-[var(--muted)]">{String(m.email)}</div>
                           </div>
                         </div>
                       </td>
                       <td className="td tabular-nums">{String(m.live_order_count)}</td>
                       <td className="td tabular-nums">{String(m.paid_count)}</td>
-                      <td className="td font-medium text-slate-100 tabular-nums">{inr(Number(m.paid_amount ?? 0))}</td>
-                      <td className="td whitespace-nowrap text-slate-500">{fmtDate(String(m.created_at))}</td>
-                      <td className="td">{m.is_active ? <span className="text-emerald-300">Active</span> : <span className="text-slate-500">Disabled</span>}</td>
+                      <td className="td font-medium text-[var(--text)] tabular-nums">{inr(Number(m.paid_amount ?? 0))}</td>
+                      <td className="td whitespace-nowrap text-[var(--muted)]">{fmtDate(String(m.created_at))}</td>
+                      <td className="td">{m.is_active ? <span className="text-emerald-700 dark:text-emerald-300">Active</span> : <span className="text-[var(--muted)]">Disabled</span>}</td>
                       <td className="td text-right">
                         <MerchantToggleButton id={Number(m.id)} isActive={Boolean(m.is_active)} email={String(m.email)} />
                       </td>
@@ -62,7 +62,7 @@ async function MerchantsBody({ page }: { page: number }) {
             </div>
           )}
           <div className="mt-4 flex items-center justify-between text-sm">
-            <span className="text-slate-500">Page {page} · 25 per page</span>
+            <span className="text-[var(--muted)]">Page {page} · 25 per page</span>
             <span className="flex gap-2">
               {page > 1 && <Link href={`/admin/merchants?page=${page - 1}`} className="btn btn-secondary btn-sm">← Previous</Link>}
               {merchants.length === 25 && <Link href={`/admin/merchants?page=${page + 1}`} className="btn btn-secondary btn-sm">Next →</Link>}

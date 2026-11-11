@@ -10,12 +10,12 @@ import { CopyButton } from "./forms";
 function OnceSecret({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div className="rounded-lg bg-emerald-500/10 p-4 ring-1 ring-emerald-500/30">
-      <label className="label font-medium text-emerald-300">{label} · copy now (will not be shown again)</label>
+      <label className="label font-medium text-emerald-700 dark:text-emerald-300">{label} · copy now (will not be shown again)</label>
       <div className="flex gap-2">
         <input readOnly value={value} className="input font-mono font-medium" />
         <CopyButton text={value} />
       </div>
-      {note && <p className="mt-2 text-xs text-emerald-200/80">{note}</p>}
+      {note && <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-200/80">{note}</p>}
     </div>
   );
 }
@@ -27,7 +27,7 @@ export function ProfileForm({ initial }: { initial: { name: string; businessName
   return (
     <form className="space-y-4" onSubmit={async (e) => { e.preventDefault(); await form.submit("/api/settings/profile", { name: v.name, business_name: v.business_name || null, phone: v.phone || null }); }}>
       <FormMessage message={form.message} ok={form.ok} />
-      {form.ok && <p className="text-sm text-emerald-300">Profile saved.</p>}
+      {form.ok && <p className="text-sm text-emerald-700 dark:text-emerald-300">Profile saved.</p>}
       <div>
         <label htmlFor="p-name" className="label">Name</label>
         <input id="p-name" required maxLength={255} className="input" value={v.name} onChange={set("name")} />
@@ -55,7 +55,7 @@ export function WebhookForm({ initial, sandbox = false }: { initial: string | nu
   return (
     <form className="space-y-4" onSubmit={async (e) => { e.preventDefault(); await form.submit(path, { webhook_url: url }); }}>
       <FormMessage message={form.message} ok={form.ok} />
-      {form.ok && <p className="text-sm text-emerald-300">Webhook URL saved.</p>}
+      {form.ok && <p className="text-sm text-emerald-700 dark:text-emerald-300">Webhook URL saved.</p>}
       <div>
         <label htmlFor={sandbox ? "w-sandbox" : "w-live"} className="label">{sandbox ? "Sandbox webhook URL" : "Webhook URL"}</label>
         <input id={sandbox ? "w-sandbox" : "w-live"} type="url" maxLength={500} placeholder="https://your-server.example/webhooks/upi"
@@ -81,8 +81,8 @@ export function RotationForm({ current }: { current: string }) {
         <option value="default">Default account</option>
       </select>
       <button className="btn btn-secondary" disabled={form.pending}>{form.pending ? "Saving…" : "Save"}</button>
-      {form.ok && <span className="text-xs text-emerald-300">Saved.</span>}
-      {form.message && <span className="text-xs text-red-400">{form.message}</span>}
+      {form.ok && <span className="text-xs text-emerald-700 dark:text-emerald-300">Saved.</span>}
+      {form.message && <span className="text-xs text-red-700 dark:text-red-400">{form.message}</span>}
     </form>
   );
 }
@@ -93,7 +93,7 @@ export function RedirectDomainsForm({ initial }: { initial: string[] }) {
   return (
     <form className="space-y-4" onSubmit={async (e) => { e.preventDefault(); await form.submit("/api/settings/redirect-domains", { redirect_domains: domains }); }}>
       <FormMessage message={form.message} ok={form.ok} />
-      {form.ok && <p className="text-sm text-emerald-300">Redirect domains saved.</p>}
+      {form.ok && <p className="text-sm text-emerald-700 dark:text-emerald-300">Redirect domains saved.</p>}
       <div>
         <label htmlFor="rd-domains" className="label">Allowed redirect domains</label>
         <textarea id="rd-domains" rows={3} placeholder={"your-store.example\napp.your-store.example"} className="input font-mono text-[13px]" value={domains} onChange={(e) => setDomains(e.target.value)} />
@@ -117,7 +117,7 @@ export function RegenerateKeysButton({ sandbox = false }: { sandbox?: boolean })
         <>
           <OnceSecret label={sandbox ? "Sandbox API secret" : "Live API secret"} value={secret}
             note="Store this secret securely on your server. It is also used to sign webhooks (HMAC-SHA256)." />
-          {key && <p className="text-sm text-slate-400">New {sandbox ? "sandbox" : "live"} API key: <code className="kbd">{key}</code></p>}
+          {key && <p className="text-sm text-[var(--muted)]">New {sandbox ? "sandbox" : "live"} API key: <code className="kbd">{key}</code></p>}
         </>
       )}
       <button
@@ -138,7 +138,7 @@ export function RevokeSandboxKeysButton() {
   return (
     <div className="space-y-3">
       <FormMessage message={form.message} ok={form.ok} />
-      {form.ok && <p className="text-sm text-emerald-300">Sandbox keys revoked.</p>}
+      {form.ok && <p className="text-sm text-emerald-700 dark:text-emerald-300">Sandbox keys revoked.</p>}
       <button
         className="btn btn-danger btn-sm" disabled={form.pending}
         onClick={async () => {
@@ -183,7 +183,7 @@ export function ChangePasswordForm() {
   return (
     <form className="space-y-4" onSubmit={async (e) => { e.preventDefault(); await form.submit("/api/settings/password", v, "PUT"); }}>
       <FormMessage message={form.message} ok={form.ok} />
-      {form.ok && <p className="text-sm text-emerald-300">Password changed. Other devices have been logged out.</p>}
+      {form.ok && <p className="text-sm text-emerald-700 dark:text-emerald-300">Password changed. Other devices have been logged out.</p>}
       <div>
         <label htmlFor="cp-current" className="label">Current password</label>
         <input id="cp-current" type="password" required autoComplete="current-password" className="input" value={v.current_password} onChange={set("current_password")} />

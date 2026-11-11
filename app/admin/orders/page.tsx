@@ -29,7 +29,7 @@ async function OrdersBody({ status, page }: { status: string; page: number }) {
           <div className="mb-4 flex flex-wrap gap-2">
             {STATUSES.map((s) => (
               <Link key={s || "all"} href={s ? `/admin/orders?status=${s}` : "/admin/orders"}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium ring-1 ${status === s ? "bg-brand-600/20 text-brand-300 ring-brand-500/40" : "bg-slate-900 text-slate-400 ring-slate-800 hover:text-slate-200"}`}>
+                className={`rounded-full px-3 py-1.5 text-xs font-medium ring-1 ${status === s ? "bg-brand-600/20 text-brand-700 dark:text-brand-300 ring-brand-500/40" : "bg-[var(--surface-2)] text-[var(--muted)] ring-[var(--border)] hover:text-[var(--text)]"}`}>
                 {s === "" ? "All" : s}
               </Link>
             ))}

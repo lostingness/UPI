@@ -20,7 +20,7 @@ export default async function ChangePasswordPage() {
       <div className="card max-w-xl p-6">
         <ChangePasswordForm />
       </div>
-      <p className="mt-4 max-w-xl text-xs leading-relaxed text-slate-500">
+      <p className="mt-4 max-w-xl text-xs leading-relaxed text-[var(--muted)]">
         Changing your password logs out all other devices. Your current session is regenerated, so you stay logged in here.
       </p>
     </AppShell>

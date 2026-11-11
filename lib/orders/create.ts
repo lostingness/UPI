@@ -24,6 +24,7 @@ import { ApiError } from "../errors";
 import { gatewayConfig } from "../config/gateway";
 import { decryptText } from "../crypto";
 import { allocatePayableAmount, getMerchantQrSettings, releaseAllocation, toPaiseStrict, paiseToAmount, type QrMethod } from "./allocations";
+import { notifyOrderEvent } from "../notifications";
 import crypto from "node:crypto";
 
 export interface AccountRow {
@@ -158,7 +159,17 @@ export async function createOrder(input: CreateOrderInput) {
         throw new ApiError(422, "This payment account has reached its daily limit.");
       }
     }
-    if (!useUnique) return order;
+    // Merchant notification (Round 5 integration): the hook lives here,
+    // in the shared createOrder, so BOTH creation paths notify — the
+    // dashboard form (POST /api/orders) and the API-key path
+    // (POST /api/v1/orders), which share handleCreateOrderDispatch. An
+    // idempotency replay never reaches createOrder, so a replay cannot
+    // double-notify; a retried creation is deduped by `order_created:<id>`.
+    // Best-effort — notifyOrderEvent never throws, so creation is unaffected.
+    if (!useUnique) {
+      await notifyOrderEvent("order_created", order);
+      return order;
+    }
     try {
       const allocated = await allocatePayableAmount(sql, {
         userId: input.userId, paymentAccountId: account?.id ?? null, orderId: order.id,
@@ -166,7 +177,9 @@ export async function createOrder(input: CreateOrderInput) {
         incrementPaise: qrIncrementPaise, expiresAt,
       });
       const updated = await sql`UPDATE orders SET payable_amount = ${allocated.payableAmount}, updated_at = NOW() WHERE id = ${order.id} RETURNING *`;
-      return (updated as import("./types").OrderRow[])[0];
+      const finalOrder = (updated as import("./types").OrderRow[])[0];
+      await notifyOrderEvent("order_created", finalOrder);
+      return finalOrder;
     } catch (e) {
       // Allocation (or the payable update) failed: leave no order row behind.
       try { await releaseAllocation(sql, order.id, "failed"); } catch { /* best-effort */ }

@@ -21,7 +21,7 @@ export default async function NewOrderPage() {
       <div className="card max-w-2xl p-6">
         <CreateOrderForm accounts={accounts.map((a) => ({ id: Number(a.id), label: String(a.label), provider: String(a.provider), is_active: Boolean(a.is_active) }))} />
       </div>
-      <p className="mt-4 max-w-2xl text-xs leading-relaxed text-slate-500">
+      <p className="mt-4 max-w-2xl text-xs leading-relaxed text-[var(--muted)]">
         The link expires {`15`} minutes after creation (configurable via GATEWAY_ORDER_EXPIRY_MINUTES). The customer pays on the hosted checkout page;
         the order is marked paid only when the provider confirms it, or when you approve a submitted UTR.
       </p>

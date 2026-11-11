@@ -289,6 +289,8 @@ export default async function Home() {
               <Link href="/docs" className="btn btn-secondary mt-8">Read the full API docs</Link>
             </div>
             <div className="overflow-x-auto rounded-2xl bg-[#0d1322] p-5 ring-1 ring-black/10">
+              {/* Round 5: dark code panel — slate text is correct here (it sits
+                  on #0d1322 in BOTH themes); token text was 1.02:1 on it. */}
               <p className="font-mono text-xs text-slate-400">Create an order</p>
               <pre className="mt-3 overflow-x-auto font-mono text-xs leading-relaxed text-slate-200">{CREATE_ORDER_EXAMPLE}</pre>
               <p className="mt-4 font-mono text-xs text-slate-400">Response — 201, payment_url + upi_intent + order_no</p>

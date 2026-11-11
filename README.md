@@ -56,7 +56,7 @@ Other useful settings: `GATEWAY_ORDER_EXPIRY_MINUTES` (15), `GATEWAY_QR_METHOD` 
 
 ### Database
 
-Create a Neon Postgres project and set its **pooled** connection string as `DATABASE_URL`. Then run the migrations (001–014, plain SQL, safe to re-run):
+Create a Neon Postgres project and set its **pooled** connection string as `DATABASE_URL`. Then run the migrations (001–015, plain SQL, safe to re-run):
 
 ```bash
 npm run migrate
@@ -102,18 +102,19 @@ Other facts:
 - Orders expire after 15 minutes by default. A late payment can still be caught for 24 hours (grace window) — the pay page says so and keeps checking.
 - Live orders are `ORD…`, sandbox orders are `TST…`. Sandbox orders never touch a provider. The sandbox can pretend to be six outcomes: success, failure, pending, expiry, timeout, invalid reference.
 - Amounts: ₹1 to ₹1,00,000, up to 2 decimals.
+- The dashboard has a notification bell: new payments, new orders, UTR submissions, and expiries show up there. Payment sounds are optional — a short chime when a payment lands, a tick when an order is created. Sounds stay silent until you tap anything on the page (a browser rule), and the speaker button next to the bell mutes them.
 
 ## Screenshots
 
-Captured 11 November 2026 from a real production build with Playwright — desktop 1440 px and a true phone width of 390 px. The merchant screens were captured against the real Neon database with a disposable demo merchant ("Demo Store", deleted after the capture). The numbers are real database rows, not made up.
+Captured 11 November 2026 from a real production build with Playwright — desktop 1280 px and a true phone width of 390 px. The landing, login, docs, and setup shots below are fresh Round 5 captures (11 Nov 2026). The merchant screens (pay, dashboard, QR settings, order detail) are still the Round 4 captures against the real Neon database with a disposable demo merchant ("Demo Store", deleted after the capture). The numbers there are real database rows, not made up.
 
 > Note: the pay screen changed after these shots were taken. Round 4 (11 Nov 2026) made the whole pay screen fit on one phone screen — smaller QR, countdown as a small chip, one row of UPI-app buttons. New pay screenshots will replace `pay-mobile.jpg` / `pay-desktop.jpg` after the next database-backed capture.
 
 ### Landing page
 
-![Landing page hero, desktop 1280 px](docs/screenshots/r4-final-light-1280.jpg)
+![Landing page hero, desktop 1280 px](docs/screenshots/r5-final-landing-light-1280.jpg)
 
-![Landing page, mobile 390 px](docs/screenshots/r4-final-light-390.jpg)
+![Landing page, mobile 390 px](docs/screenshots/r5-final-landing-light-390.jpg)
 
 ### Pay screen (before the Round 4 compact redesign)
 
@@ -137,11 +138,11 @@ Captured 11 November 2026 from a real production build with Playwright — deskt
 
 *Settings → QR: method "Unique amount", increment 1 paise, and the Amount allocations table — four released allocations (₹500.01, ₹500.02, ₹250.01, ₹750.01). The API keys in this shot belonged to the deleted demo merchant.*
 
-![Login page, mobile 390 px](docs/screenshots/login-mobile.jpg)
+![Login page, mobile 390 px](docs/screenshots/r5-final-login-light-390.jpg)
 
-![API docs, desktop 1440 px](docs/screenshots/docs-desktop.jpg)
+![API docs, desktop 1440 px](docs/screenshots/r5-final-docs-light-1280.jpg)
 
-![First-run setup, desktop](docs/screenshots/setup-desktop.jpg)
+![First-run setup, desktop](docs/screenshots/r5-final-setup-light-1280.jpg)
 
 ![Order detail, mobile 390 px](docs/screenshots/order-detail-mobile.jpg)
 

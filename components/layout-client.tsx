@@ -53,8 +53,17 @@ export function LogoutButton({ compact = false }: { compact?: boolean }) {
  * breakpoint under which the menu shows: "md" (public nav, desktop links
  * appear at md) or "lg" (dashboard shell, sidebar appears at lg — so the
  * menu must stay visible through 768–1023px, where there is no sidebar).
+ * Round 5: links carry optional lucide icons + a `group` section label
+ * (Merchant / Admin) and an optional `userChip`, matching the LiquidNav
+ * bottom sheet — the old bare text list is gone. The dropdown scrolls
+ * internally so a long grouped list never overflows a small screen.
  */
-export function MobileMenu({ links, active, below = "md" }: { links: { href: string; label: string }[]; active?: string; below?: "md" | "lg" }) {
+export function MobileMenu({ links, active, below = "md", userChip }: {
+  links: { href: string; label: string; icon?: ReactNode; group?: string }[];
+  active?: string;
+  below?: "md" | "lg";
+  userChip?: ReactNode;
+}) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
@@ -103,6 +112,15 @@ export function MobileMenu({ links, active, below = "md" }: { links: { href: str
     if (el) el.open = false;
   };
 
+  // Group consecutive links by section label, preserving order.
+  const groups: { label: string | null; links: typeof links }[] = [];
+  for (const l of links) {
+    const label = l.group ?? null;
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.links.push(l);
+    else groups.push({ label, links: [l] });
+  }
+
   return (
     <details ref={detailsRef} className={`group relative ${below === "lg" ? "lg:hidden" : "md:hidden"}`}>
       <summary
@@ -120,13 +138,36 @@ export function MobileMenu({ links, active, below = "md" }: { links: { href: str
         </svg>
         Menu
       </summary>
-      <div ref={listRef} id={panelId} className="animate-menu absolute right-0 top-11 z-50 w-56 rounded-xl bg-[var(--surface)] p-2 shadow-[var(--shadow)] ring-1 ring-[var(--border)]" role="menu">
-        {links.map((l) => (
-          <Link key={l.href} href={l.href} role="menuitem" onClick={close}
-            style={{ touchAction: "manipulation" }}
-            className={`flex h-9 touch-manipulation items-center rounded-lg px-3 text-sm font-medium transition-colors duration-150 ${active === l.href ? "bg-[var(--surface-2)] text-[var(--text)]" : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"}`}>
-            {l.label}
-          </Link>
+      <div ref={listRef} id={panelId} className="animate-menu absolute right-0 top-11 z-50 max-h-[70dvh] w-64 overflow-y-auto rounded-xl bg-[var(--surface)] p-2 shadow-[var(--shadow)] ring-1 ring-[var(--border)]" role="menu">
+        {userChip && (
+          <div className="mb-1 flex items-center gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2.5 ring-1 ring-[var(--border)]">
+            {userChip}
+          </div>
+        )}
+        {groups.map((g) => (
+          <div key={g.label ?? "all"}>
+            {g.label && (
+              <p className="px-3 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--faint)]">
+                {g.label}
+              </p>
+            )}
+            {g.links.map((l) => (
+              <Link key={l.href} href={l.href} role="menuitem" onClick={close}
+                aria-current={active === l.href ? "page" : undefined}
+                style={{ touchAction: "manipulation" }}
+                className={`flex h-10 touch-manipulation items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-150 ${active === l.href ? "bg-[var(--surface-2)] text-[var(--text)]" : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"}`}>
+                {l.icon && (
+                  <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-md ring-1 ring-[var(--border)] ${active === l.href ? "bg-[var(--surface)] text-[var(--accent-text)]" : "bg-[var(--surface-2)] text-[var(--muted)]"}`} aria-hidden="true">
+                    {l.icon}
+                  </span>
+                )}
+                <span className="min-w-0 truncate">{l.label}</span>
+                {active === l.href && (
+                  <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-text)]" aria-hidden="true" />
+                )}
+              </Link>
+            ))}
+          </div>
         ))}
       </div>
     </details>
@@ -147,11 +188,13 @@ export function useScrolled() {
 
 /**
  * Sticky glass header with a scroll state: past 8px it gains the stronger
- * blur + bottom border (via scrolledClassName) and descendants can compact
- * with `group-data-[scrolled=true]:…` (the header carries .group and a
- * data-scrolled attribute). Transitions are disabled under
- * prefers-reduced-motion. Server components use this instead of a raw
- * <header> because they cannot run the scroll listener themselves.
+ * blur + bottom border (via scrolledClassName). Round 5 rule: the scroll
+ * state must NEVER change the header's height, padding or font size —
+ * only background/border/shadow may change (the old compact-on-scroll
+ * behaviour is what made the nav shrink; it is gone). Transitions are
+ * disabled under prefers-reduced-motion. Server components use this
+ * instead of a raw <header> because they cannot run the scroll listener
+ * themselves.
  */
 export function ScrollHeader({ className = "", scrolledClassName = "", children }: { className?: string; scrolledClassName?: string; children: ReactNode }) {
   const scrolled = useScrolled();

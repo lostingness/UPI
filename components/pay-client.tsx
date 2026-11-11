@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FieldError, FormMessage, useApiForm } from "./forms";
 import { apiFetch, postApi } from "./api";
+import { installGestureUnlock, playSuccessChime } from "@/lib/sounds";
 
 export interface PayClientProps {
   orderNo: string;
@@ -151,6 +152,11 @@ export default function PayClient(props: PayClientProps) {
   const [utr, setUtr] = useState("");
 
   // Poll the server for the (server-verified) status.
+  // Round 5: install the gesture unlock so the success chime below can
+  // play — browsers block audio until the payer's first tap/keypress on
+  // this page, and the chime fires from polling (no gesture at that
+  // moment), so the unlock must be armed on mount.
+  useEffect(() => { installGestureUnlock(); }, []);
   useEffect(() => {
     if (status === "paid" || status === "failed") return;
     if (status === "expired" && props.lateRecoveryUntil && Date.now() > new Date(props.lateRecoveryUntil).getTime()) return;
@@ -164,6 +170,11 @@ export default function PayClient(props: PayClientProps) {
           if (res.data.status === "paid") {
             setStatusText("Payment received — redirecting…");
             setStatus("paid");
+            // Round 5: chime ONLY on the server-confirmed flip to paid
+            // (never on load — the initial paid render has no poll flip).
+            // Silent no-op before the payer's first gesture or when
+            // sounds are off.
+            playSuccessChime();
             setTimeout(() => {
               if (res.data?.redirect) window.location.href = res.data.redirect;
               else router.refresh(); // re-render from the server props (paid panel, UTR, paid_at) without a full reload
@@ -325,7 +336,9 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "pending" && props.hosted && (
           <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
-            <div className={`grid h-14 w-14 place-items-center rounded-2xl text-white ${props.pgName === "PhonePe" ? "bg-[#5f259f]" : "bg-[#00baf2]"}`}>
+            <div className={`grid h-14 w-14 place-items-center rounded-2xl ${props.pgName === "PhonePe" ? "bg-[#5f259f] text-white" : "bg-[#00baf2] text-[#111111]"}`}>
+              {/* Round 5: white on Paytm #00baf2 is 2.26:1 (FAIL); #111 is 8.37:1.
+                  PhonePe #5f259f keeps white (9.33:1). */}
               <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
             </div>
             <h1 className="mt-3 text-lg font-semibold">Pay securely with {props.pgName}</h1>

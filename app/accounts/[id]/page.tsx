@@ -44,8 +44,8 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               ["Created", fmtDateTime(String(a.created_at))],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between gap-4">
-                <dt className="shrink-0 text-slate-500">{k}</dt>
-                <dd className="min-w-0 text-right font-mono text-[13px] text-slate-200">{v}</dd>
+                <dt className="shrink-0 text-[var(--muted)]">{k}</dt>
+                <dd className="min-w-0 text-right font-mono text-[13px] text-[var(--text)]">{v}</dd>
               </div>
             ))}
           </dl>
@@ -55,7 +55,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               <CopyButton text={String(a.upi_id)} />
             </div>
           )}
-          <div className="mt-5 rounded-lg bg-slate-800/60 px-4 py-3 text-xs leading-relaxed text-slate-400 ring-1 ring-slate-800">
+          <div className="mt-5 rounded-lg bg-[var(--surface-2)] px-4 py-3 text-xs leading-relaxed text-[var(--muted)] ring-1 ring-[var(--border)]">
             Credentials for this account are stored encrypted and are never displayed — not even to you.
             To change them, delete this account and create a new one. Deleting is refused while any orders exist for it; disable it instead.
           </div>
@@ -68,7 +68,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
           <div className="card p-6">
             <h2 className="card-title">Actions</h2>
             <div className="mt-4"><AccountActions id={Number(a.id)} isActive={Boolean(a.is_active)} isDefault={Boolean(a.is_default)} /></div>
-            <p className="mt-3 text-xs leading-relaxed text-slate-500">
+            <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">
               Disabling stops new orders routing to this account; existing pending orders are unaffected.
               Making an account default clears the default flag from your other accounts.
             </p>

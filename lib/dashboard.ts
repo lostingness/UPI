@@ -2,7 +2,29 @@
 // IST day boundaries via AT TIME ZONE 'Asia/Kolkata').
 import { getSql } from "./db";
 
+// Round 5 skeleton fix: the Neon HTTP driver has no query timeout, so a
+// stalled/suspended database endpoint used to hang this function forever —
+// and the dashboard page awaiting it never resolved, leaving the global
+// loading.tsx skeleton on screen with no error and no retry. Race the work
+// against a hard timeout so the stats route fails fast (500 via handleError)
+// and the page fails into error.tsx (Try again) instead. The underlying
+// query keeps running in the background (it cannot be cancelled), but the
+// response is no longer held hostage by it.
+const DASHBOARD_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 export async function dashboardStats(userId: number, environment: "live" | "sandbox") {
+  return withTimeout(runDashboardStats(userId, environment), DASHBOARD_TIMEOUT_MS, "dashboardStats");
+}
+
+async function runDashboardStats(userId: number, environment: "live" | "sandbox") {
   const sql = getSql();
   const counts = await sql`
     SELECT

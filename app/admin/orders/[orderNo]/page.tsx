@@ -29,12 +29,12 @@ async function AdminOrderBody({ orderNo, adminId, ip }: { orderNo: string; admin
         <div className="card p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-xs text-slate-500">Amount</div>
-              <div className="mt-1 font-mono text-3xl font-medium text-slate-50 tabular-nums">{inr(Number(order.amount))}</div>
+              <div className="text-xs text-[var(--muted)]">Amount</div>
+              <div className="mt-1 font-mono font-medium tabular-nums text-[var(--text)] text-[clamp(1.5rem,7vw,1.875rem)]">{inr(Number(order.amount))}</div>
             </div>
             <StatusPill status={order.status} />
           </div>
-          <dl className="mt-6 space-y-3 border-t border-slate-800 pt-5 text-sm">
+          <dl className="mt-6 space-y-3 border-t border-[var(--border)] pt-5 text-sm">
             {([
               ["Order ID", order.order_no, true],
               ["Client order ID", order.client_order_id, true],
@@ -52,12 +52,12 @@ async function AdminOrderBody({ orderNo, adminId, ip }: { orderNo: string; admin
               ["Created", fmtDateTime(order.created_at), false],
             ] as [string, string, boolean][]).map(([k, v, mono]) => (
               <div key={k} className="flex justify-between gap-4">
-                <dt className="shrink-0 text-slate-500">{k}</dt>
-                <dd className={`min-w-0 text-right text-slate-200 ${mono ? "font-mono text-[13px] break-all" : ""}`}>{v}</dd>
+                <dt className="shrink-0 text-[var(--muted)]">{k}</dt>
+                <dd className={`min-w-0 text-right break-words [overflow-wrap:anywhere] text-[var(--text)] ${mono ? "font-mono text-[13px] break-all" : ""}`}>{v}</dd>
               </div>
             ))}
           </dl>
-          <div className="mt-6 border-t border-slate-800 pt-5">
+          <div className="mt-6 border-t border-[var(--border)] pt-5">
             <div className="label">Payment URL</div>
             <div className="flex gap-2">
               <input readOnly value={order.environment === "sandbox" ? `/sandbox/pay/${order.order_no}` : `/pay/${order.order_no}`} className="input font-mono text-xs" />
@@ -68,13 +68,13 @@ async function AdminOrderBody({ orderNo, adminId, ip }: { orderNo: string; admin
         <div className="card">
           <div className="card-header"><h2 className="card-title">Webhook history</h2></div>
           {webhookHistory.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-slate-500">No webhook attempts for this order yet.</p>
+            <p className="px-5 py-6 text-sm text-[var(--muted)]">No webhook attempts for this order yet.</p>
           ) : (
-            <div className="divide-y divide-slate-800/70">
+            <div className="divide-y divide-[var(--border)]">
               {webhookHistory.map((l) => (
                 <div key={`${l.storage_tier}-${l.id}`} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
-                  <span className="font-mono text-[13px] text-slate-200">{l.event}</span>
-                  <span className="flex items-center gap-2 text-xs text-slate-500">
+                  <span className="font-mono text-[13px] text-[var(--text)]">{l.event}</span>
+                  <span className="flex items-center gap-2 text-xs text-[var(--muted)]">
                     <span>{l.storage_tier === "archive" ? "archived" : "active"}</span>
                     <span>attempt {l.attempt}</span>
                     <span>{l.response_code ? `HTTP ${l.response_code}` : "no response"}</span>
@@ -94,7 +94,7 @@ async function AdminOrderBody({ orderNo, adminId, ip }: { orderNo: string; admin
         </div>
         <div className="card p-5">
           <h2 className="card-title">Admin notes</h2>
-          <p className="mt-3 text-xs leading-relaxed text-slate-500">
+          <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">
             This view is read-only except for the audited override above. UTR approve/reject is the merchant&apos;s job —
             see the order in the merchant&apos;s own dashboard. Viewing this order wrote an <code className="kbd">order_viewed</code> audit entry.
           </p>

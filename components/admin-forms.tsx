@@ -26,8 +26,8 @@ export function ManualOverrideForm({ orderNo, amount }: { orderNo: string; amoun
       }}
     >
       <FormMessage message={form.message} ok={form.ok} />
-      {form.ok && <p className="text-sm text-emerald-300">Override applied — the order is now paid and the override is recorded in the audit log.</p>}
-      <div className="rounded-lg bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-300 ring-1 ring-amber-500/30">
+      {form.ok && <p className="text-sm text-emerald-700 dark:text-emerald-300">Override applied — the order is now paid and the override is recorded in the audit log.</p>}
+      <div className="rounded-lg bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-700 dark:text-amber-300 ring-1 ring-amber-500/30">
         Manual override marks the order paid without a provider response. Use it only with independent evidence
         (bank statement / provider dashboard). The amount must equal the order amount, and a reference + reason (20–500 chars) are required.
         This action is written to the audit log with your identity.
@@ -76,9 +76,9 @@ export function LeaseRecoveryForm() {
       }}
     >
       <FormMessage message={form.message} ok={form.ok} />
-      {form.ok && <p className="text-sm text-emerald-300">Lease recovered — the order can be verified again. The recovery is recorded in the audit table.</p>}
-      <p className="text-xs leading-relaxed text-slate-500">
-        Recover an <span className="font-medium text-slate-200">expired</span> verification lease so a stuck order can be checked again. Only recover a lease after you are sure
+      {form.ok && <p className="text-sm text-emerald-700 dark:text-emerald-300">Lease recovered — the order can be verified again. The recovery is recorded in the audit table.</p>}
+      <p className="text-xs leading-relaxed text-[var(--muted)]">
+        Recover an <span className="font-medium text-[var(--text)]">expired</span> verification lease so a stuck order can be checked again. Only recover a lease after you are sure
         the process that held it is stopped — on Vercel there is no process identity, so the check is: lease expired + generation matches.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -127,7 +127,7 @@ export function MerchantToggleButton({ id, isActive, email }: { id: number; isAc
       >
         {busy ? "…" : isActive ? "Disable" : "Enable"}
       </button>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-xs text-red-700 dark:text-red-400">{error}</span>}
     </span>
   );
 }
@@ -158,7 +158,7 @@ export function WebhookEventActions({ eventId, status, hasPayload }: { eventId: 
           </button>
         )}
       </span>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-xs text-red-700 dark:text-red-400">{error}</span>}
     </span>
   );
 }

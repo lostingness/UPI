@@ -99,7 +99,7 @@ async function DebuggerBody({ q, status, provider, environment, dateFrom, dateTo
             emptyHint="No orders match these filters."
           />
           <Pagination page={page} hasMore={orders.length === 25} href={(p) => qs({ page: String(p) })} />
-          <p className="mt-4 text-xs text-slate-500">Each row also shows its webhook-log count on the detail page. Opening a detail view writes a transaction_debugger_viewed audit entry.</p>
+          <p className="mt-4 text-xs text-[var(--muted)]">Each row also shows its webhook-log count on the detail page. Opening a detail view writes a transaction_debugger_viewed audit entry.</p>
         </>
   );
 }

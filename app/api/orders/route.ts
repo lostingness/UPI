@@ -21,5 +21,10 @@ export async function GET(req: Request) {
 
 // POST /api/orders — API-key mode when X-Api-Key is present, otherwise the
 // session-authenticated dashboard create (GAP 1). Same creation logic,
-// idempotency and rate limits in both modes.
-export async function POST(req: Request) { return handleCreateOrderDispatch(req); }
+// idempotency and rate limits in both modes. The order_created merchant
+// notification lives in the shared lib/orders/create.ts (Round 5
+// integration), so this route and /api/v1/orders both notify; the old
+// route-level hook (extra SELECT by order_no) was removed in the move.
+export async function POST(req: Request) {
+  return handleCreateOrderDispatch(req);
+}

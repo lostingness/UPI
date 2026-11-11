@@ -61,10 +61,10 @@ export function CreateAccountForm() {
             <button
               key={p.id} type="button"
               onClick={() => setProvider(p.id)}
-              className={`rounded-xl p-4 text-left ring-1 transition-colors duration-150 ${provider === p.id ? "bg-brand-600/15 ring-brand-500" : "bg-slate-800/50 ring-slate-700 hover:ring-slate-600"}`}
+              className={`rounded-xl p-4 text-left ring-1 transition-colors duration-150 ${provider === p.id ? "bg-brand-600/15 ring-brand-500" : "bg-[var(--surface-2)] ring-[var(--border)] hover:ring-[var(--border)]"}`}
             >
-              <div className="text-sm font-medium text-slate-100">{p.label}</div>
-              <div className="mt-1 text-xs leading-relaxed text-slate-400">{p.hint}</div>
+              <div className="text-sm font-medium text-[var(--text)]">{p.label}</div>
+              <div className="mt-1 text-xs leading-relaxed text-[var(--muted)]">{p.hint}</div>
             </button>
           ))}
         </div>
@@ -184,7 +184,7 @@ export function AccountActions({ id, isActive, isDefault }: { id: number; isActi
         }}>
         {busy === "delete" ? "…" : "Delete"}
       </button>
-      {error && <span className="w-full text-xs text-red-400">{error}</span>}
+      {error && <span className="w-full text-xs text-red-700 dark:text-red-400">{error}</span>}
     </div>
   );
 }
@@ -208,8 +208,8 @@ export function LimitForm({ id, dailyLimit }: { id: number; dailyLimit: string |
           className="input" value={limit} onChange={(e) => setLimit(e.target.value)} />
       </div>
       <button className="btn btn-secondary" disabled={form.pending}>{form.pending ? "Saving…" : "Save limit"}</button>
-      {form.message && <span className="w-full text-xs text-red-400">{form.message}</span>}
-      {form.ok && <span className="w-full text-xs text-emerald-300">Limit saved.</span>}
+      {form.message && <span className="w-full text-xs text-red-700 dark:text-red-400">{form.message}</span>}
+      {form.ok && <span className="w-full text-xs text-emerald-700 dark:text-emerald-300">Limit saved.</span>}
     </form>
   );
 }

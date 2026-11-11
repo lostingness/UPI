@@ -6,6 +6,7 @@ import { getSql } from "../db";
 import { recordOutboxEvent } from "../webhooks/outbox";
 import type { OrderRow } from "./types";
 import { releaseAllocation, releaseExpiredAllocations } from "./allocations";
+import { notifyOrderEvent } from "../notifications";
 
 export async function expireOrderInDb(order: OrderRow): Promise<"expired" | "unchanged"> {
   if (order.status !== "pending") return "unchanged";
@@ -24,5 +25,7 @@ export async function expireOrderInDb(order: OrderRow): Promise<"expired" | "unc
   try { await releaseAllocation(sql, order.id, "expired"); } catch { /* best-effort */ }
   try { await releaseExpiredAllocations(sql); } catch { /* best-effort */ }
   await recordOutboxEvent(sql, { ...order, status: "expired" }, "order.expired");
+  // Merchant notification (Round 5, best-effort — never blocks the expiry).
+  await notifyOrderEvent("order_expired", order);
   return "expired";
 }
