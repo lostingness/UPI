@@ -87,6 +87,10 @@ export function PublicNav({ user }: { user: SessionUser | null }) {
     <LiquidNav
       variant="landing"
       links={PUBLIC_LINKS}
+      // Round 6 (Halden): bell only for authed users (it polls an authed
+      // endpoint); authed users get no Login link and a /orders/new CTA.
+      showBell={user !== null}
+      authed={user !== null}
       actions={
         user ? (
           <>
@@ -95,7 +99,11 @@ export function PublicNav({ user }: { user: SessionUser | null }) {
           </>
         ) : (
           <>
-            <Link href="/login" className="hidden text-sm font-medium text-[var(--muted)] transition-colors duration-150 hover:text-[var(--text)] sm:block touch-manipulation">Log in</Link>
+            {/* Round 6: `actions` now renders ONLY in the mobile sheet
+                footer (the pill renders its own Login link, which hides
+                below 420px) — so the sheet Login must NOT carry the old
+                `hidden sm:block` (at 390px it would be reachable nowhere). */}
+            <Link href="/login" className="text-sm font-medium text-[var(--muted)] transition-colors duration-150 hover:text-[var(--text)] touch-manipulation">Log in</Link>
             <Link href="/setup" className="btn btn-accent btn-sm touch-manipulation">Get started</Link>
           </>
         )
@@ -217,6 +225,8 @@ export function AppShell({
       <div className="min-w-0 flex-1">
         <LiquidNav
           variant="dashboard"
+          showBell
+          authed
           links={[
             ...MERCHANT_LINKS.map((l) => toNavLink(l, "Merchant", active)),
             ...(isAdmin ? ADMIN_LINKS.map((l) => toNavLink(l, "Admin", active)) : []),

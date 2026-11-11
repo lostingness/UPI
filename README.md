@@ -106,15 +106,23 @@ Other facts:
 
 ## Screenshots
 
-Captured 11 November 2026 from a real production build with Playwright — desktop 1280 px and a true phone width of 390 px. The landing, login, docs, and setup shots below are fresh Round 5 captures (11 Nov 2026). The merchant screens (pay, dashboard, QR settings, order detail) are still the Round 4 captures against the real Neon database with a disposable demo merchant ("Demo Store", deleted after the capture). The numbers there are real database rows, not made up.
+Captured 12 November 2026 from a real production build — desktop 1280 px and a true phone width of 390 px. The landing, login, docs, and setup shots below are fresh Round 6 captures (12 Nov 2026) of the Halden rebuild. The merchant screens (pay, dashboard, QR settings, order detail) are still the Round 4 captures against the real Neon database with a disposable demo merchant ("Demo Store", deleted after the capture). The numbers there are real database rows, not made up.
+
+> Note: these Round 6 shots were taken in this machine's Chromium, which cannot reach Google Fonts or the ship-photo host — so they show system fallback fonts and an empty ship-photo area. On a real phone or browser the Inter Tight font loads and the fjord ship photo shows (both URLs return 200). The layout, colours, and spacing in the shots are exact.
 
 > Note: the pay screen changed after these shots were taken. Round 4 (11 Nov 2026) made the whole pay screen fit on one phone screen — smaller QR, countdown as a small chip, one row of UPI-app buttons. New pay screenshots will replace `pay-mobile.jpg` / `pay-desktop.jpg` after the next database-backed capture.
 
 ### Landing page
 
-![Landing page hero, desktop 1280 px](docs/screenshots/r5-final-landing-light-1280.jpg)
+![Landing page hero, desktop 1280 px](docs/screenshots/r6-final-landing-light-1280.jpg)
 
-![Landing page, mobile 390 px](docs/screenshots/r5-final-landing-light-390.jpg)
+![Landing page, mobile 390 px](docs/screenshots/r6-final-landing-light-390.jpg)
+
+![Pinned statement, desktop 1280 px](docs/screenshots/r6-statement-1280-light.jpg)
+
+![Dark split section, desktop 1280 px](docs/screenshots/r6-split-1280-light.jpg)
+
+![Nav with the Get started CTA morphed in after scrolling, desktop 1280 px](docs/screenshots/r6-nav-landing-1280-light-scrolled.jpg)
 
 ### Pay screen (before the Round 4 compact redesign)
 
@@ -138,11 +146,11 @@ Captured 11 November 2026 from a real production build with Playwright — deskt
 
 *Settings → QR: method "Unique amount", increment 1 paise, and the Amount allocations table — four released allocations (₹500.01, ₹500.02, ₹250.01, ₹750.01). The API keys in this shot belonged to the deleted demo merchant.*
 
-![Login page, mobile 390 px](docs/screenshots/r5-final-login-light-390.jpg)
+![Login page, mobile 390 px](docs/screenshots/r6-final-login-light-390.jpg)
 
-![API docs, desktop 1440 px](docs/screenshots/r5-final-docs-light-1280.jpg)
+![API docs, desktop 1440 px](docs/screenshots/r6-final-docs-light-1280.jpg)
 
-![First-run setup, desktop](docs/screenshots/r5-final-setup-light-1280.jpg)
+![First-run setup, desktop](docs/screenshots/r6-final-setup-light-1280.jpg)
 
 ![Order detail, mobile 390 px](docs/screenshots/order-detail-mobile.jpg)
 

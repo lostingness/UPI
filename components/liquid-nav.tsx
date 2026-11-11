@@ -1,40 +1,67 @@
-// Liquid nav — Axion pill navbar (Round 5 rebuild).
-// STABLE SIZE (the Round 5 fix): the pill has ONE fixed height — 60px
-// below md, 64px at md+ — and it NEVER changes on scroll. Scrolling past
-// 8px only swaps the glass treatment (liquid-glass → liquid-glass-strong)
-// and adds a border/shadow; no padding, height or font-size change, and
-// the height transition is not even animatable (the transition property
-// lists only background/box-shadow/backdrop-filter/border-color). The
-// user's complaint — "niche krte hi chota hota" (it shrinks when you
-// scroll down) — came from the old `sm:py-1` compact rule; that rule is
-// gone.
+// Halden nav — Round 6 rebuild (replaces the Axion liquid-glass pill).
 //
-// Mobile menu is a bottom sheet driven by a native <details>/<summary> —
-// the Round 3 first-tap fix: the menu opens on the FIRST tap even before
-// hydration (or with JS disabled). Client JS only adds aria-expanded
-// sync, Escape/backdrop/link close — none of it is required to open the
-// menu. The sheet is grouped (Merchant / Admin / Explore) with lucide
-// icons, a user chip, and a logout row — the old bare text list is gone.
+// FIXED pill, never sticky, never shrinking: position:fixed, z-50,
+// top:20px (12px mobile), left/right:var(--gut), height 60px (54px
+// mobile). Height, padding and font size NEVER change on scroll — the
+// Round 5 "niche krte hi chota hota" rule still holds; scrolling only
+// drives the CTA morph (see below), never the pill's size.
 //
-// STRUCTURAL NOTE: the <summary> MUST be a direct child of <details> to
-// act as the disclosure toggle (a nested summary does not toggle) — and a
-// closed <details> hides all its non-<summary> children, so the pill bar
-// itself must NOT be inside it (that hid the whole nav). The <details>
-// is therefore a sibling of the pill: its summary is absolutely
-// positioned into the pill's reserved right end, and the fixed backdrop
-// and bottom sheet are its other children. The sheet/backdrop also stay
-// outside the pill because its backdrop-filter would become their
-// containing block and break their fixed positioning.
+// Structure: #nav (fixed wrapper, carries the `on` class) > .halden-pill
+// (the white pill; dark theme: dark glass) + <details> (mobile menu,
+// sibling of the pill — a closed <details> hides its non-<summary>
+// children, so the pill must NOT be inside it; the sheet/backdrop are
+// also outside the pill because its backdrop-filter would become their
+// containing block and break their fixed positioning).
+//
+// The entrance animation lives on the PILL, not on #nav: a transform on
+// #nav (or any filter/backdrop-filter) would make #nav the containing
+// block for the fixed sheet/backdrop and break them. The pill's own
+// transform only affects its descendants (centre links, bell panel),
+// which are positioned relative to it anyway.
+//
+// Centre links are absolutely centred and shown ONLY at >=1280px
+// viewport. Measured: the 5 links span ~412px and the right cluster is
+// ~350px (CTA on), so the pill needs >=~1112px to fit both without
+// overlap; at 1280px the pill is 1134px wide. Below that the menu sheet
+// carries the links — an overlap-free nav beats a cramped one. The
+// <=820px mobile rule from the spec is satisfied as a subset.
+//
+// CTA morph (Halden dot-arrow): .navcta starts 42px wide, scale(0),
+// margin-left:-42px (zero footprint); the .btn inside is fixed 142px
+// wide so only its cyan dot shows through the 42px window. When #nav
+// gains `on`, the wrapper scales in, stretches to 142px, and the label
+// fades in. `on` is driven by the statement reveal (Worker A: the
+// `halden:stmt` CustomEvent with detail {p} — p>.4 turns it on) OR by
+// scrolling past the hero on any page, and it is ON from the start on
+// non-landing pages (no statement there). If Worker A lands a shared
+// module instead, the compute() below also reads window.__haldenStmtP
+// defensively. Login loses its right padding while `on`.
+//
+// Mobile (<=820px): centre links hidden, pill 54px at top:12px, CTA
+// margin 8px, Login padding 0 6px, menu button icon-only (32px). At
+// 390px the pill is 350px wide and the full right cluster (mark + bell
+// + theme + Login + 142px CTA + menu) does not fit, so Login hides
+// below 420px — it stays reachable in the menu sheet footer, which
+// already carries Login + Get started for guests. Bell + theme stay
+// visible at every width; the sound toggle moves into the sheet below
+// 820px (its pill instance stays mounted and in sync via
+// SOUND_CHANGED_EVENT, the Round 5 pattern).
+//
+// Mobile menu is the Round 3 <details>/<summary>: it opens on the FIRST
+// tap even before hydration. The summary gets an explicit z-index so it
+// stays above the backdrop (z-30) and clickable while open.
 //
 // Colours go only through the semantic theme tokens (var(--text),
-// var(--muted), var(--surface-2), var(--border), var(--accent-text)…);
-// no hardcoded white/slate/grey. Another worker owns the token VALUES;
-// this nav inherits them.
+// var(--muted), --surface...) except the spec-fixed Halden values:
+// pill #fff, ink #0b1d3a, cyan dot #2fe0d0, periwinkle #5b7cf0. Dark
+// theme pill is a dark glass (rgba(20,26,46,.85) + blur). Link/muted
+// text keeps Round 5 AA contrast in both themes.
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Clock } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Clock } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { NotificationBell } from "./notification-bell";
 import { SoundToggle } from "./sound-toggle";
@@ -48,6 +75,45 @@ export type LiquidNavLink = {
   /** Sheet section this link belongs to ("Merchant" / "Admin" / "Explore"). */
   group?: string;
 };
+
+/** Centre links (Halden spec, gateway routes) — same on landing and
+    dashboard pages; the sheet + sidebar keep the merchant links. */
+const HALDEN_LINKS: { href: string; label: string }[] = [
+  { href: "/#features", label: "Features" },
+  { href: "/#qr", label: "QR methods" },
+  { href: "/#pricing", label: "Pricing" },
+  { href: "/docs", label: "Docs" },
+  { href: "/dashboard", label: "Dashboard" },
+];
+
+/** Statement progress above which the CTA morphs in on the landing page. */
+export const HALDEN_STMT_THRESHOLD = 0.4;
+/** Fraction of the viewport the user must scroll before the CTA turns on
+    without any statement event (scrolling past the hero). */
+export const HALDEN_HERO_SCROLL_FRACTION = 0.8;
+
+/**
+ * Pure CTA rule, exported for tests: on non-landing pages the CTA is
+ * always on (no statement exists there); on the landing page it turns on
+ * once the statement reveal passes the threshold or the user scrolls
+ * past the hero.
+ */
+export function shouldShowNavCta({
+  isLanding,
+  stmtP,
+  scrollY,
+  viewportH,
+}: {
+  isLanding: boolean;
+  stmtP: number | null;
+  scrollY: number;
+  viewportH: number;
+}): boolean {
+  if (!isLanding) return true;
+  if (stmtP !== null && stmtP > HALDEN_STMT_THRESHOLD) return true;
+  if (viewportH > 0 && scrollY > viewportH * HALDEN_HERO_SCROLL_FRACTION) return true;
+  return false;
+}
 
 const istTime = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Kolkata",
@@ -68,12 +134,65 @@ function groupLinks(links: LiquidNavLink[]): { label: string | null; links: Liqu
   return groups;
 }
 
+// All Halden nav CSS lives here (this file owns the nav; globals.css is
+// another worker's file). Unlayered <style> beats Tailwind's layered
+// utilities, so these rules win over the .btn base where they overlap.
+const HALDEN_NAV_CSS = `
+#nav{--ease:cubic-bezier(.22,.7,.2,1);--gut:clamp(20px,5.7vw,82px);position:fixed;z-index:50;top:20px;left:var(--gut);right:var(--gut);font-family:var(--font-sans);}
+.halden-nav-spacer{height:80px;}
+#nav .halden-pill{position:relative;display:flex;align-items:center;height:60px;padding:0 84px 0 22px;border-radius:999px;background:#fff;box-shadow:0 1px 0 rgba(11,29,58,.04),0 10px 30px -18px rgba(11,29,58,.25);animation:navin .9s cubic-bezier(.22,.7,.2,1) .15s both;}
+@keyframes navin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+html.dark #nav .halden-pill{background:rgba(20,26,46,.85);-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 1px 0 rgba(255,255,255,.07),0 10px 30px -18px rgba(0,0,0,.65),inset 0 0 0 1px rgba(255,255,255,.08);}
+#nav .halden-brand{display:flex;flex:none;align-items:center;gap:9px;color:var(--text);text-decoration:none;}
+#nav .halden-brand-name{font-size:17px;font-weight:500;letter-spacing:-.02em;color:var(--text);white-space:nowrap;}
+#nav .halden-centre{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;align-items:center;gap:31px;}
+#nav .halden-centre a{font-size:14px;font-weight:500;letter-spacing:-.005em;color:var(--muted);opacity:.92;text-decoration:none;white-space:nowrap;transition:opacity .2s;}
+#nav .halden-centre a:hover{opacity:.55;}
+#nav .halden-right{display:flex;flex:none;align-items:center;gap:8px;margin-left:auto;}
+#nav .halden-sound-pill{display:flex;align-items:center;}
+#nav .nav-login{font-size:14px;font-weight:500;line-height:42px;color:var(--text);padding:0 14px;text-decoration:none;white-space:nowrap;}
+#nav.on .nav-login{padding-right:0;}
+#nav .navcta{flex:none;width:42px;height:42px;overflow:hidden;border-radius:999px;margin-left:-42px;transform:scale(0);transform-origin:100% 50%;transition:transform .35s var(--ease),width .65s var(--ease) .22s,margin .35s var(--ease);}
+#nav .navcta .navcta-btn{display:flex;align-items:center;gap:10px;width:142px;height:42px;padding:0 16px 0 14px;border-radius:999px;background:#0b1d3a;color:#fff;text-decoration:none;white-space:nowrap;}
+#nav .navcta .dot{flex:none;display:grid;place-items:center;width:10px;height:10px;border-radius:999px;background:#2fe0d0;box-shadow:0 0 12px rgba(47,224,208,.8);transition:width .25s var(--ease),height .25s var(--ease);}
+#nav .navcta .dot svg{width:14px;height:14px;opacity:0;transition:opacity .2s;}
+#nav .navcta .navcta-btn:hover .dot{width:32px;height:32px;}
+#nav .navcta .navcta-btn:hover .dot svg{opacity:1;}
+#nav .navcta .lbl{flex:1;text-align:center;font-size:14px;font-weight:500;letter-spacing:-.005em;color:#fff;opacity:0;transition:opacity .4s var(--ease) .45s;}
+#nav.on .navcta{width:142px;margin-left:16px;transform:scale(1);}
+#nav.on .navcta .lbl{opacity:1;}
+#nav details[data-sheet]{display:block;}
+#nav details[data-sheet]>summary{z-index:60;}
+@media (min-width:1280px){
+  #nav .halden-centre{display:flex;}
+  #nav .halden-pill{padding-right:10px;}
+  #nav details[data-sheet]{display:none;}
+}
+@media (max-width:820px){
+  #nav{top:12px;}
+  .halden-nav-spacer{height:66px;}
+  #nav .halden-pill{height:54px;padding:0 44px 0 12px;}
+  #nav .halden-right{gap:4px;}
+  #nav .halden-sound-pill{display:none;}
+  #nav .nav-login{padding:0 6px;}
+  #nav.on .navcta{margin-left:8px;}
+  #nav .nav-menu-label{display:none;}
+  #nav .nav-menu-btn{width:32px;height:32px;min-height:32px;padding:0;justify-content:center;}
+}
+@media (max-width:419px){
+  #nav .halden-brand-name{display:none;}
+  #nav .nav-login{display:none;}
+}
+`;
+
 export function LiquidNav({
   variant,
   links,
   actions,
   sheetActions,
   mobileUser,
+  showBell = false,
+  authed = false,
 }: {
   variant: "landing" | "dashboard";
   links: LiquidNavLink[];
@@ -84,26 +203,56 @@ export function LiquidNav({
   sheetActions?: ReactNode;
   /** User chip (avatar + name/email/role) shown at the top of the mobile sheet. */
   mobileUser?: ReactNode;
+  /** Show the notification bell in the pill (authed users only — it
+      polls an authed endpoint). Landing guests never get it. */
+  showBell?: boolean;
+  /** Logged-in user: the pill shows no Login link (Dashboard is already
+      a centre link) and the CTA points at /orders/new, not /setup. */
+  authed?: boolean;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [time, setTime] = useState<string | null>(null);
-
-  // Dashboard shows the desktop link row only from lg (the sidebar appears
-  // at lg too); below that the bottom sheet is the nav, so the 768–1023px
-  // gap has a menu. Landing shows desktop links from md.
-  const bp = variant === "dashboard" ? "lg" : "md";
-  const desktop = bp === "lg" ? "lg:flex" : "md:flex";
-  const hideBelowDesktop = bp === "lg" ? "lg:hidden" : "md:hidden";
+  const pathname = usePathname() ?? "/";
+  const isLanding = pathname === "/";
+  // Non-landing pages: CTA on from the first paint (no statement there).
+  // Landing: off until the statement reveal or a past-hero scroll.
+  const [ctaOn, setCtaOn] = useState(!isLanding);
   const groups = groupLinks(links);
+  const ctaHref = variant === "dashboard" || authed ? "/orders/new" : "/setup";
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    let stmtP: number | null = null;
+    const compute = () => {
+      // Defensive read: if Worker A lands a shared module/global instead
+      // of (or in addition to) the event, honour it too.
+      const globalP = (window as unknown as { __haldenStmtP?: unknown }).__haldenStmtP;
+      const p = stmtP ?? (typeof globalP === "number" ? globalP : null);
+      setCtaOn(
+        shouldShowNavCta({
+          isLanding,
+          stmtP: p,
+          scrollY: window.scrollY,
+          viewportH: window.innerHeight,
+        }),
+      );
+    };
+    const onStmt = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      const p = typeof d === "number" ? d : typeof d?.p === "number" ? d.p : null;
+      if (p !== null) {
+        stmtP = p;
+        compute();
+      }
+    };
+    window.addEventListener("halden:stmt", onStmt as EventListener);
+    window.addEventListener("scroll", compute, { passive: true });
+    compute();
+    return () => {
+      window.removeEventListener("halden:stmt", onStmt as EventListener);
+      window.removeEventListener("scroll", compute);
+    };
+  }, [isLanding]);
 
   useEffect(() => {
     const tick = () => setTime(istTime.format(new Date()));
@@ -137,102 +286,81 @@ export function LiquidNav({
   };
 
   return (
-    <div className="sticky top-3 z-40 px-3">
-      {/* Relative wrapper: positioning context for the Menu summary, and
-          the <details> lives OUTSIDE the pill — a closed <details> hides
-          all its non-<summary> children, so the pill bar itself must NOT
-          be inside it (that hid the whole nav). The sheet/backdrop are
-          also outside the pill because its backdrop-filter would become
-          their containing block and break their fixed positioning. */}
-      <div className="relative mx-auto max-w-[1440px]">
-        {/* FIXED HEIGHT: h-[60px] below md, h-16 (64px) at md+. The height
-            never changes with scroll — only the glass treatment does. */}
-        <div
-          data-testid="liquid-nav-pill"
-          className={`${scrolled ? "liquid-glass-strong" : "liquid-glass"} flex h-[60px] items-center gap-2 rounded-full pl-2 pr-[5.75rem] transition-[background-color,box-shadow,backdrop-filter,border-color] duration-200 motion-reduce:transition-none sm:gap-3 sm:pl-3 md:h-16 ${bp}:pr-2`}
-        >
-          <Link href="/" className="flex shrink-0 touch-manipulation items-center gap-2.5" aria-label="UPI Gateway — home">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--text)] font-display text-[13px] font-semibold text-[var(--bg)] ring-1 ring-[var(--border)]" aria-hidden="true">
-              UG
-            </span>
-            <span className="hidden font-display text-[17px] font-semibold tracking-[-0.01em] text-[var(--text)] min-[420px]:block">
-              UPI Gateway
-            </span>
+    <>
+      <style>{HALDEN_NAV_CSS}</style>
+      {/* In-flow spacer: the pill is fixed, so without this the page
+          content would jump up ~80px under it. Matches the pill's
+          top offset + height (20+60 desktop, 12+54 mobile). */}
+      <div className="halden-nav-spacer" aria-hidden="true" />
+      <div id="nav" data-testid="halden-nav" className={ctaOn ? "on" : undefined}>
+        <div data-testid="liquid-nav-pill" className="halden-pill">
+          <Link href="/" className="halden-brand touch-manipulation" aria-label="UPI Gateway — home">
+            <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+              <circle cx="11" cy="11" r="11" fill="#5b7cf0" />
+              <path d="M5 10.2c2.3-1.6 4.7-1.6 7 0s4.7 1.6 7 0" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+              <path d="M5 14.2c2.3-1.6 4.7-1.6 7 0s4.7 1.6 7 0" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            <span className="halden-brand-name">UPI Gateway</span>
           </Link>
 
-          <nav className={`ml-1 hidden min-w-0 items-center gap-0.5 overflow-x-auto ${desktop}`} aria-label="Primary">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                aria-current={l.active ? "page" : undefined}
-                style={{ touchAction: "manipulation" }}
-                className={`shrink-0 touch-manipulation rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
-                  l.active ? "bg-[var(--surface-2)] text-[var(--text)]" : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
-                }`}
-              >
+          <nav className="halden-centre" aria-label="Primary">
+            {HALDEN_LINKS.map((l) => (
+              <Link key={l.href} href={l.href} style={{ touchAction: "manipulation" }}>
                 {l.label}
               </Link>
             ))}
           </nav>
 
-          {/* Round 5 integration fix: this badge showed from xl (1280px),
-              where it crowded the link row and clipped the "Docs" link
-              (measured 2026-11-11: "Do…" at exactly 1280px). It now
-              appears only from 1440px, where the pill has room for it. */}
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {variant === "landing" && (
-              <span className="hidden items-center gap-1.5 text-xs font-medium text-[var(--muted)] min-[1440px]:flex">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                Self-hosted · MIT · ₹0 gateway fees
-              </span>
-            )}
-            <span className="hidden items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-xs font-medium tabular-nums text-[var(--muted)] lg:flex">
-              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-              {time ?? "--:--"} IST
-            </span>
-            {actions && <div className={`hidden items-center gap-2 ${desktop}`}>{actions}</div>}
-            {/* R5 INTEGRATION — notification bell, mounted in the slot A2
-                left for it (dashboard nav only, merchant-only — never on
-                the landing nav). The slot sits OUTSIDE the `actions`
-                wrapper, which is hidden below lg: the bell stays visible
-                in the pill at every width, with one mounted instance (no
-                double polling / double chime). */}
-            {variant === "dashboard" && (
+          <div className="halden-right">
+            {/* Notification bell — authed users only (see showBell). One
+                mounted instance; the sheet never duplicates it. */}
+            {showBell && (
               <div data-nav-slot="notifications" className="flex items-center">
                 <NotificationBell />
               </div>
             )}
-            {variant === "landing" && (
-              <Link
-                href="/orders/new"
-                className="btn-expand hidden touch-manipulation md:inline-flex"
-                aria-label="Create payment link"
-              >
-                <ArrowUpRight className="btn-expand-icon h-4 w-4" aria-hidden="true" />
-                <span className="btn-expand-label">
-                  <span className="text-roll">
-                    <span>Create payment link</span>
-                    <span aria-hidden="true">Create payment link</span>
-                  </span>
-                </span>
+            {/* Sound toggle in the pill on desktop; below 820px this
+                instance hides and the sheet footer instance (same sync
+                event) is the reachable one. */}
+            <div data-nav-slot="sound-toggle" className="halden-sound-pill">
+              <SoundToggle />
+            </div>
+            <ThemeToggle />
+            {variant === "landing" && !authed && (
+              <Link href="/login" className="nav-login touch-manipulation" style={{ touchAction: "manipulation" }}>
+                Login
               </Link>
             )}
-            <ThemeToggle />
+            <div className="navcta" data-testid="nav-cta">
+              <Link
+                href={ctaHref}
+                className="navcta-btn touch-manipulation"
+                tabIndex={ctaOn ? 0 : -1}
+                aria-label="Get started"
+                style={{ touchAction: "manipulation" }}
+              >
+                <span className="dot" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#0b1d3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m9 6 6 6-6 6" />
+                  </svg>
+                </span>
+                <span className="lbl">Get started</span>
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Mobile menu — <details> is a sibling of the pill (see note
-            above). Its <summary> is the direct first child, absolutely
+        {/* Mobile menu — <details> is a sibling of the pill (see header
+            note). Its <summary> is the direct first child, absolutely
             positioned into the pill's reserved right end; the backdrop and
             bottom sheet are fixed, viewport-relative, and hidden by the
             closed <details> until the first tap opens them. */}
-        <details ref={detailsRef} data-sheet className={`group ${hideBelowDesktop}`}>
+        <details ref={detailsRef} data-sheet className="group">
           <summary
             aria-expanded={open}
             aria-label="Menu"
             style={{ touchAction: "manipulation" }}
-            className="btn btn-secondary btn-sm absolute right-1.5 top-1/2 -translate-y-1/2 touch-manipulation list-none select-none [&::-webkit-details-marker]:hidden"
+            className="nav-menu-btn btn btn-secondary btn-sm absolute right-1.5 top-1/2 -translate-y-1/2 touch-manipulation list-none select-none [&::-webkit-details-marker]:hidden"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4 group-open:hidden" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
               <path d="M4 7h16M4 12h16M4 17h16" />
@@ -240,11 +368,12 @@ export function LiquidNav({
             <svg viewBox="0 0 24 24" className="hidden h-4 w-4 group-open:block" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>
-            Menu
+            <span className="nav-menu-label">Menu</span>
           </summary>
 
-          {/* Backdrop — below the pill (z-30 < nav z-40) so the Menu/X
-              summary stays clickable; click closes (JS enhancement only). */}
+          {/* Backdrop — below the pill/summary (z-30 < summary z-60) so
+              the Menu/X summary stays clickable; click closes (JS
+              enhancement only). */}
           <div
             aria-hidden="true"
             onClick={close}
@@ -304,11 +433,11 @@ export function LiquidNav({
                 {sheetActions ?? actions}
               </div>
             )}
-            {/* R5 INTEGRATION — sound toggle, mounted in the slot A2 left
-                for it. Mobile has no sidebar, so the sheet footer is the
-                settings-adjacent surface on phones (the desktop sidebar
-                carries the same slot in components/layout.tsx). The two
-                instances stay in sync via the upi-sounds-changed event. */}
+            {/* Sound toggle, mounted in the slot A2 left for it. Mobile
+                has no sidebar, so the sheet footer is the reachable
+                surface on phones (the desktop sidebar carries the same
+                slot in components/layout.tsx). The instances stay in sync
+                via the upi-sounds-changed event. */}
             <div data-nav-slot="sound-toggle" className="flex items-center px-2">
               <SoundToggle />
             </div>
@@ -322,6 +451,6 @@ export function LiquidNav({
           </div>
         </details>
       </div>
-    </div>
+    </>
   );
 }

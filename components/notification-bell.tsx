@@ -18,7 +18,8 @@
 // the nav slot (see the Round 5 mount instructions).
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { apiFetch, postApi } from "./api";
@@ -112,6 +113,52 @@ export function NotificationBell() {
   const [loading, setLoading] = useState(true);
   const seenIdsRef = useRef<Set<number> | null>(null); // null = first snapshot not taken yet
   const panelRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelElRef = useRef<HTMLDivElement>(null);
+  // ROUND 6 BUG 2 FIX — viewport-clamped panel position. The old panel
+  // was `absolute right-0` inside the pill: at 390px the bell sits near
+  // the middle of the pill, so a 352px-wide right-anchored panel ran
+  // ~220px past the LEFT viewport edge and its text was cut. A plain
+  // `position:fixed` inside the pill would NOT fix it either — the pill
+  // uses backdrop-filter, which becomes the containing block for fixed
+  // descendants. The panel is therefore portalled to document.body and
+  // positioned from the bell's measured rect, clamped to the viewport:
+  // mobile (<=820px) it is a full-width sheet (16px gutters, below the
+  // nav); desktop it stays anchored to the bell but can never leave the
+  // viewport. Recomputed on open, resize and scroll.
+  const [panelStyle, setPanelStyle] = useState<CSSProperties | null>(null);
+  const computePanelStyle = useCallback((): CSSProperties => {
+    const fallback: CSSProperties = { position: "fixed", left: 16, right: 16, top: 80, zIndex: 70 };
+    if (typeof window === "undefined") return fallback;
+    const btn = buttonRef.current;
+    if (!btn) return fallback;
+    const r = btn.getBoundingClientRect();
+    const vw = window.innerWidth;
+    if (vw <= 820) {
+      return { position: "fixed", left: 16, right: 16, top: Math.max(80, Math.ceil(r.bottom) + 12), zIndex: 70 };
+    }
+    const width = Math.min(360, vw - 32);
+    const left = Math.min(Math.max(16, r.right - width), vw - width - 16);
+    return { position: "fixed", left, width, top: Math.ceil(r.bottom) + 8, zIndex: 70 };
+  }, []);
+
+  const toggleOpen = useCallback(() => {
+    if (!open) setPanelStyle(computePanelStyle());
+    setOpen(!open);
+  }, [open, computePanelStyle]);
+
+  // Keep the panel clamped while it is open (rotation, resize, scroll).
+  useEffect(() => {
+    if (!open) return;
+    const update = () => setPanelStyle(computePanelStyle());
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, computePanelStyle]);
 
   // Alert on genuinely NEW server-confirmed events only: compare each
   // poll against the snapshot taken at mount. Items in the first snapshot
@@ -167,11 +214,15 @@ export function NotificationBell() {
     };
   }, [fetchNotifications]);
 
-  // Close the panel on outside click / Escape.
+  // Close the panel on outside click / Escape. The panel is portalled to
+  // document.body, so it is NOT inside panelRef — check both refs.
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (panelRef.current?.contains(t)) return;
+      if (panelElRef.current?.contains(t)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -203,8 +254,9 @@ export function NotificationBell() {
   return (
     <div ref={panelRef} className="relative shrink-0">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggleOpen}
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
         aria-expanded={open}
         title="Notifications"
@@ -222,11 +274,13 @@ export function NotificationBell() {
         )}
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div
+          ref={panelElRef}
           role="dialog"
           aria-label="Notifications"
-          className="absolute right-0 top-11 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-[var(--surface)] shadow-[var(--shadow)] ring-1 ring-[var(--border)]"
+          style={panelStyle ?? { position: "fixed", left: 16, right: 16, top: 80, zIndex: 70 }}
+          className="overflow-hidden rounded-2xl bg-[var(--surface)] shadow-[var(--shadow)] ring-1 ring-[var(--border)]"
         >
           <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
             <h2 className="text-sm font-semibold text-[var(--text)]">Notifications</h2>
@@ -273,7 +327,8 @@ export function NotificationBell() {
               </ul>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

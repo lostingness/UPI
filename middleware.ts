@@ -36,7 +36,10 @@ const CSP = [
   // matcher routes. The old cdnfonts host stays listed (harmless, and
   // the directive is not weakened).
   "font-src 'self' fonts.googleapis.com fonts.gstatic.com https://fonts.cdnfonts.com",
-  "img-src 'self' data: https://d2ol7oe51mr4n9.cloudfront.net",
+  "img-src 'self' data: https://d2ol7oe51mr4n9.cloudfront.net https://images.higgs.ai",
+  // Round 6: the Halden dark-split ship photo is served from
+  // images.higgs.ai (see app/page.tsx SHIP_URL) — without this host the
+  // image is CSP-blocked on the landing page.
   // Meridian hero video/poster host (video + poster must not be blocked on
   // matcher routes — the hero video is served from this CloudFront host).
   "media-src 'self' https://d2ol7oe51mr4n9.cloudfront.net",

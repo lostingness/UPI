@@ -9,10 +9,10 @@ import { CopyButton } from "./forms";
 
 function OnceSecret({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="rounded-lg bg-emerald-500/10 p-4 ring-1 ring-emerald-500/30">
+    <div data-testid="once-secret" className="min-w-0 rounded-lg bg-emerald-500/10 p-4 ring-1 ring-emerald-500/30">
       <label className="label font-medium text-emerald-700 dark:text-emerald-300">{label} · copy now (will not be shown again)</label>
       <div className="flex gap-2">
-        <input readOnly value={value} className="input font-mono font-medium" />
+        <input readOnly value={value} className="input min-w-0 flex-1 font-mono font-medium" />
         <CopyButton text={value} />
       </div>
       {note && <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-200/80">{note}</p>}
@@ -110,25 +110,48 @@ export function RegenerateKeysButton({ sandbox = false }: { sandbox?: boolean })
   const path = sandbox ? "/api/settings/sandbox/regenerate-keys" : "/api/settings/regenerate-keys";
   const key = form.data?.api_key ?? form.data?.sandbox_api_key;
   const secret = form.data?.api_secret ?? form.data?.sandbox_api_secret;
+  const regenerate = async () => {
+    if (!window.confirm("Old keys will stop working immediately. Continue?")) return;
+    await form.submit(path, {});
+  };
+  const button = (
+    <button className="btn btn-danger btn-sm" disabled={form.pending} onClick={regenerate}>
+      {form.pending ? "Regenerating…" : "Regenerate keys"}
+    </button>
+  );
+  // ROUND 6 BUG 1 FIX: the old layout put this whole component (secret
+  // reveal included) inside the red banner's single-row flex
+  // (`flex items-center justify-between`). Once a secret was revealed,
+  // the tall/wide reveal overflowed that row in both directions —
+  // vertically centred over the banner, spilling past its right edge and
+  // covering the "Regenerate keys" label. The banner is now a wrapping
+  // flex row that holds ONLY the label + button, and the secret reveal
+  // renders as a sibling BELOW it in normal flow, full width, so the two
+  // cards can never overlap at any viewport width.
   return (
-    <div className="space-y-3">
+    <div className={secret ? "w-full min-w-0 space-y-3" : "space-y-3"}>
       <FormMessage message={form.message} ok={false} />
+      {!sandbox ? (
+        <div
+          data-testid="regen-banner"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-red-500/10 px-4 py-3 ring-1 ring-red-500/20"
+        >
+          <div className="min-w-0 text-sm text-red-700 dark:text-red-300">
+            <b>Regenerate keys</b>
+            <div className="text-xs text-red-700 dark:text-red-300/70">Old keys stop working immediately.</div>
+          </div>
+          {button}
+        </div>
+      ) : (
+        button
+      )}
       {secret && (
         <>
           <OnceSecret label={sandbox ? "Sandbox API secret" : "Live API secret"} value={secret}
             note="Store this secret securely on your server. It is also used to sign webhooks (HMAC-SHA256)." />
-          {key && <p className="text-sm text-[var(--muted)]">New {sandbox ? "sandbox" : "live"} API key: <code className="kbd">{key}</code></p>}
+          {key && <p className="break-words text-sm text-[var(--muted)]">New {sandbox ? "sandbox" : "live"} API key: <code className="kbd break-all">{key}</code></p>}
         </>
       )}
-      <button
-        className="btn btn-danger btn-sm" disabled={form.pending}
-        onClick={async () => {
-          if (!window.confirm("Old keys will stop working immediately. Continue?")) return;
-          await form.submit(path, {});
-        }}
-      >
-        {form.pending ? "Regenerating…" : "Regenerate keys"}
-      </button>
     </div>
   );
 }

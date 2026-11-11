@@ -65,10 +65,11 @@ export default async function SettingsPage() {
             <input type="text" readOnly value="••••••••••••••••••••••••••••••••••••••••" disabled className="input font-mono text-[var(--muted)]" />
             <p className="help">Hidden for security. If you lost your secret, click “Regenerate” below to issue a new pair.</p>
           </div>
-          <div className="flex items-center justify-between gap-4 rounded-lg bg-red-500/10 px-4 py-3 ring-1 ring-red-500/20">
-            <div className="text-sm text-red-700 dark:text-red-300"><b>Regenerate keys</b><div className="text-xs text-red-700 dark:text-red-300/70">Old keys stop working immediately.</div></div>
-            <RegenerateKeysButton />
-          </div>
+          {/* Round 6: the red "Regenerate keys" banner lives inside
+              RegenerateKeysButton now — it used to wrap the whole component
+              here, and the revealed secret overflowed the banner's flex row
+              and covered the label on phones. */}
+          <RegenerateKeysButton />
         </Section>
 
         <Section title="Sandbox credentials" intro="Create simulated payments without contacting Paytm, PhonePe, banks, or UPI providers.">
