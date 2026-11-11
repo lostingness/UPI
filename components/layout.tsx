@@ -1,45 +1,45 @@
 // Layouts — public nav + footer, authed sidebar shell, guest shell.
-// Ledger direction: flat logo mark (₹ in solid indigo, 8px radius), sentence
-// case, hairlines, active state = small surface step + hairline.
-// Glass direction (Meridian): sticky bars use rgba(51,52,74,.6) +
-// backdrop-blur(14px), square corners; past 8px of scroll they gain a
-// stronger blur, a visible bottom border and slightly less height
-// (ScrollHeader in layout-client.tsx owns the scroll listener).
+// Axion direction (Round 4): light #EFEFEF base + dark Meridian navy
+// under `html.dark`, system type, liquid-glass pill nav (LiquidNav owns
+// the scroll state and the mobile bottom sheet). All colours go through
+// the --bg/--surface/--text/--muted/--border vars in globals.css.
 import Link from "next/link";
 import type { SessionUser } from "./server-data";
 import { Avatar, Icon, ICONS } from "./ui";
-import { LogoutButton, MobileMenu, ScrollHeader } from "./layout-client";
+import { LogoutButton } from "./layout-client";
+import { LiquidNav } from "./liquid-nav";
 
 export function Logo() {
   return (
     <Link href="/" className="flex touch-manipulation items-center gap-2.5">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600 text-base font-medium text-white" aria-hidden="true">₹</span>
-      <span className="text-base font-medium text-slate-50">UPI Gateway</span>
+      <span className="grid h-8 w-8 place-items-center rounded-full bg-[#111111] text-[13px] font-semibold text-white ring-1 ring-white/25" aria-hidden="true">UG</span>
+      <span className="text-base font-medium text-[var(--text)]">UPI Gateway</span>
     </Link>
   );
 }
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-white/10 py-8">
+    <footer className="border-t border-[var(--border)] py-8">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-sm">
             <Logo />
-            <p className="mt-3 text-sm leading-relaxed text-slate-500">
+            <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
               Self-hosted UPI payments for Indian merchants. Money goes directly to the merchant&apos;s bank account — the gateway never holds funds.
             </p>
           </div>
-          <nav className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm text-slate-400">
-            <Link href="/#features" className="touch-manipulation hover:text-slate-100">Features</Link>
-            <Link href="/#how" className="touch-manipulation hover:text-slate-100">How it works</Link>
-            <Link href="/#security" className="touch-manipulation hover:text-slate-100">Security</Link>
-            <Link href="/docs" className="touch-manipulation hover:text-slate-100">API docs</Link>
-            <Link href="/login" className="touch-manipulation hover:text-slate-100">Log in</Link>
-            <Link href="/setup" className="touch-manipulation hover:text-slate-100">Setup</Link>
+          <nav className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm text-[var(--muted)]">
+            <Link href="/#features" className="touch-manipulation hover:text-[var(--text)]">Features</Link>
+            <Link href="/#how" className="touch-manipulation hover:text-[var(--text)]">How it works</Link>
+            <Link href="/#qr" className="touch-manipulation hover:text-[var(--text)]">QR methods</Link>
+            <Link href="/#security" className="touch-manipulation hover:text-[var(--text)]">Security</Link>
+            <Link href="/docs" className="touch-manipulation hover:text-[var(--text)]">API docs</Link>
+            <Link href="/login" className="touch-manipulation hover:text-[var(--text)]">Log in</Link>
+            <Link href="/setup" className="touch-manipulation hover:text-[var(--text)]">Setup</Link>
           </nav>
         </div>
-        <div className="mt-8 flex flex-col gap-2 border-t border-white/5 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-8 flex flex-col gap-2 border-t border-[var(--border)] pt-6 text-xs text-[var(--faint)] sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 UPI Gateway · MIT License</p>
           <p>Developed by Mohit 🩷</p>
         </div>
@@ -49,42 +49,33 @@ export function SiteFooter() {
 }
 
 const PUBLIC_LINKS = [
-  { href: "/#features", label: "Features" },
   { href: "/#how", label: "How it works" },
-  { href: "/#security", label: "Security" },
+  { href: "/#qr", label: "QR methods" },
+  { href: "/#features", label: "Features" },
   { href: "/#pricing", label: "Pricing" },
-  { href: "/docs", label: "API docs" },
+  { href: "/#faq", label: "FAQ" },
+  { href: "/docs", label: "Docs" },
 ];
 
 export function PublicNav({ user }: { user: SessionUser | null }) {
   return (
-    <ScrollHeader
-      className="sticky top-0 z-40 border-b border-transparent bg-[rgba(51,52,74,0.6)] backdrop-blur-[14px] transition-[background-color,border-color,backdrop-filter] duration-200 motion-reduce:transition-none"
-      scrolledClassName="border-white/10 bg-[rgba(51,52,74,0.85)] backdrop-blur-[20px]"
-    >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 transition-[height] duration-200 motion-reduce:transition-none group-data-[scrolled=true]:h-14 sm:px-6">
-        <Logo />
-        <nav className="hidden items-center gap-6 text-sm font-medium text-slate-400 md:flex" aria-label="Primary">
-          {PUBLIC_LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="touch-manipulation transition-colors duration-150 hover:text-slate-100">{l.label}</a>
-          ))}
-        </nav>
-        <div className="flex items-center gap-2">
-          {user ? (
-            <>
-              <Link href="/dashboard" className="btn btn-secondary btn-sm touch-manipulation">Dashboard</Link>
-              <LogoutButton compact />
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="hidden text-sm font-medium text-slate-400 transition-colors duration-150 hover:text-slate-100 sm:block touch-manipulation">Log in</Link>
-              <Link href="/setup" className="btn btn-primary btn-sm touch-manipulation">Get started</Link>
-            </>
-          )}
-          <MobileMenu links={PUBLIC_LINKS} />
-        </div>
-      </div>
-    </ScrollHeader>
+    <LiquidNav
+      variant="landing"
+      links={PUBLIC_LINKS}
+      actions={
+        user ? (
+          <>
+            <Link href="/dashboard" className="btn btn-secondary btn-sm touch-manipulation">Dashboard</Link>
+            <LogoutButton compact />
+          </>
+        ) : (
+          <>
+            <Link href="/login" className="hidden text-sm font-medium text-[var(--muted)] transition-colors duration-150 hover:text-[var(--text)] sm:block touch-manipulation">Log in</Link>
+            <Link href="/setup" className="btn btn-accent btn-sm touch-manipulation">Get started</Link>
+          </>
+        )
+      }
+    />
   );
 }
 
@@ -131,25 +122,25 @@ export function AppShell({
   const allLinks = isAdmin ? [...MERCHANT_LINKS, ...ADMIN_LINKS] : MERCHANT_LINKS;
   return (
     <div className="min-h-screen lg:flex">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-white/10 bg-[rgba(51,52,74,0.4)] px-4 py-5 backdrop-blur-[14px] lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] px-4 py-5 lg:flex">
         <Logo />
         <div className="mt-8">
-          <p className="mb-2 px-3 text-xs font-medium text-slate-500">Merchant</p>
+          <p className="mb-2 px-3 text-xs font-medium text-[var(--faint)]">Merchant</p>
           <NavList links={MERCHANT_LINKS} active={active} />
         </div>
         {isAdmin && (
           <div className="mt-6">
-            <p className="mb-2 px-3 text-xs font-medium text-slate-500">Admin</p>
+            <p className="mb-2 px-3 text-xs font-medium text-[var(--faint)]">Admin</p>
             <NavList links={ADMIN_LINKS} active={active} />
           </div>
         )}
         <div className="mt-auto pt-8">
-          <div className="flex items-center gap-3 rounded-xl bg-slate-900 px-3 py-3 ring-1 ring-white/10">
+          <div className="flex items-center gap-3 rounded-xl bg-[var(--surface-2)] px-3 py-3 ring-1 ring-[var(--border)]">
             <Avatar name={user.businessName ?? user.name} />
             <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-slate-100">{user.businessName ?? user.name}</div>
-              <div className="truncate text-xs text-slate-500">{user.email}</div>
-              <div className="mt-0.5 font-mono text-xs text-brand-400">{user.role}</div>
+              <div className="truncate text-sm font-medium text-[var(--text)]">{user.businessName ?? user.name}</div>
+              <div className="truncate text-xs text-[var(--muted)]">{user.email}</div>
+              <div className="mt-0.5 font-mono text-xs text-[var(--accent-text)]">{user.role}</div>
             </div>
           </div>
           <div className="mt-3 px-1"><LogoutButton /></div>
@@ -157,32 +148,21 @@ export function AppShell({
       </aside>
 
       <div className="min-w-0 flex-1">
-        <ScrollHeader
-          className="sticky top-0 z-30 border-b border-transparent bg-[rgba(51,52,74,0.6)] backdrop-blur-[14px] transition-[background-color,border-color,backdrop-filter] duration-200 motion-reduce:transition-none"
-          scrolledClassName="border-white/10 bg-[rgba(51,52,74,0.85)] backdrop-blur-[20px]"
-        >
-          <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 transition-[min-height] duration-200 motion-reduce:transition-none group-data-[scrolled=true]:min-h-12 sm:px-6">
-            <div className="lg:hidden"><Logo /></div>
-            <div className="hidden min-w-0 lg:block">
-              <span className="truncate text-sm text-slate-400">{user.businessName ?? user.name}</span>
-              <span className="ml-2 font-mono text-xs text-slate-500">{user.role}</span>
-            </div>
-            <div className="flex items-center gap-2 lg:hidden">
-              {/* below="lg": the sidebar only appears at lg, so the menu must
-                  stay reachable through 768–1023px (previously MobileMenu's
-                  md:hidden left NO navigation at all in that range). */}
-              <MobileMenu links={allLinks.map(({ href, label }) => ({ href, label }))} active={active} below="lg" />
-            </div>
-            <div className="hidden items-center gap-3 lg:flex">
+        <LiquidNav
+          variant="dashboard"
+          links={allLinks.map(({ href, label }) => ({ href, label, active: active === href }))}
+          actions={
+            <>
               <Avatar name={user.businessName ?? user.name} className="h-8 w-8 text-xs" />
-            </div>
-          </div>
-        </ScrollHeader>
+              <LogoutButton compact />
+            </>
+          }
+        />
         <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
           <div className="animate-rise mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-xl font-medium text-slate-50 sm:text-2xl">{title}</h1>
-              {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
+              <h1 className="text-xl font-medium text-[var(--text)] sm:text-2xl">{title}</h1>
+              {subtitle && <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>}
             </div>
             {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
           </div>
@@ -200,14 +180,14 @@ export function GuestShell({ title, subtitle, children }: { title: string; subti
         <div className="animate-rise w-full max-w-md">
           <div className="mb-8 flex flex-col items-center text-center">
             <Logo />
-            <p className="mt-4 text-sm text-slate-500">Accept UPI payments straight into your bank account.</p>
+            <p className="mt-4 text-sm text-[var(--muted)]">Accept UPI payments straight into your bank account.</p>
           </div>
           <div className="card p-6 sm:p-8">
-            <h1 className="text-xl font-medium text-slate-50">{title}</h1>
-            {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
+            <h1 className="text-xl font-medium text-[var(--text)]">{title}</h1>
+            {subtitle && <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>}
             <div className="mt-6">{children}</div>
           </div>
-          <p className="mt-6 text-center text-xs text-slate-600">
+          <p className="mt-6 text-center text-xs text-[var(--faint)]">
             UPI Gateway · MIT License · Developed by Mohit 🩷
           </p>
         </div>

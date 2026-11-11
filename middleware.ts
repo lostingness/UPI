@@ -11,7 +11,8 @@
 //   Enforcing vs report-only via GATEWAY_CSP_ENFORCE. The matcher covers
 //   /pay/:path* too — the public pay page (QR, deep links, UTR form) had no
 //   CSP header at all before 2026-11-11 (verified live: /pay returned 200
-//   with no content-security-policy while /dashboard had it).
+//   with no content-security-policy while /dashboard had it). Round 4 added
+//   "/" and "/login/:path*" — the landing page and login had no CSP either.
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
@@ -57,9 +58,11 @@ function sessionSecret(): Uint8Array {
 }
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
   const headerName = process.env.GATEWAY_CSP_ENFORCE === "false" ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy";
-  res.headers.set(headerName, CSP);
+  // Every response the middleware returns — including the /login redirects
+  // and the admin 403 — carries the CSP header, not just NextResponse.next().
+  const withCsp = <T extends Response>(r: T): T => { r.headers.set(headerName, CSP); return r; };
+  const res = withCsp(NextResponse.next());
 
   const path = req.nextUrl.pathname;
   const isDashboard = path.startsWith("/dashboard") || path.startsWith("/orders") || path.startsWith("/accounts") || path.startsWith("/settings");
@@ -70,19 +73,24 @@ export async function middleware(req: NextRequest) {
   if (!token) {
     const login = new URL("/login", req.url);
     login.searchParams.set("next", path);
-    return NextResponse.redirect(login);
+    return withCsp(NextResponse.redirect(login));
   }
   try {
     const { payload } = await jwtVerify(token, sessionSecret());
-    if (isAdmin && payload.role !== "admin") return new Response("Forbidden", { status: 403 });
+    if (isAdmin && payload.role !== "admin") return withCsp(new Response("Forbidden", { status: 403 }));
   } catch {
     const login = new URL("/login", req.url);
     login.searchParams.set("next", path);
-    return NextResponse.redirect(login);
+    return withCsp(NextResponse.redirect(login));
   }
   return res;
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/orders/:path*", "/accounts/:path*", "/settings/:path*", "/pay/:path*"],
+  // Round 4: "/" and "/login" added — the landing page and login had no CSP
+  // header at all (only /dashboard, /admin, /orders, /accounts, /settings
+  // and /pay/:path* were matched). Directives unchanged: script-src 'self'
+  // 'unsafe-inline' stays — Next.js inlines its RSC/flight bootstrap
+  // scripts and hydration breaks without it.
+  matcher: ["/", "/login/:path*", "/dashboard/:path*", "/admin/:path*", "/orders/:path*", "/accounts/:path*", "/settings/:path*", "/pay/:path*"],
 };

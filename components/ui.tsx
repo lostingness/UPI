@@ -1,8 +1,8 @@
 // Shared server-safe UI helpers (formatting, status, cards, empty states).
 // Ledger direction: mono figures, one format (₹ with 2dp), sentence case,
 // quiet status text — no glowing pills, no icons stuffed into stat cards.
-// Meridian accents: deep navy #020816 context, peach #f2b380 highlights,
-// single red #f93f28 for the one thing that needs to shout.
+// Axion accents: near-monochrome surfaces, one orange (--accent-text for
+// text, --accent-strong for fills — both AA-safe, see globals.css).
 
 export function inr(amount: number | string | null | undefined): string {
   const n = Number(amount ?? 0);
@@ -32,17 +32,17 @@ export function fmtDateTime(iso: string | null | undefined): string {
 export type OrderStatus = "pending" | "paid" | "expired" | "review" | "failed";
 
 const STATUS_STYLE: Record<string, string> = {
-  paid: "text-emerald-300",
-  pending: "text-amber-300",
-  review: "text-sky-300",
-  expired: "text-slate-400",
-  failed: "text-red-300",
-  active: "text-emerald-300",
-  disabled: "text-slate-400",
-  delivered: "text-emerald-300",
-  blocked: "text-red-300",
-  sandbox: "text-amber-300",
-  live: "text-emerald-300",
+  paid: "text-emerald-700 dark:text-emerald-300",
+  pending: "text-amber-700 dark:text-amber-300",
+  review: "text-sky-700 dark:text-sky-300",
+  expired: "text-[var(--faint)]",
+  failed: "text-red-700 dark:text-red-300",
+  active: "text-emerald-700 dark:text-emerald-300",
+  disabled: "text-[var(--faint)]",
+  delivered: "text-emerald-700 dark:text-emerald-300",
+  blocked: "text-red-700 dark:text-red-300",
+  sandbox: "text-amber-700 dark:text-amber-300",
+  live: "text-emerald-700 dark:text-emerald-300",
 };
 
 const STATUS_DOT: Record<string, string> = {
@@ -56,7 +56,7 @@ export function StatusPill({ status, label }: { status: string; label?: string }
   const style = STATUS_STYLE[status] ?? STATUS_STYLE.expired;
   const dot = STATUS_DOT[status] ?? STATUS_DOT.expired;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full bg-white/[0.03] px-2 py-0.5 text-xs font-medium ring-1 ring-white/10 ${style}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs font-medium ring-1 ring-[var(--border)] ${style}`}>
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
       {label ?? status}
     </span>
@@ -71,7 +71,7 @@ export function initials(name: string | null | undefined): string {
 
 export function Avatar({ name, className = "h-10 w-10 text-sm" }: { name: string | null | undefined; className?: string }) {
   return (
-    <span className={`inline-flex shrink-0 items-center justify-center rounded-lg bg-[#f2b380]/10 font-medium text-[#f2b380] ring-1 ring-[#f2b380]/25 ${className}`}>
+    <span className={`inline-flex shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 font-medium text-[var(--accent-text)] ring-1 ring-[var(--accent)]/25 ${className}`}>
       {initials(name)}
     </span>
   );
@@ -80,13 +80,13 @@ export function Avatar({ name, className = "h-10 w-10 text-sm" }: { name: string
 export function EmptyState({ title, hint, children }: { title: string; hint?: string; children?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
-      <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/[0.03] text-[#f2b380] ring-1 ring-white/10">
+      <div className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--surface-2)] text-[var(--accent-text)] ring-1 ring-[var(--border)]">
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
           <circle cx="12" cy="12" r="9" /><path d="M8 12h8" />
         </svg>
       </div>
-      <p className="mt-4 text-sm font-medium text-slate-200">{title}</p>
-      {hint && <p className="mt-1 max-w-sm text-sm text-slate-500">{hint}</p>}
+      <p className="mt-4 text-sm font-medium text-[var(--text)]">{title}</p>
+      {hint && <p className="mt-1 max-w-sm text-sm text-[var(--muted)]">{hint}</p>}
       {children && <div className="mt-5">{children}</div>}
     </div>
   );
@@ -96,8 +96,8 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 className="text-xl font-medium text-[#f6f8fc] sm:text-2xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
+        <h1 className="text-xl font-medium text-[var(--text)] sm:text-2xl">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -109,12 +109,12 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
 export function StatCard({ label, value, hint, children }: { label: string; value: string; hint?: string; children?: React.ReactNode }) {
   return (
     <div className="card p-4 sm:p-5">
-      <span aria-hidden="true" className="mb-3 block h-0.5 w-6 rounded-full bg-[#f2b380]/70" />
-      <div className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-[#989eac]">{label}</div>
-      <div className="mt-2 truncate font-mono text-xl font-medium text-[#f6f8fc] tabular-nums sm:text-2xl">
+      <span aria-hidden="true" className="mb-3 block h-0.5 w-6 rounded-full bg-[var(--accent)]/70" />
+      <div className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--faint)]">{label}</div>
+      <div className="mt-2 truncate font-mono text-xl font-medium text-[var(--text)] tabular-nums sm:text-2xl">
         {children ?? value}
       </div>
-      {hint && <div className="mt-1.5 text-xs text-slate-500">{hint}</div>}
+      {hint && <div className="mt-1.5 text-xs text-[var(--muted)]">{hint}</div>}
     </div>
   );
 }
@@ -122,17 +122,17 @@ export function StatCard({ label, value, hint, children }: { label: string; valu
 export function DbNotConfigured({ context }: { context?: string }) {
   return (
     <div className="card border-amber-500/30 p-6">
-      <h2 className="text-base font-medium text-amber-300">Database not configured</h2>
-      <p className="mt-2 text-sm text-slate-400">
+      <h2 className="text-base font-medium text-amber-700 dark:text-amber-300">Database not configured</h2>
+      <p className="mt-2 text-sm text-[var(--muted)]">
         {context ?? "This page needs the database."} Set the Neon pooled{" "}
         <code className="kbd">DATABASE_URL</code> environment variable and run{" "}
         <code className="kbd">npm run migrate</code> (see <code className="kbd">db/README.md</code>).
         Nothing here is faked — no orders, accounts or settings can be shown until the database is connected.
       </p>
       <p className="mt-3 text-sm">
-        <a href="/setup" className="font-medium text-brand-400 hover:text-brand-300">Go to setup</a>
+        <a href="/setup" className="font-medium text-[var(--accent-text)] hover:opacity-80">Go to setup</a>
         {" · "}
-        <a href="/api/health" className="font-medium text-brand-400 hover:text-brand-300">Check /api/health</a>
+        <a href="/api/health" className="font-medium text-[var(--accent-text)] hover:opacity-80">Check /api/health</a>
       </p>
     </div>
   );
@@ -141,9 +141,9 @@ export function DbNotConfigured({ context }: { context?: string }) {
 export function ErrorBox({ message }: { message: string }) {
   return (
     <div className="card border-red-500/30 p-6">
-      <h2 className="text-base font-medium text-red-300">Something went wrong</h2>
-      <p className="mt-2 text-sm text-slate-400">{message}</p>
-      <p className="mt-3 text-sm"><a href="/dashboard" className="font-medium text-brand-400 hover:text-brand-300">Back to dashboard</a></p>
+      <h2 className="text-base font-medium text-red-700 dark:text-red-300">Something went wrong</h2>
+      <p className="mt-2 text-sm text-[var(--muted)]">{message}</p>
+      <p className="mt-3 text-sm"><a href="/dashboard" className="font-medium text-[var(--accent-text)] hover:opacity-80">Back to dashboard</a></p>
     </div>
   );
 }

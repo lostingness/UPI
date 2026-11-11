@@ -120,11 +120,11 @@ export function MobileMenu({ links, active, below = "md" }: { links: { href: str
         </svg>
         Menu
       </summary>
-      <div ref={listRef} id={panelId} className="animate-menu absolute right-0 top-11 z-50 w-56 rounded-xl bg-slate-900 p-2 ring-1 ring-white/10" role="menu">
+      <div ref={listRef} id={panelId} className="animate-menu absolute right-0 top-11 z-50 w-56 rounded-xl bg-[var(--surface)] p-2 shadow-[var(--shadow)] ring-1 ring-[var(--border)]" role="menu">
         {links.map((l) => (
           <Link key={l.href} href={l.href} role="menuitem" onClick={close}
             style={{ touchAction: "manipulation" }}
-            className={`flex h-9 touch-manipulation items-center rounded-lg px-3 text-sm font-medium transition-colors duration-150 ${active === l.href ? "bg-slate-800 text-slate-100" : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"}`}>
+            className={`flex h-9 touch-manipulation items-center rounded-lg px-3 text-sm font-medium transition-colors duration-150 ${active === l.href ? "bg-[var(--surface-2)] text-[var(--text)]" : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"}`}>
             {l.label}
           </Link>
         ))}
@@ -243,12 +243,12 @@ export function FaqItem({ q, a }: { q: string; a: string }) {
     <div className="card overflow-hidden">
       <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}
         style={{ touchAction: "manipulation" }}
-        className="flex w-full touch-manipulation items-center justify-between gap-4 px-5 py-4 text-left transition-colors duration-150 hover:bg-slate-800/50">
-        <span className="text-sm font-medium text-slate-100">{q}</span>
-        <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 text-slate-500 transition-[transform] duration-200 ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg>
+        className="flex w-full touch-manipulation items-center justify-between gap-4 px-5 py-4 text-left transition-colors duration-150 hover:bg-[var(--surface-2)]">
+        <span className="text-sm font-medium text-[var(--text)]">{q}</span>
+        <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 text-[var(--faint)] transition-[transform] duration-200 ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg>
       </button>
       <div className={`grid transition-opacity duration-200 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-        <div className="overflow-hidden"><p className="px-5 pb-5 text-sm leading-relaxed text-slate-400">{a}</p></div>
+        <div className="overflow-hidden"><p className="px-5 pb-5 text-sm leading-relaxed text-[var(--muted)]">{a}</p></div>
       </div>
     </div>
   );

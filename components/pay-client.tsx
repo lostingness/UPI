@@ -3,6 +3,12 @@
 // (expired/recovering); 1 s countdown tick; UTR submit; hosted PG start.
 // A payment is NEVER marked paid here — the page only displays the status
 // the server reports, and follows the server-provided redirect when paid.
+//
+// Round 4: compact layout — the whole pay screen fits one 390x844 mobile
+// viewport without scrolling (QR 192px, countdown as an inline chip next
+// to the amount, ONE row of UPI-app buttons, footer hidden below md).
+// Payment logic is unchanged: UTR submit goes to `review` only, approve
+// flow unchanged, QR intent/amount encoding unchanged.
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -46,11 +52,11 @@ export interface PayClientProps {
   redirectUrl: string | null;
 }
 
-const APPS: { name: string; scheme: string; logo: string; text: string }[] = [
-  { name: "GPay", scheme: "tez://upi/pay", logo: "/images/upi/gpay.svg", text: "text-slate-300" },
-  { name: "PhonePe", scheme: "phonepe://pay", logo: "/images/upi/phonepe.svg", text: "text-slate-300" },
-  { name: "Paytm", scheme: "paytmmp://pay", logo: "/images/upi/paytm.svg", text: "text-slate-300" },
-  { name: "BHIM", scheme: "upi://pay", logo: "/images/upi/bhim.svg", text: "text-slate-300" },
+const APPS: { name: string; scheme: string; logo: string }[] = [
+  { name: "GPay", scheme: "tez://upi/pay", logo: "/images/upi/gpay.svg" },
+  { name: "PhonePe", scheme: "phonepe://pay", logo: "/images/upi/phonepe.svg" },
+  { name: "Paytm", scheme: "paytmmp://pay", logo: "/images/upi/paytm.svg" },
+  { name: "BHIM", scheme: "upi://pay", logo: "/images/upi/bhim.svg" },
 ];
 
 function useCountdown(expiresAt: string | null, createdAt: string) {
@@ -68,21 +74,25 @@ function useCountdown(expiresAt: string | null, createdAt: string) {
   }, [expiresAt]);
   const mm = String(Math.floor(left / 60)).padStart(2, "0");
   const ss = String(left % 60).padStart(2, "0");
-  return { left, total, display: `${mm}:${ss}`, frac: left / total };
+  return { left, display: `${mm}:${ss}` };
 }
 
-function TimerRing({ display, frac, left }: { display: string; frac: number; left: number }) {
-  const offset = (100.5 * (1 - frac)).toFixed(2);
-  const stroke = left < 60 ? "#f93f28" : "#f2b380";
+// Small inline countdown chip (replaces the old 56px timer ring): sits
+// next to the merchant name in the compact header.
+function CountdownChip({ display, left }: { display: string; left: number }) {
+  const urgent = left < 60;
   return (
-    <div className="relative h-14 w-14 shrink-0">
-      <svg viewBox="0 0 36 36" className="h-14 w-14 -rotate-90">
-        <circle cx="18" cy="18" r="16" fill="none" stroke="rgb(255 255 255 / .12)" strokeWidth="3" />
-        <circle cx="18" cy="18" r="16" fill="none" stroke={stroke} strokeWidth="3" strokeLinecap="round"
-          strokeDasharray="100.5" strokeDashoffset={offset} style={{ transition: "stroke-dashoffset 1s linear, stroke .3s" }} />
-      </svg>
-      <div className="absolute inset-0 grid place-items-center font-mono text-xs font-medium text-slate-100">{display}</div>
-    </div>
+    <span
+      title={urgent ? "Less than a minute left — this QR expires soon" : "Time left before this QR expires"}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 font-mono text-xs font-semibold ring-1 ${
+        urgent
+          ? "bg-[var(--accent)]/10 text-[var(--accent-text)] ring-[var(--accent)]/40"
+          : "bg-[var(--surface)] text-[var(--muted)] ring-[var(--border)]"
+      }`}
+    >
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+      {display}
+    </span>
   );
 }
 
@@ -102,6 +112,30 @@ function CopyText({ text }: { text: string }) {
   );
 }
 
+// The single row of UPI-app deep links (GPay / PhonePe / Paytm / BHIM).
+// This is the ONLY deep-link block — the old duplicate md:hidden big CTA
+// + 3-button grid was removed in Round 4.
+function AppButtons({ appLinks }: { appLinks: { name: string; href: string; logo: string }[] }) {
+  return (
+    <div className="flex flex-wrap justify-center gap-1">
+      {appLinks.map((a) => (
+        <a key={a.name} href={a.href} style={{ touchAction: "manipulation" }} className="flex min-h-9 items-center gap-1 rounded-full bg-[var(--surface-2)] px-2.5 py-1.5 text-[11px] font-medium whitespace-nowrap text-[var(--text)] ring-1 ring-[var(--border)] transition hover:brightness-95">
+          <Image src={a.logo} alt={a.name} width={14} height={14} className="rounded-sm" />{a.name}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function WaitingStrip({ text }: { text: string }) {
+  return (
+    <div className="flex items-center justify-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--muted)] ring-1 ring-[var(--border)]">
+      <span className="inline-block h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-[var(--faint)] border-t-[var(--accent-text)]" />
+      <span className="truncate">{text}</span>
+    </div>
+  );
+}
+
 export default function PayClient(props: PayClientProps) {
   const router = useRouter();
   const [status, setStatus] = useState(props.status);
@@ -112,7 +146,7 @@ export default function PayClient(props: PayClientProps) {
   const pollDelay = status === "expired" ? 30000 : 4000;
   const statusRef = useRef(status);
   statusRef.current = status;
-  const { display, frac, left } = useCountdown(props.expiresAt, props.createdAt);
+  const { display, left } = useCountdown(props.expiresAt, props.createdAt);
   const utrForm = useApiForm();
   const [utr, setUtr] = useState("");
 
@@ -174,100 +208,89 @@ export default function PayClient(props: PayClientProps) {
   };
 
   return (
-    <div className="grid md:grid-cols-5">
-      {/* Summary panel */}
-      <div className="animate-rise bg-[#020816] p-6 text-[#f6f8fc] sm:p-8 md:col-span-2">
-        <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-[#f93f28] text-base font-medium text-white">
+    <div className="grid bg-[var(--surface)] text-[var(--text)] md:grid-cols-5">
+      {/* Compact summary header — on mobile this is one tight block (payee,
+          amount, countdown chip, one meta line); the old dl rows + timer
+          ring block are gone. */}
+      <div className="animate-rise bg-[var(--surface-2)] px-4 py-3 md:col-span-2 md:px-5 md:py-5">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--accent-strong)] text-sm font-semibold text-[var(--accent-ink)]">
             {(props.merchantName[0] ?? "?").toUpperCase()}
           </span>
-          <div className="min-w-0">
-            <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#c9ccd4]">Paying to</div>
-            <div className="truncate font-medium">{props.merchantName}</div>
+          <div className="min-w-0 flex-1">
+            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--faint)]">Paying to</div>
+            <div className="truncate text-sm font-semibold">{props.merchantName}</div>
           </div>
+          {status === "pending" && props.expiresAt && <CountdownChip display={display} left={left} />}
         </div>
-        <div className="mt-8">
+        <div className="mt-2.5">
           {isUnique ? (
             <>
-              <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400">Order amount</div>
-              <div className="mt-1 font-mono text-xl font-medium tabular-nums text-slate-400">
-                ₹{fmt(props.amount)}
+              <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-text)]">Pay exactly</div>
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
+                <span className="font-mono text-2xl font-semibold leading-none tabular-nums">₹{fmt(payAmount)}</span>
+                <span className="font-mono text-xs tabular-nums text-[var(--muted)]">Order ₹{fmt(props.amount)}</span>
               </div>
-              <div className="mt-4 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[#f2b380]">Pay exactly</div>
-              <div className="mt-1 font-mono text-4xl font-medium tabular-nums">
-                ₹{fmt(payAmount)}
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-slate-400">
-                Unique amount QR — pay this exact amount so your payment can be matched to this order.
+              <p className="mt-1 text-[11px] leading-snug text-[var(--muted)]">
+                Pay this exact amount — it identifies your order.
               </p>
             </>
           ) : (
             <>
-              <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400">Amount</div>
-              <div className="mt-1 font-mono text-4xl font-medium tabular-nums">
+              <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--faint)]">Amount</div>
+              <div className="mt-0.5 font-mono text-2xl font-semibold leading-none tabular-nums">
                 ₹{fmt(props.amount)}
               </div>
             </>
           )}
-          {props.note && <div className="mt-2 text-sm text-slate-300">{props.note}</div>}
+          {props.note && <div className="mt-1 text-xs text-[var(--muted)]">{props.note}</div>}
         </div>
-        <dl className="mt-8 space-y-3 text-sm">
-          <div className="flex justify-between gap-4"><dt className="whitespace-nowrap text-slate-400">Order ID</dt><dd className="truncate font-mono text-xs text-slate-200">{props.orderNo}</dd></div>
-          {props.customerName && <div className="flex justify-between gap-4"><dt className="whitespace-nowrap text-slate-400">Customer</dt><dd className="truncate text-slate-200">{props.customerName}</dd></div>}
-          {props.upiId && <div className="flex justify-between gap-4"><dt className="whitespace-nowrap text-slate-400">UPI ID</dt><dd className="truncate font-mono text-xs text-slate-200">{props.upiId}</dd></div>}
-        </dl>
-        {status === "pending" && props.expiresAt && (
-          <div className="mt-8 flex items-center gap-4 border-t border-white/10 pt-8 md:mt-auto">
-            <TimerRing display={display} frac={frac} left={left} />
-            <div className="text-sm">
-              <div className="font-medium">Complete payment in time</div>
-              <div className="text-xs text-slate-400">This QR code expires automatically.</div>
-            </div>
-          </div>
-        )}
+        <p className="mt-2 truncate font-mono text-[11px] text-[var(--faint)]">
+          {props.orderNo}{props.upiId ? ` · ${props.upiId}` : ""}{props.customerName ? ` · ${props.customerName}` : ""}
+        </p>
       </div>
 
       {/* Action area */}
-      <div className="animate-rise flex flex-col bg-[#0a1226] p-6 sm:p-8 md:col-span-3">
+      <div className="animate-rise flex flex-col bg-[var(--surface)] px-4 py-3 md:col-span-3 md:px-5 md:py-5">
         {status === "paid" && (
-          <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-white/[0.04] ring-1 ring-white/10">
-              <svg viewBox="0 0 24 24" className="h-11 w-11" fill="none" stroke="#34d399" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="m8 12.4 2.7 2.7L16.4 9.4" /></svg>
+          <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+            <div className="grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
+              <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="#34d399" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="m8 12.4 2.7 2.7L16.4 9.4" /></svg>
             </div>
-            <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment successful</h1>
-            <p className="mt-2 text-slate-400">₹{fmt(payAmount)} paid to {props.merchantName}</p>
-            <dl className="mt-8 w-full max-w-xs divide-y divide-slate-800 rounded-xl bg-slate-800/60 text-left text-sm ring-1 ring-slate-800">
-              {props.utr && <div className="flex justify-between px-4 py-3"><dt className="text-slate-500">UTR</dt><dd className="font-mono font-medium text-slate-100">{props.utr}</dd></div>}
-              <div className="flex justify-between px-4 py-3"><dt className="text-slate-500">Paid at</dt><dd className="font-medium text-slate-100">{props.paidAt ? new Date(props.paidAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST" : "—"}</dd></div>
+            <h1 className="mt-3 text-xl font-semibold">Payment successful</h1>
+            <p className="mt-1 text-sm text-[var(--muted)]">₹{fmt(payAmount)} paid to {props.merchantName}</p>
+            <dl className="mt-4 w-full max-w-xs rounded-xl bg-[var(--surface-2)] text-left text-sm ring-1 ring-[var(--border)]">
+              {props.utr && <div className="flex justify-between px-3 py-2"><dt className="text-[var(--faint)]">UTR</dt><dd className="font-mono font-medium">{props.utr}</dd></div>}
+              <div className={`flex justify-between px-3 py-2${props.utr ? " border-t border-[var(--border)]" : ""}`}><dt className="text-[var(--faint)]">Paid at</dt><dd className="font-medium">{props.paidAt ? new Date(props.paidAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST" : "—"}</dd></div>
             </dl>
-            {props.redirectUrl && <a href={props.redirectUrl} className="btn btn-primary mt-6">Continue to merchant site →</a>}
-            <p className="mt-6 text-xs text-slate-500">You can safely close this page.</p>
+            {props.redirectUrl && <a href={props.redirectUrl} className="btn btn-accent mt-4">Continue to merchant site →</a>}
+            <p className="mt-4 text-xs text-[var(--faint)]">You can safely close this page.</p>
           </div>
         )}
 
         {status === "review" && (
-          <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-white/[0.04] ring-1 ring-white/10">
-              <svg viewBox="0 0 24 24" className="h-11 w-11" fill="none" stroke="#38bdf8" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="M12 7v5.2l3.2 2" /></svg>
+          <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+            <div className="grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
+              <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="#38bdf8" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="M12 7v5.2l3.2 2" /></svg>
             </div>
-            <h1 className="mt-6 text-2xl font-medium text-slate-50">Verifying your payment</h1>
-            <p className="mt-2 max-w-sm text-sm text-slate-400">{props.merchantName} is confirming your UTR with their bank. This page updates automatically once it&apos;s approved.</p>
-            <dl className="mt-8 w-full max-w-xs divide-y divide-slate-800 rounded-xl bg-slate-800/60 text-left text-sm ring-1 ring-slate-800">
-              <div className="flex justify-between px-4 py-3"><dt className="text-slate-500">Your UTR</dt><dd className="font-mono font-medium text-slate-100">{props.customerUtr}</dd></div>
-              <div className="flex justify-between px-4 py-3"><dt className="text-slate-500">Submitted</dt><dd className="font-medium text-slate-100">{props.utrSubmittedAt ? new Date(props.utrSubmittedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST" : "—"}</dd></div>
+            <h1 className="mt-3 text-xl font-semibold">Verifying your payment</h1>
+            <p className="mt-1 max-w-sm text-sm text-[var(--muted)]">{props.merchantName} is confirming your UTR with their bank. This page updates automatically once it&apos;s approved.</p>
+            <dl className="mt-4 w-full max-w-xs rounded-xl bg-[var(--surface-2)] text-left text-sm ring-1 ring-[var(--border)]">
+              <div className="flex justify-between px-3 py-2"><dt className="text-[var(--faint)]">Your UTR</dt><dd className="font-mono font-medium">{props.customerUtr}</dd></div>
+              <div className="flex justify-between border-t border-[var(--border)] px-3 py-2"><dt className="text-[var(--faint)]">Submitted</dt><dd className="font-medium">{props.utrSubmittedAt ? new Date(props.utrSubmittedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST" : "—"}</dd></div>
             </dl>
-            <p className="mt-6 text-xs text-slate-500">Don&apos;t pay again. You can close this page; the merchant will be notified once it&apos;s confirmed.</p>
+            <p className="mt-4 text-xs text-[var(--faint)]">Don&apos;t pay again. You can close this page; the merchant will be notified once it&apos;s confirmed.</p>
           </div>
         )}
 
         {status === "expired" && (
-          <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-white/[0.04] ring-1 ring-white/10">
-              <svg viewBox="0 0 24 24" className="h-11 w-11" fill="none" stroke="#fbbf24" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+          <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+            <div className="grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
+              <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="#fbbf24" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
             </div>
-            <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment link expired</h1>
+            <h1 className="mt-3 text-xl font-semibold">Payment link expired</h1>
             {props.canRecover && props.lateRecoveryUntil && (
-              <p className="mt-2 max-w-sm text-sm text-slate-400">
+              <p className="mt-1 max-w-sm text-sm text-[var(--muted)]">
                 Already paid? Don&apos;t pay again. We can still check the provider until{" "}
                 {new Date(props.lateRecoveryUntil).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true })} IST.
                 This page updates when payment is confirmed.
@@ -275,13 +298,13 @@ export default function PayClient(props: PayClientProps) {
             )}
             {props.acceptsUtr ? (
               <>
-                <p className="mt-2 max-w-sm text-sm text-slate-400">If you already paid, don&apos;t pay again — submit your UTR below so {props.merchantName} can confirm it.</p>
-                <div className="mt-8 w-full max-w-sm"><UtrForm orderNo={props.orderNo} attemptsLeft={attemptsLeft} reviewNote={props.reviewNote} /></div>
+                <p className="mt-1 max-w-sm text-sm text-[var(--muted)]">If you already paid, don&apos;t pay again — submit your UTR below so {props.merchantName} can confirm it.</p>
+                <div className="mt-3 w-full max-w-sm"><UtrForm orderNo={props.orderNo} attemptsLeft={attemptsLeft} reviewNote={props.reviewNote} /></div>
               </>
             ) : (
               <>
-                <p className="mt-2 max-w-xs text-sm text-slate-400">Please ask {props.merchantName} for a new payment link.</p>
-                <div className="mt-8 flex max-w-sm items-start gap-3 rounded-xl bg-amber-500/10 px-4 py-3 text-left text-sm text-amber-300 ring-1 ring-amber-500/30">
+                <p className="mt-1 max-w-sm text-sm text-[var(--muted)]">Please ask {props.merchantName} for a new payment link.</p>
+                <div className="mt-3 flex max-w-sm items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-left text-[13px] text-[var(--text)] ring-1 ring-amber-500/30">
                   <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
                   <span>If money was debited from your account, don&apos;t pay again. Share your UTR with the merchant to confirm the payment.</span>
                 </div>
@@ -291,115 +314,80 @@ export default function PayClient(props: PayClientProps) {
         )}
 
         {status === "failed" && (
-          <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-white/[0.04] ring-1 ring-white/10">
-              <svg viewBox="0 0 24 24" className="h-11 w-11" fill="none" stroke="#f87171" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="m9.2 9.2 5.6 5.6M14.8 9.2l-5.6 5.6" /></svg>
+          <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+            <div className="grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
+              <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="#f87171" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="m9.2 9.2 5.6 5.6M14.8 9.2l-5.6 5.6" /></svg>
             </div>
-            <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment failed</h1>
-            <p className="mt-2 max-w-sm text-sm text-slate-400">This payment could not be completed. Please ask {props.merchantName} for a new payment link — and don&apos;t pay again on this one.</p>
+            <h1 className="mt-3 text-xl font-semibold">Payment failed</h1>
+            <p className="mt-1 max-w-sm text-sm text-[var(--muted)]">This payment could not be completed. Please ask {props.merchantName} for a new payment link — and don&apos;t pay again on this one.</p>
           </div>
         )}
 
         {status === "pending" && props.hosted && (
-          <div className="flex flex-1 flex-col items-center justify-center py-6 text-center">
-            <div className={`grid h-20 w-20 place-items-center rounded-2xl text-white ${props.pgName === "PhonePe" ? "bg-[#5f259f]" : "bg-[#00baf2]"}`}>
-              <svg viewBox="0 0 24 24" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+          <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+            <div className={`grid h-14 w-14 place-items-center rounded-2xl text-white ${props.pgName === "PhonePe" ? "bg-[#5f259f]" : "bg-[#00baf2]"}`}>
+              <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
             </div>
-            <h1 className="mt-6 text-xl font-medium text-slate-50">Pay securely with {props.pgName}</h1>
-            <p className="mt-2 max-w-sm text-sm text-slate-400">You&apos;ll complete the payment on {props.pgName}&apos;s secure checkout using UPI, card or netbanking, then come back here automatically.</p>
-            {startError && <div className="mt-6 flex max-w-sm items-start gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-left text-sm text-red-300 ring-1 ring-red-500/30">{startError}</div>}
-            <button className="mt-8 inline-flex min-h-12 w-full max-w-sm items-center justify-center gap-2 rounded-lg bg-[#f93f28] px-5 py-3 text-base font-bold text-[#331200] transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f2b380] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1226] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50" style={{ touchAction: "manipulation" }} onClick={startHosted} disabled={starting}>
+            <h1 className="mt-3 text-lg font-semibold">Pay securely with {props.pgName}</h1>
+            <p className="mt-1 max-w-sm text-[13px] text-[var(--muted)]">You&apos;ll complete the payment on {props.pgName}&apos;s secure checkout using UPI, card or netbanking, then come back here automatically.</p>
+            {startError && <div className="mt-3 flex max-w-sm items-start gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-left text-[13px] text-[var(--text)] ring-1 ring-red-500/30">{startError}</div>}
+            <button className="btn btn-accent btn-lg mt-4 w-full max-w-sm font-semibold" style={{ touchAction: "manipulation" }} onClick={startHosted} disabled={starting}>
               {starting ? "Starting secure checkout…" : `Pay ₹${fmt(payAmount)} with ${props.pgName}`}
             </button>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {props.upiIntent && appLinks.map((a) => (
-                <a key={a.name} href={a.href} style={{ touchAction: "manipulation" }} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.06] px-3.5 py-2 text-xs font-medium text-slate-200 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/10">
-                  <Image src={a.logo} alt={a.name} width={16} height={16} className="rounded-sm" />{a.name}
-                </a>
-              ))}
-              <span className="flex min-h-11 items-center rounded-full bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-slate-400 ring-1 ring-white/10">Cards</span>
-              <span className="flex min-h-11 items-center rounded-full bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-slate-400 ring-1 ring-white/10">Netbanking</span>
-            </div>
+            {props.upiIntent && (
+              <div className="mt-2.5">
+                <AppButtons appLinks={appLinks} />
+              </div>
+            )}
             {!props.upiIntent && props.upiId && (
-              <div className="mt-4 flex w-full max-w-sm items-center justify-between gap-3 rounded-xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/10">
-                <div className="min-w-0">
-                  <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Or pay to UPI ID</div>
-                  <div className="truncate font-mono text-sm font-medium text-slate-100">{props.upiId}</div>
-                </div>
+              <div className="mt-2.5 flex w-full max-w-sm items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2 ring-1 ring-[var(--border)]">
+                <span className="min-w-0 truncate font-mono text-[13px] font-medium">
+                  <span className="text-[var(--faint)]">UPI ID · </span>{props.upiId}
+                </span>
                 <CopyText text={props.upiId} />
               </div>
             )}
-            <div className="mt-auto pt-6">
-              <div className="flex items-center justify-center gap-2.5 rounded-xl bg-white/[0.04] px-4 py-3 text-sm text-slate-300 ring-1 ring-white/10">
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-[#f2b380]" />
-                <span>{statusText ?? "Waiting for payment…"}</span>
-              </div>
+            <div className="mt-2.5 w-full max-w-sm">
+              <WaitingStrip text={statusText ?? "Waiting for payment…"} />
             </div>
           </div>
         )}
 
         {status === "pending" && !props.hosted && (
           <>
-            <div className="text-center">
-              <h1 className="text-lg font-semibold text-slate-50">Scan &amp; pay with any UPI app</h1>
-              <p className="mt-1 text-sm text-slate-400">Open your UPI app, scan the QR and approve the payment.</p>
-            </div>
+            <h1 className="hidden text-center text-[15px] font-semibold md:block">Scan &amp; pay with any UPI app</h1>
             {!qrFailed && props.upiIntent ? (
-              <div className="animate-qr relative mx-auto mt-6 rounded-2xl bg-white p-3 shadow-[0_8px_32px_rgb(0_0_0/0.45)] ring-1 ring-white/10">
-                <span className="absolute -left-px -top-px h-6 w-6 rounded-tl-2xl border-l-[3px] border-t-[3px] border-[#f2b380]" />
-                <span className="absolute -right-px -top-px h-6 w-6 rounded-tr-2xl border-r-[3px] border-t-[3px] border-[#f2b380]" />
-                <span className="absolute -bottom-px -left-px h-6 w-6 rounded-bl-2xl border-b-[3px] border-l-[3px] border-[#f2b380]" />
-                <span className="absolute -bottom-px -right-px h-6 w-6 rounded-br-2xl border-b-[3px] border-r-[3px] border-[#f2b380]" />
+              <div className="animate-qr relative mx-auto mt-2.5 rounded-xl bg-white p-2 shadow-[var(--shadow)] ring-1 ring-[var(--border)]">
+                <span className="absolute -left-px -top-px h-4 w-4 rounded-tl-xl border-l-[3px] border-t-[3px] border-[var(--accent)]" />
+                <span className="absolute -right-px -top-px h-4 w-4 rounded-tr-xl border-r-[3px] border-t-[3px] border-[var(--accent)]" />
+                <span className="absolute -bottom-px -left-px h-4 w-4 rounded-bl-xl border-b-[3px] border-l-[3px] border-[var(--accent)]" />
+                <span className="absolute -bottom-px -right-px h-4 w-4 rounded-br-xl border-b-[3px] border-r-[3px] border-[var(--accent)]" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/api/pay/${props.orderNo}/qr`} alt={`UPI QR code for ₹${payAmount}`} className="h-52 w-52 sm:h-56 sm:w-56" onError={() => setQrFailed(true)} />
+                <img src={`/api/pay/${props.orderNo}/qr`} alt={`UPI QR code for ₹${payAmount}`} className="h-48 w-48" onError={() => setQrFailed(true)} />
               </div>
             ) : (
-              <div className="mx-auto mt-6 max-w-sm rounded-xl bg-amber-500/10 px-4 py-3 text-center text-sm text-amber-300 ring-1 ring-amber-500/30">
+              <div className="mx-auto mt-2.5 max-w-sm rounded-lg bg-amber-500/10 px-3 py-2 text-center text-[13px] text-[var(--text)] ring-1 ring-amber-500/30">
                 QR code is unavailable right now — use the UPI app buttons or pay to the UPI ID below.
               </div>
             )}
             {props.upiIntent && (
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
-                {appLinks.map((a) => (
-                  <a key={a.name} href={a.href} style={{ touchAction: "manipulation" }} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.06] px-3.5 py-2 text-xs font-medium text-slate-200 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/10">
-                    <Image src={a.logo} alt={a.name} width={16} height={16} className="rounded-sm" />{a.name}
-                  </a>
-                ))}
+              <div className="mt-2.5">
+                <AppButtons appLinks={appLinks} />
               </div>
             )}
-            <div className="mt-6 space-y-3 md:hidden">
-              <div className="flex items-center gap-3 text-xs text-slate-500"><span className="h-px flex-1 bg-slate-800" />Or pay on this phone<span className="h-px flex-1 bg-slate-800" /></div>
-              {props.upiIntent && (
-                <a href={props.upiIntent} style={{ touchAction: "manipulation" }} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#f93f28] px-5 py-3 text-base font-bold text-[#331200] transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f2b380] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1226] active:scale-[0.98]">Pay ₹{fmt(payAmount)} with UPI app</a>
-              )}
-              {props.upiIntent && (
-                <div className="grid grid-cols-3 gap-2">
-                  {appLinks.slice(0, 3).map((a) => (
-                    <a key={a.name} href={a.href} style={{ touchAction: "manipulation" }} className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-lg bg-white/[0.06] px-2 py-2 text-sm font-medium text-slate-100 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/10">
-                      <Image src={a.logo} alt={a.name} width={20} height={20} className="rounded-sm" />{a.name}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
             {props.upiId && (
-              <div className="mt-6 flex items-center justify-between gap-3 rounded-xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/10">
-                <div className="min-w-0">
-                  <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Or pay to UPI ID</div>
-                  <div className="truncate font-mono text-sm font-medium text-slate-100">{props.upiId}</div>
-                </div>
+              <div className="mt-2.5 flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2 ring-1 ring-[var(--border)]">
+                <span className="min-w-0 truncate font-mono text-[13px] font-medium">
+                  <span className="text-[var(--faint)]">UPI ID · </span>{props.upiId}
+                </span>
                 <CopyText text={props.upiId} />
               </div>
             )}
             {props.acceptsUtr && (
-              <div className="mt-4"><UtrForm orderNo={props.orderNo} attemptsLeft={attemptsLeft} reviewNote={props.reviewNote} /></div>
+              <div className="mt-2.5"><UtrForm orderNo={props.orderNo} attemptsLeft={attemptsLeft} reviewNote={props.reviewNote} /></div>
             )}
-            <div className="mt-auto pt-6">
-              <div className="flex items-center justify-center gap-2.5 rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-300 ring-1 ring-amber-500/30">
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-amber-500/40 border-t-amber-300" />
-                <span>{statusText ?? (props.acceptsUtr ? "After paying, submit your UTR above" : "Waiting for payment…")}</span>
-              </div>
-              <p className="mt-2 text-center text-xs text-slate-500">Please don&apos;t close or refresh this page after paying.</p>
+            <div className="mt-2.5">
+              <WaitingStrip text={statusText ?? (props.acceptsUtr ? "After paying, submit your UTR above" : "Waiting for payment…")} />
             </div>
           </>
         )}
@@ -413,27 +401,26 @@ export function UtrForm({ orderNo, attemptsLeft, reviewNote }: { orderNo: string
   const [utr, setUtr] = useState("");
   return (
     <form
-      className="rounded-xl bg-white/[0.02] p-4 text-left ring-1 ring-white/10"
+      className="rounded-xl bg-[var(--surface-2)] p-3 text-left ring-1 ring-[var(--border)]"
       onSubmit={async (e) => {
         e.preventDefault();
         await form.submit(`/api/pay/${orderNo}/utr`, { utr });
       }}
     >
       {reviewNote && (
-        <div className="mb-3 flex items-start gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300 ring-1 ring-red-500/30">
+        <div className="mb-2 flex items-start gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-[var(--text)] ring-1 ring-red-500/30">
           <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
-          <div><span className="font-medium text-red-200">Couldn&apos;t verify your last UTR.</span> {reviewNote} Please check the 12-digit UTR in your UPI app and try again.</div>
+          <div><span className="font-medium">Couldn&apos;t verify your last UTR.</span> {reviewNote} Please check the 12-digit UTR in your UPI app and try again.</div>
         </div>
       )}
       {form.ok && (
-        <div className="mb-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300 ring-1 ring-emerald-500/30">
+        <div className="mb-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-[var(--text)] ring-1 ring-emerald-500/30">
           UTR submitted for review. The merchant will confirm it against their bank — this page updates automatically.
         </div>
       )}
       <FormMessage message={form.message} ok={false} />
-      <label htmlFor={`utr-${orderNo}`} className="text-sm font-medium text-slate-100">Already paid? Enter your UTR</label>
-      <p className="mb-3 mt-0.5 text-xs text-slate-500">Find the 12-digit <span className="font-medium text-slate-300">UTR / UPI Ref. No.</span> in your UPI app&apos;s transaction details.</p>
-      <div className="flex gap-2">
+      <label htmlFor={`utr-${orderNo}`} className="text-[13px] font-medium">Already paid? Enter your UTR</label>
+      <div className="mt-1.5 flex gap-2">
         <input id={`utr-${orderNo}`} inputMode="numeric" autoComplete="off" maxLength={14} required
           placeholder="e.g. 412345678901" className="input font-mono"
           value={utr} onChange={(e) => setUtr(e.target.value)} />
@@ -442,8 +429,8 @@ export function UtrForm({ orderNo, attemptsLeft, reviewNote }: { orderNo: string
         </button>
       </div>
       <FieldError errors={form.errors} name="utr" />
-      <p className="mt-2 text-[11px] text-slate-500">
-        {attemptsLeft} {attemptsLeft === 1 ? "attempt" : "attempts"} left. The merchant confirms this UTR against their bank account before your order is marked paid.
+      <p className="mt-1.5 text-[11px] leading-snug text-[var(--faint)]">
+        {attemptsLeft} {attemptsLeft === 1 ? "attempt" : "attempts"} left · UTR is in your UPI app.
       </p>
     </form>
   );
