@@ -14,7 +14,17 @@ import { jwtVerify } from "jose";
 
 const CSP = [
   "default-src 'self'",
-  "script-src 'self'",
+  // 'unsafe-inline' is REQUIRED for script-src: Next.js App Router inlines
+  // its RSC/flight bootstrap scripts (self.__next_r / self.__next_f) into
+  // every document. Without it the browser blocks those scripts, the
+  // request ID is never defined, hydration throws InvariantError and every
+  // client interaction on the matched routes (/dashboard, /settings,
+  // /orders, /accounts, /admin) is dead on a full page load — verified
+  // live 2026-11-11: full-load /dashboard had 0 React fibers + the
+  // invariant error, while client-side navigation from /login hydrated.
+  // style-src already uses 'unsafe-inline'; React escapes rendered data,
+  // so user content cannot inject script through the app.
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' fonts.googleapis.com",
   "font-src 'self' fonts.gstatic.com",
   "img-src 'self' data:",

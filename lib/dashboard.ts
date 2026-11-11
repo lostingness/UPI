@@ -28,12 +28,22 @@ export async function dashboardStats(userId: number, environment: "live" | "sand
     ORDER BY o.created_at DESC LIMIT 6`;
   const c = (counts as Record<string, string>[])[0];
   const paid = Number(c.paid_count), closed = Number(c.closed_count);
+  // The Neon driver returns DATE columns as Date objects; String(date)
+  // would render "Wed Nov 11 2026 00:00:00 GMT+0000 (…)" as the chart
+  // x-axis label. Format it short instead ("11 Nov"). The day is already
+  // IST-truncated by the query, so UTC getters are the safe read.
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const shortDay = (v: unknown): string => {
+    const d = v instanceof Date ? v : new Date(String(v));
+    if (Number.isNaN(d.getTime())) return String(v);
+    return `${String(d.getUTCDate()).padStart(2, "0")} ${MONTHS[d.getUTCMonth()]}`;
+  };
   return {
     paidCount: paid, pendingCount: Number(c.pending_count), reviewCount: Number(c.review_count),
     closedCount: closed, totalAmount: Number(c.total_amount), todayAmount: Number(c.today_amount),
     todayCount: Number(c.today_count),
     successRate: closed > 0 ? paid / closed : null,
-    chart7d: (chart as { day: string; amount: string; count: string }[]).map((r) => ({ date: String(r.day), amount: Number(r.amount), count: Number(r.count) })),
+    chart7d: (chart as { day: string; amount: string; count: string }[]).map((r) => ({ date: shortDay(r.day), amount: Number(r.amount), count: Number(r.count) })),
     recentOrders: recent,
   };
 }

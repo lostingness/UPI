@@ -45,6 +45,8 @@ export default async function PayPage({ params }: { params: Promise<{ orderNo: s
           <PayClient
             orderNo={order.order_no}
             amount={String(order.amount)}
+            payableAmount={String(api.payable_amount)}
+            qrMethod={String(api.qr_method)}
             merchantName={data.merchantName}
             note={order.note}
             customerName={order.customer_name}

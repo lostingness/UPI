@@ -51,7 +51,10 @@ export async function getAccount(id: number, userId: number): Promise<AccountRow
 export function publicAccount(a: AccountRow): Record<string, unknown> {
   const { credentials, ...rest } = a;
   void credentials;
-  return rest;
+  // Neon HTTP driver returns BIGINT as strings; the API contract is numeric
+  // ids (round-1 fixed the same class of bug in orders/auth — this serializer
+  // was missed, so POST /api/accounts returned "id":"3").
+  return { ...rest, id: Number(a.id), user_id: Number(a.user_id) };
 }
 
 export async function accountUsage(sql: ReturnType<typeof getSql>, accountId: number): Promise<{ used_today: number; remaining_today: number | null }> {

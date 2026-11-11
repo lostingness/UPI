@@ -47,7 +47,7 @@ An order is marked `paid` only when **all** of these match a provider response �
 
 ## Screenshots
 
-Captured 11 November 2026 from a real local production build (`next build` + `next start`) with Playwright at desktop 1440 px and a true phone width of 390 px. No mockups, no AI-generated images. The pay screen, dashboard, QR settings, and order detail with real data need a connected database, so they are not shown here yet — see the note below the gallery.
+Captured 11 November 2026 from a real local production build (`next build` + `next start`) with Playwright at desktop 1440 px and a true phone width of 390 px. No mockups, no AI-generated images. The merchant screens below (dashboard, QR settings, pay screen, order detail) were captured against the real Neon database with a disposable demo merchant ("Demo Store", deleted after the capture) — the figures are real database rows, not invented.
 
 ### Landing page
 
@@ -107,16 +107,41 @@ Captured 11 November 2026 from a real local production build (`next build` + `ne
 
 ***Error state, not a successful payment screen.** Visiting `/pay/ORD-DOESNOTEXIST` in this database-less capture shows "Database not configured" — the pay page cannot look up any order until the Neon database is connected, so it says so instead of faking a result. With a database connected, a genuinely missing order shows "Order not found". A real pay screen with a live QR is deferred to the database-backed capture below.*
 
-### Screenshots still to come (database-backed run)
+### Merchant dashboard, QR settings, pay screen, order detail (database-backed)
 
-These screens cannot be captured honestly without a database — the app redirects to `/login` without a session and needs real Neon rows for real data — so they are **deferred, not faked**:
+Captured 11 November 2026 from the same real production build, logged in as a disposable demo merchant ("Demo Store", deleted after the capture) against the real Neon database. Four orders: one paid ₹500.00 via UTR review, one in review (₹750.00), two pending (₹500.00, ₹250.00).
 
-- Merchant **dashboard** (real totals, real recent orders)
-- **QR settings** (Settings → QR: method + increment)
-- **Pay screen with a real order and QR**
-- **Order detail** page (status, verification history, webhook deliveries)
+![Merchant dashboard, desktop 1440 px](docs/screenshots/dashboard-desktop.jpg)
 
-They will be added from a run against a configured Neon database.
+*Merchant dashboard (desktop): Today ₹500.00, Total received ₹500.00, Pending / Review 2 / 1, success rate 100%, paid-volume chart for the last 7 days ("11 Nov"), and the real recent-orders table. No fake stats — every number comes from the database.*
+
+![Merchant dashboard, mobile 390 px](docs/screenshots/dashboard-mobile.jpg)
+
+*Merchant dashboard at 390 px — same real data, no horizontal overflow.*
+
+![QR settings, desktop 1440 px](docs/screenshots/qr-settings-desktop.jpg)
+
+*Settings → API & webhooks, QR settings section (desktop, full page): QR method "Unique amount", increment 1 paise, and the Amount allocations table — four released allocations (₹500.01, ₹500.02, ₹250.01, ₹750.01) from the demo orders. The API keys visible here belong to the deleted demo merchant.*
+
+![QR settings, mobile 390 px](docs/screenshots/qr-settings-mobile.jpg)
+
+*QR settings at 390 px (full page). The allocations table scrolls inside its own card while the page itself stays at 390 px — no page-level horizontal scroll.*
+
+![Pay screen with a real QR, desktop 1440 px](docs/screenshots/pay-desktop.jpg)
+
+*Pay screen for a real ₹500.00 order (desktop): "Order amount ₹500.00 / **Pay exactly ₹500.02**" — the payable amount (base + 2 paise allocation) is what the QR and the UPI intent encode, so the customer pays the exact amount verification expects. Real QR, real UPI intent, UTR form.*
+
+![Pay screen with a real QR, mobile 390 px](docs/screenshots/pay-mobile.jpg)
+
+*Pay screen at 390 px. The countdown reads 00:00 because this order was captured after its 15-minute expiry — it stays payable during the 24-hour late-payment grace window, by design.*
+
+![Order detail, desktop 1440 px](docs/screenshots/order-detail-desktop.jpg)
+
+*Order detail (desktop): the paid ₹500.00 order — status timeline, UTR 111122223333, "Verified by utr_review", the UPI intent with `am=500.01`, and the note that merchant-side manual confirmation is disabled — a payment is never marked paid from this page alone.*
+
+![Order detail, mobile 390 px](docs/screenshots/order-detail-mobile.jpg)
+
+*Order detail at 390 px.*
 
 ---
 

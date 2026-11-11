@@ -14,6 +14,13 @@ import { apiFetch, postApi } from "./api";
 export interface PayClientProps {
   orderNo: string;
   amount: string;
+  // The amount the customer must actually pay. Equals `amount` for Same
+  // Amount QR; a few paise above it for Unique Amount QR (the QR/intent
+  // encode this value, and provider verification matches against it) — so
+  // the page must display THIS, not `amount`, or the customer pays the
+  // wrong amount and the payment cannot be matched.
+  payableAmount: string;
+  qrMethod: string;
   merchantName: string;
   note: string | null;
   customerName: string | null;
@@ -146,6 +153,12 @@ export default function PayClient(props: PayClientProps) {
   const query = props.upiIntent ? props.upiIntent.split("?")[1] ?? "" : "";
   const appLinks = APPS.map((a) => ({ ...a, href: `${a.scheme}?${query}` }));
   const attemptsLeft = Math.max(0, 3 - props.utrAttempts);
+  // Unique Amount QR: the payable amount differs from the order amount by a
+  // few paise — display the payable amount as the amount to pay, with the
+  // order amount shown for reference. Same Amount QR: both are equal.
+  const isUnique = props.qrMethod === "unique" && Number(props.payableAmount) !== Number(props.amount);
+  const payAmount = props.payableAmount;
+  const fmt = (v: string) => Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const startHosted = async () => {
     setStarting(true); setStartError(null);
@@ -174,10 +187,28 @@ export default function PayClient(props: PayClientProps) {
           </div>
         </div>
         <div className="mt-8">
-          <div className="text-xs text-slate-400">Amount</div>
-          <div className="mt-1 font-mono text-4xl font-medium tabular-nums">
-            ₹{Number(props.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
+          {isUnique ? (
+            <>
+              <div className="text-xs text-slate-400">Order amount</div>
+              <div className="mt-1 font-mono text-xl font-medium tabular-nums text-slate-400">
+                ₹{fmt(props.amount)}
+              </div>
+              <div className="mt-4 text-xs font-medium text-amber-300">Pay exactly</div>
+              <div className="mt-1 font-mono text-4xl font-medium tabular-nums">
+                ₹{fmt(payAmount)}
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                Unique amount QR — pay this exact amount so your payment can be matched to this order.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-xs text-slate-400">Amount</div>
+              <div className="mt-1 font-mono text-4xl font-medium tabular-nums">
+                ₹{fmt(props.amount)}
+              </div>
+            </>
+          )}
           {props.note && <div className="mt-2 text-sm text-slate-300">{props.note}</div>}
         </div>
         <dl className="mt-8 space-y-3 text-sm">
@@ -204,7 +235,7 @@ export default function PayClient(props: PayClientProps) {
               <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
             </div>
             <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment successful</h1>
-            <p className="mt-2 text-slate-400">₹{Number(props.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })} paid to {props.merchantName}</p>
+            <p className="mt-2 text-slate-400">₹{fmt(payAmount)} paid to {props.merchantName}</p>
             <dl className="mt-8 w-full max-w-xs divide-y divide-slate-800 rounded-xl bg-slate-800/60 text-left text-sm ring-1 ring-slate-800">
               {props.utr && <div className="flex justify-between px-4 py-3"><dt className="text-slate-500">UTR</dt><dd className="font-mono font-medium text-slate-100">{props.utr}</dd></div>}
               <div className="flex justify-between px-4 py-3"><dt className="text-slate-500">Paid at</dt><dd className="font-medium text-slate-100">{props.paidAt ? new Date(props.paidAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST" : "—"}</dd></div>
@@ -278,7 +309,7 @@ export default function PayClient(props: PayClientProps) {
             <p className="mt-2 max-w-sm text-sm text-slate-400">You&apos;ll complete the payment on {props.pgName}&apos;s secure checkout using UPI, card or netbanking, then come back here automatically.</p>
             {startError && <div className="mt-6 flex max-w-sm items-start gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-left text-sm text-red-300 ring-1 ring-red-500/30">{startError}</div>}
             <button className="btn btn-primary btn-lg mt-8 w-full max-w-sm" onClick={startHosted} disabled={starting}>
-              {starting ? "Starting secure checkout…" : `Pay ₹${Number(props.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })} with ${props.pgName}`}
+              {starting ? "Starting secure checkout…" : `Pay ₹${fmt(payAmount)} with ${props.pgName}`}
             </button>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {appLinks.map((a) => (
@@ -311,7 +342,7 @@ export default function PayClient(props: PayClientProps) {
                 <span className="absolute -bottom-px -left-px h-6 w-6 rounded-bl-2xl border-b-[3px] border-l-[3px] border-brand-500" />
                 <span className="absolute -bottom-px -right-px h-6 w-6 rounded-br-2xl border-b-[3px] border-r-[3px] border-brand-500" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/api/pay/${props.orderNo}/qr`} alt={`UPI QR code for ₹${props.amount}`} className="h-52 w-52 sm:h-56 sm:w-56" onError={() => setQrFailed(true)} />
+                <img src={`/api/pay/${props.orderNo}/qr`} alt={`UPI QR code for ₹${payAmount}`} className="h-52 w-52 sm:h-56 sm:w-56" onError={() => setQrFailed(true)} />
               </div>
             ) : (
               <div className="mx-auto mt-6 max-w-sm rounded-xl bg-amber-500/10 px-4 py-3 text-center text-sm text-amber-300 ring-1 ring-amber-500/30">
@@ -328,7 +359,7 @@ export default function PayClient(props: PayClientProps) {
             <div className="mt-6 space-y-3 md:hidden">
               <div className="flex items-center gap-3 text-xs text-slate-500"><span className="h-px flex-1 bg-slate-800" />Or pay on this phone<span className="h-px flex-1 bg-slate-800" /></div>
               {props.upiIntent && (
-                <a href={props.upiIntent} className="btn btn-primary btn-lg w-full">Pay ₹{Number(props.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })} with UPI app</a>
+                <a href={props.upiIntent} className="btn btn-primary btn-lg w-full">Pay ₹{fmt(payAmount)} with UPI app</a>
               )}
               <div className="grid grid-cols-3 gap-2">
                 {appLinks.slice(0, 3).map((a) => (

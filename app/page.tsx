@@ -179,7 +179,7 @@ export default async function Home() {
               <p className="font-mono text-xs text-brand-400">ORD…</p>
               <h3 className="mt-2 text-lg font-medium text-slate-50">Unique amount QR</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                Each order gets a QR with its own amount — ₹499.00 for one customer, ₹1,250.00 for the next. The amount is allocated atomically, so two orders never share the same payable amount at the same time, and the provider response is matched to the exact order.
+                Each order gets a QR with its own amount — two customers both order for ₹500.00, the first pays ₹500.01 and the second ₹500.02. The amount is allocated atomically, so two orders never share the same payable amount at the same time, and the provider response is matched to the exact order.
               </p>
               <dl className="mt-5 space-y-2 text-sm">
                 <div className="flex justify-between gap-4 border-t border-white/5 pt-2"><dt className="text-slate-500">Best for</dt><dd className="text-right text-slate-200">Online checkout, payment links</dd></div>

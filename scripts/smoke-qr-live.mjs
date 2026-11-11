@@ -162,7 +162,13 @@ async function main() {
   );
 
   // 8. Expire the first order through the real check path, then reuse its amount.
-  await sql`UPDATE orders SET expires_at = NOW() - INTERVAL '1 minute' WHERE order_no = ${orderNos[0]}`;
+  // NOTE: the check path honours the 24 h late-payment grace (a faithful
+  // port of the Laravel checkLatePayment): an order 1 minute past expiry
+  // must stay `pending` so a late payment can still be recovered. To make
+  // it genuinely expire, BOTH expires_at and original_expires_at must be
+  // beyond the grace window (25 h ago), so checkOrder's grace branch no
+  // longer applies and the real expire path runs.
+  await sql`UPDATE orders SET expires_at = NOW() - INTERVAL '25 hours', original_expires_at = NOW() - INTERVAL '25 hours' WHERE order_no = ${orderNos[0]}`;
   const afterExpire = await api(`/api/pay/${orderNos[0]}/status`);
   check("expired order reports status expired", afterExpire.body?.data?.status === "expired", `got ${afterExpire.body?.data?.status}`);
   const released = await api("/api/settings/qr/allocations?status=released");
