@@ -8,7 +8,10 @@
 //   'self' fonts.gstatic.com; img-src 'self' data:; connect-src 'self';
 //   form-action 'self' + PG hosts (Paytm sandbox+prod, PhonePe api-preprod +
 //   api.phonepe.com); frame-ancestors 'none'; base-uri 'self'; object-src 'none'.
-//   Enforcing vs report-only via GATEWAY_CSP_ENFORCE.
+//   Enforcing vs report-only via GATEWAY_CSP_ENFORCE. The matcher covers
+//   /pay/:path* too — the public pay page (QR, deep links, UTR form) had no
+//   CSP header at all before 2026-11-11 (verified live: /pay returned 200
+//   with no content-security-policy while /dashboard had it).
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
@@ -81,5 +84,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/orders/:path*", "/accounts/:path*", "/settings/:path*"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/orders/:path*", "/accounts/:path*", "/settings/:path*", "/pay/:path*"],
 };
