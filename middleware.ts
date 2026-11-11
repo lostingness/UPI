@@ -89,8 +89,10 @@ export async function middleware(req: NextRequest) {
 export const config = {
   // Round 4: "/" and "/login" added — the landing page and login had no CSP
   // header at all (only /dashboard, /admin, /orders, /accounts, /settings
-  // and /pay/:path* were matched). Directives unchanged: script-src 'self'
+  // and /pay/:path* were matched). Round 4 follow-up: "/register/:path*"
+  // added too — the public register page served no CSP header at all
+  // (verified live 2026-11-11). Directives unchanged: script-src 'self'
   // 'unsafe-inline' stays — Next.js inlines its RSC/flight bootstrap
   // scripts and hydration breaks without it.
-  matcher: ["/", "/login/:path*", "/dashboard/:path*", "/admin/:path*", "/orders/:path*", "/accounts/:path*", "/settings/:path*", "/pay/:path*"],
+  matcher: ["/", "/login/:path*", "/register/:path*", "/dashboard/:path*", "/admin/:path*", "/orders/:path*", "/accounts/:path*", "/settings/:path*", "/pay/:path*"],
 };
