@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/cron/orders-check-pending", "schedule": "* * * * *" },
-    { "path": "/api/cron/webhooks-dispatch", "schedule": "* * * * *" },
+    { "path": "/api/cron/orders-check-pending", "schedule": "0 1 * * *" },
+    { "path": "/api/cron/webhooks-dispatch", "schedule": "0 2 * * *" },
     { "path": "/api/cron/webhooks-offload", "schedule": "0 3 * * *" },
     { "path": "/api/cron/webhooks-prune", "schedule": "0 4 * * *" }
   ]

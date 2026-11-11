@@ -80,10 +80,13 @@ rejects wrong amount; UTR approve/reject; admin override; rate limits
   **sensitive** env vars (Production + Preview as needed).
 - No persistent storage: no filesystem, no queue worker, no long-lived
   connections. The Neon HTTP driver is used (`@neondatabase/serverless`).
-- Crons (`vercel.json`): order checks + webhook dispatch every minute,
-  offload 03:00, prune 04:00. **1-minute crons need a paid Vercel plan**
-  (Hobby allows daily crons only) — confirm the plan before relying on
-  every-minute checks.
+- Crons (`vercel.json`): order checks + webhook dispatch daily, offload 03:00,
+  prune 04:00. **Hobby plan allows at most one cron run per day**, so the
+  shipped schedules are once-daily (01:00 checks, 02:00 dispatch) — the source
+  ran these every minute. On Hobby, pending-order checks and webhook delivery
+  run once a day; upgrade to Pro to restore every-minute schedules
+  (`* * * * *`). Webhooks can also be dispatched on demand via
+  `POST /api/webhooks/outbox/dispatch` (admin/cron) or the admin UI retry.
 - Cron endpoints are guarded by `CRON_SECRET` (`Authorization: Bearer …`).
 
 ## API surface (backend phase)
