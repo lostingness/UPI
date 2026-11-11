@@ -1,12 +1,29 @@
 // Small client bits: logout, mobile menu, scroll reveal, animated figures, FAQ.
 // Motion: one ease-out curve, named transitions only, no looping motion.
+//
+// Resilience notes (mobile multi-click bug, measured 2026-11-11):
+// - MobileMenu is a native <details>/<summary>: it opens on the FIRST tap
+//   even before React hydrates (or with JS disabled entirely). Client JS
+//   only adds aria-expanded sync, Escape/arrow keys, link-close and
+//   tap-outside close — none of it is required to open the menu.
+// - Reveal renders VISIBLE by default and only opts into the hidden
+//   .reveal state once JS has run (see Reveal). If hydration fails, no
+//   landing section can stay invisible.
+// - touch-action: manipulation on every button/link here kills the 300ms
+//   tap delay / double-tap zoom on mobile; .btn already gives an instant
+//   pressed state (active:scale).
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { postApi } from "./api";
 import { inr } from "./ui";
+
+// useLayoutEffect on the client, useEffect on the server (avoids the SSR
+// "useLayoutEffect does nothing on the server" warning). Used by Reveal so
+// the hidden state is applied before first paint, never after it.
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 export function LogoutButton({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
@@ -15,7 +32,7 @@ export function LogoutButton({ compact = false }: { compact?: boolean }) {
     <button
       type="button"
       disabled={busy}
-      className={compact ? "btn btn-secondary btn-sm" : "btn btn-secondary w-full"}
+      className={`${compact ? "btn btn-secondary btn-sm" : "btn btn-secondary w-full"} touch-manipulation`}
       onClick={async () => {
         setBusy(true);
         await postApi("/api/auth/logout", {});
@@ -28,65 +45,162 @@ export function LogoutButton({ compact = false }: { compact?: boolean }) {
   );
 }
 
-/** Slide-down mobile menu: one button, Escape closes, arrow keys move focus. */
-export function MobileMenu({ links, active }: { links: { href: string; label: string }[]; active?: string }) {
-  const [open, setOpen] = useState(false);
+/**
+ * Mobile menu, CSS-first: native <details>/<summary> opens and closes with
+ * zero JS (first tap works before hydration). After hydration a tiny
+ * enhancement syncs aria-expanded, closes on Escape / tap-outside / link
+ * click, and moves focus with arrow keys. The `below` prop picks the
+ * breakpoint under which the menu shows: "md" (public nav, desktop links
+ * appear at md) or "lg" (dashboard shell, sidebar appears at lg — so the
+ * menu must stay visible through 768–1023px, where there is no sidebar).
+ */
+export function MobileMenu({ links, active, below = "md" }: { links: { href: string; label: string }[]; active?: string; below?: "md" | "lg" }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const panelId = useId();
+  const [open, setOpen] = useState(false);
+
   useEffect(() => {
-    if (!open) return;
+    const el = detailsRef.current;
+    if (!el) return;
+    // Sync aria-expanded with the real (possibly pre-hydration) open state.
+    const sync = () => setOpen(el.open);
+    sync();
+    el.addEventListener("toggle", sync);
+    // Tap-outside close (enhancement only — no-JS path is unaffected).
+    const onDocClick = (e: MouseEvent) => {
+      if (el.open && e.target instanceof Node && !el.contains(e.target)) el.open = false;
+    };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setOpen(false); return; }
+      if (!el.open) return;
+      if (e.key === "Escape") {
+        el.open = false;
+        el.querySelector("summary")?.focus();
+        return;
+      }
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const target = e.target as Node | null;
+        if (!target || !el.contains(target)) return;
         e.preventDefault();
         const items = Array.from(listRef.current?.querySelectorAll("a") ?? []);
+        if (!items.length) return;
         const i = items.indexOf(document.activeElement as HTMLAnchorElement);
         const next = e.key === "ArrowDown" ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
         items[next]?.focus();
       }
     };
+    document.addEventListener("click", onDocClick);
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open ]);
+    return () => {
+      el.removeEventListener("toggle", sync);
+      document.removeEventListener("click", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  const close = () => {
+    const el = detailsRef.current;
+    if (el) el.open = false;
+  };
+
   return (
-    <div className="relative md:hidden">
-      <button
-        type="button" aria-expanded={open} aria-label="Menu"
-        className="btn btn-secondary btn-sm"
-        onClick={() => setOpen((v) => !v)}
+    <details ref={detailsRef} className={`group relative ${below === "lg" ? "lg:hidden" : "md:hidden"}`}>
+      <summary
+        aria-expanded={open}
+        aria-label="Menu"
+        aria-controls={panelId}
+        style={{ touchAction: "manipulation" }}
+        className="btn btn-secondary btn-sm touch-manipulation list-none select-none [&::-webkit-details-marker]:hidden"
       >
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-          {open ? <path d="M18 6 6 18M6 6l12 12" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+        <svg viewBox="0 0 24 24" className="h-4 w-4 group-open:hidden" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+        <svg viewBox="0 0 24 24" className="hidden h-4 w-4 group-open:block" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12" />
         </svg>
         Menu
-      </button>
-      {open && (
-        <div ref={listRef} className="animate-menu absolute right-0 top-11 z-50 w-56 rounded-xl bg-slate-900 p-2 ring-1 ring-white/10" role="menu">
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} role="menuitem" onClick={() => setOpen(false)}
-              className={`flex h-9 items-center rounded-lg px-3 text-sm font-medium transition-colors duration-150 ${active === l.href ? "bg-slate-800 text-slate-100" : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"}`}>
-              {l.label}
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
+      </summary>
+      <div ref={listRef} id={panelId} className="animate-menu absolute right-0 top-11 z-50 w-56 rounded-xl bg-slate-900 p-2 ring-1 ring-white/10" role="menu">
+        {links.map((l) => (
+          <Link key={l.href} href={l.href} role="menuitem" onClick={close}
+            style={{ touchAction: "manipulation" }}
+            className={`flex h-9 touch-manipulation items-center rounded-lg px-3 text-sm font-medium transition-colors duration-150 ${active === l.href ? "bg-slate-800 text-slate-100" : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"}`}>
+            {l.label}
+          </Link>
+        ))}
+      </div>
+    </details>
   );
 }
 
-/** Subtle scroll reveal, once, via IntersectionObserver. */
+/** True while the page is scrolled more than 8px. Shared by ScrollHeader. */
+export function useScrolled() {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return scrolled;
+}
+
+/**
+ * Sticky glass header with a scroll state: past 8px it gains the stronger
+ * blur + bottom border (via scrolledClassName) and descendants can compact
+ * with `group-data-[scrolled=true]:…` (the header carries .group and a
+ * data-scrolled attribute). Transitions are disabled under
+ * prefers-reduced-motion. Server components use this instead of a raw
+ * <header> because they cannot run the scroll listener themselves.
+ */
+export function ScrollHeader({ className = "", scrolledClassName = "", children }: { className?: string; scrolledClassName?: string; children: ReactNode }) {
+  const scrolled = useScrolled();
+  return (
+    <header data-scrolled={scrolled ? "true" : "false"} className={`group ${className}${scrolled ? ` ${scrolledClassName}` : ""}`}>
+      {children}
+    </header>
+  );
+}
+
+/**
+ * Subtle scroll reveal, once, via IntersectionObserver — but VISIBLE BY
+ * DEFAULT. The SSR HTML carries no .reveal class, so with JS disabled or
+ * hydration dead the content is simply there. Only after JS runs (layout
+ * effect, before paint) is .reveal added; sections already in view get
+ * .is-visible in the same commit, so there is no visible→hidden→visible
+ * flicker, and below-fold sections fade in when scrolled to.
+ */
 export function Reveal({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
+  const [enhanced, setEnhanced] = useState(false);
+  const [visible, setVisible] = useState(false);
+  useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { el.classList.add("is-visible"); return; }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setEnhanced(true);
+      setVisible(true);
+      return;
+    }
+    // Already in view? Reveal immediately in the same commit (no dip).
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) setVisible(true);
+    setEnhanced(true);
     const io = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) { el.classList.add("is-visible"); io.disconnect(); }
+      if (e.isIntersecting) { setVisible(true); io.disconnect(); }
     }, { threshold: 0.1 });
     io.observe(el);
     return () => io.disconnect();
   }, []);
-  return <div ref={ref} className={`reveal ${className}`} style={{ "--d": `${delay}ms` } as React.CSSProperties}>{children}</div>;
+  return (
+    <div
+      ref={ref}
+      className={`${enhanced ? "reveal" : ""}${visible ? " is-visible" : ""}${className ? ` ${className}` : ""}`}
+      style={{ "--d": `${delay}ms` } as React.CSSProperties}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** Number that tweens once on mount. Amounts use the single ₹ 2dp format. */
@@ -128,7 +242,8 @@ export function FaqItem({ q, a }: { q: string; a: string }) {
   return (
     <div className="card overflow-hidden">
       <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors duration-150 hover:bg-slate-800/50">
+        style={{ touchAction: "manipulation" }}
+        className="flex w-full touch-manipulation items-center justify-between gap-4 px-5 py-4 text-left transition-colors duration-150 hover:bg-slate-800/50">
         <span className="text-sm font-medium text-slate-100">{q}</span>
         <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 text-slate-500 transition-[transform] duration-200 ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg>
       </button>

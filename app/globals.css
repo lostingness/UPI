@@ -1,15 +1,48 @@
 @import "tailwindcss";
 
-/* UPI Gateway — ledger / passbook direction.
-   Dark graphite ramp, one indigo accent (#4f46e5, the real brand colour),
-   hairline borders, Inter for UI + JetBrains Mono for figures and order numbers.
-   Motion: one ease-out curve, named transitions only, no looping motion.
-   Unslop method by Damir Sokolovsky / unslop (CC BY 4.0) — see references in
-   the redesign report; applied here: spacing, colour, icons, copy, type,
-   layout, details, visuals, motion, in that order. */
+/* UPI Gateway — Meridian design system.
+   Deep-navy ink (#020816), glass panels (rgba(51,52,74,.6) + 14px blur),
+   navy glass (rgba(45,56,92,.85)), peach accent, red-orange CTA (#f93f28).
+   Type: TeX Gyre Adventor ("M Display"), TeX Gyre Heros ("M Sans"),
+   TeX Gyre Cursor ("M Mono") — served as @font-face from cdnfonts.com
+   (verified real TeX Gyre files via the name table). There is NO npm
+   package for these families (@fontsource/tex-gyre-*, typeface-tex-gyre-*
+   and Google Fonts all 404), so they cannot be bundled at build time;
+   the @font-face runtime URLs below are the working source.
+   Motion: one ease-out curve, named transitions only. The .reveal system
+   is visible by default and only animates when JS adds .is-visible —
+   content never depends on JS to be seen. */
+
+/* --- Meridian fonts (TeX Gyre, via cdnfonts.com woff) --- */
+@font-face { font-family: "M Display"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("https://fonts.cdnfonts.com/s/425/texgyreadventor-regular.woff") format("woff"); }
+@font-face { font-family: "M Display"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("https://fonts.cdnfonts.com/s/425/texgyreadventor-bold.woff") format("woff"); }
+@font-face { font-family: "M Sans"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("https://fonts.cdnfonts.com/s/428/texgyreheros-regular.woff") format("woff"); }
+@font-face { font-family: "M Sans"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("https://fonts.cdnfonts.com/s/428/texgyreheros-bold.woff") format("woff"); }
+@font-face { font-family: "M Mono"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("https://fonts.cdnfonts.com/s/427/texgyrecursor-regular.woff") format("woff"); }
+@font-face { font-family: "M Mono"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("https://fonts.cdnfonts.com/s/427/texgyrecursor-bold.woff") format("woff"); }
+
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "M Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "M Display", "ITC Avant Garde Gothic", "Avant Garde", "URW Gothic", "Century Gothic", sans-serif;
+  --font-mono: "M Mono", "Courier New", Courier, monospace;
+
+  /* Meridian tokens */
+  --color-ink-bg: #020816;
+  --color-glass: rgba(51, 52, 74, 0.6);
+  --color-navy: rgba(45, 56, 92, 0.85);
+  --color-peach: #f2b380;
+  --color-cta: #f93f28;
+  --color-peach-ink: #331200;
+  --color-display: #f6f8fc;
+  --color-body: #cfd3e0;
+  --color-chip: #c9ccd4;
+  --color-rail: #989eac;
 
   --color-brand-50: #eef2ff;
   --color-brand-100: #e0e7ff;
@@ -26,11 +59,16 @@
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   --shadow-pop: 0 8px 24px 0 rgb(0 0 0 / 0.4);
+
+  --animate-marquee: marquee 48s linear infinite;
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 }
 
 @layer base {
   html { color-scheme: dark; scroll-behavior: smooth; }
-  body { @apply bg-slate-950 text-slate-200 antialiased; font-size: 15px; line-height: 1.5; }
+  body { @apply bg-[#020816] text-slate-200 antialiased; font-size: 15px; line-height: 1.5; }
   ::selection { @apply bg-brand-600/40 text-white; }
   :focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; border-radius: 4px; }
   input[type="number"]::-webkit-outer-spin-button,
@@ -40,16 +78,22 @@
   @keyframes qr-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
   @keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin-slow { to { transform: rotate(360deg); } }
+  @keyframes hero-word-in { from { transform: translateY(132%); } to { transform: translateY(0); } }
   .animate-rise { animation: rise-in 400ms var(--ease-out) both; animation-delay: var(--d, 0ms); }
   .animate-qr { animation: qr-in 300ms var(--ease-out) both; }
   .animate-menu { animation: menu-in 180ms var(--ease-out) both; }
   .animate-spin-slow { animation: spin-slow 1s linear infinite; }
-  .reveal { opacity: 0; transform: translateY(8px); transition: opacity 400ms var(--ease-out), transform 400ms var(--ease-out); transition-delay: var(--d, 0ms); }
-  .reveal.is-visible { opacity: 1; transform: translateY(0); }
+  /* Scroll reveal: visible by default. JS (IntersectionObserver in
+     layout-client Reveal) only adds .is-visible, which plays the entrance
+     once. No JS, no observer, or a failed observer → content stays visible. */
+  .reveal { opacity: 1; transform: none; }
+  .reveal.is-visible { animation: rise-in 400ms var(--ease-out) both; animation-delay: var(--d, 0ms); }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; transition-duration: 0.01ms !important; }
-    .reveal { opacity: 1; transform: none; }
+    .reveal, .reveal.is-visible { opacity: 1; transform: none; animation: none; }
+    .marquee-track { animation: none !important; }
+    .hero-word > span { transform: none !important; }
   }
 }
 
@@ -69,6 +113,29 @@
   .btn-success { @apply bg-emerald-600 text-white hover:bg-emerald-500; }
   .btn-danger { @apply bg-transparent text-red-400 ring-1 ring-inset ring-red-500/40 hover:bg-red-500/10; }
   .btn-ghost { @apply text-slate-400 hover:bg-slate-800 hover:text-slate-100; }
+  /* Meridian CTAs — square corners, mono bold labels, cap-shift nudge. */
+  .btn-cta {
+    background: #f93f28; color: #331200; border-radius: 0;
+    font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.4px;
+  }
+  .btn-cta:hover { filter: brightness(1.05); }
+  .btn-glass {
+    background: rgba(45, 56, 92, 0.85); color: #fff; border-radius: 0;
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.4px;
+  }
+  .btn-glass:hover { background: rgba(58, 72, 114, 0.9); }
+  .btn-cta span, .btn-glass span { position: relative; top: -0.055em; }
+
+  /* Meridian glass — square corners, no border-radius (rail excepted). */
+  .glass {
+    background: rgba(51, 52, 74, 0.6);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
+  .glass-navy {
+    background: rgba(45, 56, 92, 0.85);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
 
   .card { @apply rounded-2xl bg-slate-900 ring-1 ring-white/10 shadow-card; }
   .card-header { @apply flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-5; }
@@ -105,4 +172,69 @@
   .receipt-row dd { @apply text-right font-medium text-slate-100 tabular-nums; }
   .meta { @apply font-mono text-xs text-slate-500 tabular-nums; }
   .skeleton { @apply animate-pulse rounded-lg bg-slate-800; }
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, rgb(30 41 59 / 1) 25%, rgb(51 65 85 / 1) 50%, rgb(30 41 59 / 1) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  /* ---------- Meridian hero ---------- */
+  .hero-meridian {
+    position: relative; isolation: isolate; overflow: hidden;
+    background: #020816; min-height: calc(100vh - 4rem);
+    min-height: calc(100svh - 4rem); min-height: calc(100dvh - 4rem);
+  }
+  .hero-photo { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 0; will-change: transform; transform-origin: 0 0; }
+  /* When the hero layout script runs it sizes/positions the photo with the
+     reference layout-engine math (--s/--x0/--y0); without JS the 100% cover
+     fallback above applies. */
+  .m-hero-js .hero-photo { width: calc(1586px * var(--s, 1)); height: calc(992px * var(--s, 1)); transform: translate3d(var(--x0, 0px), var(--y0, 0px), 0); }
+  .hero-photo video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 100%; display: block; }
+  /* Deep-navy sky above, fading out so the subject shows below the CTAs. */
+  .hero-photo::after {
+    content: ""; position: absolute; inset: -1px; pointer-events: none;
+    background: linear-gradient(180deg, rgba(2, 8, 22, 1) 0%, rgba(2, 8, 22, 0.55) 6%, rgba(2, 8, 22, 0.15) 14%, rgba(2, 8, 22, 0) 22%, rgba(2, 8, 22, 0) 100%);
+  }
+  .hero-stage {
+    position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center;
+    text-align: center; padding: 4.5rem 1.25rem 3rem;
+  }
+  @media (min-width: 640px) { .hero-stage { padding-top: 6rem; } }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 0.75rem; height: 2.2rem; padding: 0 0.75rem;
+    background: rgba(51, 52, 74, 0.6); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    font-family: var(--font-mono); font-weight: 700; font-size: 12px; letter-spacing: 0.6px; color: #fff;
+    white-space: nowrap;
+  }
+  .hero-eyebrow .sq { width: 9px; height: 11px; flex: none; background: #c9ccd4; }
+  .hero-title {
+    margin: 1.5rem 0 0; max-width: 20ch; font-family: var(--font-display); font-weight: 400;
+    font-size: clamp(2rem, 9.25vw, 3.3125rem); line-height: 1.06; letter-spacing: 0; color: #f6f8fc;
+    text-wrap: balance;
+  }
+  @media (min-width: 640px) { .hero-title { max-width: none; } }
+  .hero-word { display: inline-block; overflow: hidden; vertical-align: top; padding: 0.08em 0 0.2em; margin: -0.08em 0 -0.2em; }
+  .hero-word > span { display: inline-block; animation: hero-word-in 1.05s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: var(--d, 0ms); }
+  .hero-lede { margin: 1.25rem 0 0; max-width: 32em; font-size: 1rem; line-height: 1.45; color: #cfd3e0; text-wrap: pretty; }
+  @media (min-width: 640px) { .hero-lede { font-size: 1.125rem; line-height: 1.278; } }
+  .hero-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.55rem; margin-top: 1.5rem; width: 100%; max-width: 330px; }
+  @media (min-width: 640px) { .hero-cta { max-width: none; width: auto; } }
+  .hero-cta .btn { min-height: 3.2rem; font-size: 13.5px; padding-left: 1.9rem; padding-right: 1.9rem; }
+  @media (max-width: 639px) { .hero-cta .btn { flex: 1 1 auto; justify-content: center; min-height: 2.875rem; font-size: 11.5px; padding-left: 0.85rem; padding-right: 0.85rem; } }
+  .hero-ticks { margin-top: 2rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 1.25rem; font-size: 0.875rem; color: #cfd3e0; list-style: none; padding: 0; }
+  .hero-ticks li::before { content: "✓ "; color: #f2b380; }
+
+  /* ---------- Testimonials marquee ---------- */
+  .marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+  .marquee-track { display: flex; gap: 1rem; width: max-content; animation: marquee 48s linear infinite; }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+  @media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; flex-wrap: wrap; width: auto; } }
+
+  /* ---------- Payment-flow diagram ---------- */
+  .flow-diagram text { font-family: var(--font-sans); }
+  .flow-diagram .flow-box { fill: rgba(51, 52, 74, 0.6); stroke: rgba(255, 255, 255, 0.14); }
+  .flow-diagram .flow-num { font-family: var(--font-mono); font-weight: 700; fill: #f2b380; }
+  .flow-diagram .flow-label { fill: #f6f8fc; }
+  .flow-diagram .flow-sub { fill: #989eac; }
+  .flow-diagram .flow-arrow { stroke: #f2b380; stroke-width: 1.5; fill: none; }
 }

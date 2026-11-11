@@ -26,8 +26,15 @@ const CSP = [
   // so user content cannot inject script through the app.
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' fonts.googleapis.com",
-  "font-src 'self' fonts.gstatic.com",
-  "img-src 'self' data:",
+  // Meridian fonts are served at runtime from fonts.cdnfonts.com (TeX Gyre
+  // woff files — @fontsource/tex-gyre-* does not exist on npm and Google
+  // Fonts does not carry them), so it must be an allowed font source here
+  // or the fonts are blocked on matcher routes.
+  "font-src 'self' fonts.gstatic.com https://fonts.cdnfonts.com",
+  "img-src 'self' data: https://d2ol7oe51mr4n9.cloudfront.net",
+  // Meridian hero video/poster host (video + poster must not be blocked on
+  // matcher routes — the hero video is served from this CloudFront host).
+  "media-src 'self' https://d2ol7oe51mr4n9.cloudfront.net",
   "connect-src 'self'",
   "form-action 'self' https://securestage.paytmpayments.com https://secure.paytmpayments.com https://api-preprod.phonepe.com https://api.phonepe.com",
   "frame-ancestors 'none'",

@@ -73,7 +73,7 @@ function useCountdown(expiresAt: string | null, createdAt: string) {
 
 function TimerRing({ display, frac, left }: { display: string; frac: number; left: number }) {
   const offset = (100.5 * (1 - frac)).toFixed(2);
-  const stroke = left < 60 ? "#f87171" : "#818cf8";
+  const stroke = left < 60 ? "#f93f28" : "#f2b380";
   return (
     <div className="relative h-14 w-14 shrink-0">
       <svg viewBox="0 0 36 36" className="h-14 w-14 -rotate-90">
@@ -176,24 +176,24 @@ export default function PayClient(props: PayClientProps) {
   return (
     <div className="grid md:grid-cols-5">
       {/* Summary panel */}
-      <div className="bg-slate-950 p-6 text-white sm:p-8 md:col-span-2">
+      <div className="animate-rise bg-[#020816] p-6 text-[#f6f8fc] sm:p-8 md:col-span-2">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-brand-600 text-base font-medium text-white">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-[#f93f28] text-base font-medium text-white">
             {(props.merchantName[0] ?? "?").toUpperCase()}
           </span>
           <div className="min-w-0">
-            <div className="text-xs text-slate-400">Paying to</div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#c9ccd4]">Paying to</div>
             <div className="truncate font-medium">{props.merchantName}</div>
           </div>
         </div>
         <div className="mt-8">
           {isUnique ? (
             <>
-              <div className="text-xs text-slate-400">Order amount</div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400">Order amount</div>
               <div className="mt-1 font-mono text-xl font-medium tabular-nums text-slate-400">
                 ₹{fmt(props.amount)}
               </div>
-              <div className="mt-4 text-xs font-medium text-amber-300">Pay exactly</div>
+              <div className="mt-4 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[#f2b380]">Pay exactly</div>
               <div className="mt-1 font-mono text-4xl font-medium tabular-nums">
                 ₹{fmt(payAmount)}
               </div>
@@ -203,7 +203,7 @@ export default function PayClient(props: PayClientProps) {
             </>
           ) : (
             <>
-              <div className="text-xs text-slate-400">Amount</div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400">Amount</div>
               <div className="mt-1 font-mono text-4xl font-medium tabular-nums">
                 ₹{fmt(props.amount)}
               </div>
@@ -228,11 +228,11 @@ export default function PayClient(props: PayClientProps) {
       </div>
 
       {/* Action area */}
-      <div className="flex flex-col bg-slate-900 p-6 sm:p-8 md:col-span-3">
+      <div className="animate-rise flex flex-col bg-[#0a1226] p-6 sm:p-8 md:col-span-3">
         {status === "paid" && (
           <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-emerald-500">
-              <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-white/[0.04] ring-1 ring-white/10">
+              <svg viewBox="0 0 24 24" className="h-11 w-11" fill="none" stroke="#34d399" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="m8 12.4 2.7 2.7L16.4 9.4" /></svg>
             </div>
             <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment successful</h1>
             <p className="mt-2 text-slate-400">₹{fmt(payAmount)} paid to {props.merchantName}</p>
@@ -247,8 +247,8 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "review" && (
           <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-xl bg-sky-500/15 text-sky-400 ring-1 ring-sky-500/30">
-              <svg viewBox="0 0 24 24" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z" /><path d="m9 12 2 2 4-4" /></svg>
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-white/[0.04] ring-1 ring-white/10">
+              <svg viewBox="0 0 24 24" className="h-11 w-11" fill="none" stroke="#38bdf8" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="M12 7v5.2l3.2 2" /></svg>
             </div>
             <h1 className="mt-6 text-2xl font-medium text-slate-50">Verifying your payment</h1>
             <p className="mt-2 max-w-sm text-sm text-slate-400">{props.merchantName} is confirming your UTR with their bank. This page updates automatically once it&apos;s approved.</p>
@@ -262,8 +262,8 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "expired" && (
           <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-xl bg-slate-800 text-slate-400">
-              <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-white/[0.04] ring-1 ring-white/10">
+              <svg viewBox="0 0 24 24" className="h-11 w-11" fill="none" stroke="#fbbf24" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
             </div>
             <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment link expired</h1>
             {props.canRecover && props.lateRecoveryUntil && (
@@ -292,8 +292,8 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "failed" && (
           <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-xl bg-red-500/15 text-red-400 ring-1 ring-red-500/30">
-              <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-white/[0.04] ring-1 ring-white/10">
+              <svg viewBox="0 0 24 24" className="h-11 w-11" fill="none" stroke="#f87171" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="m9.2 9.2 5.6 5.6M14.8 9.2l-5.6 5.6" /></svg>
             </div>
             <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment failed</h1>
             <p className="mt-2 max-w-sm text-sm text-slate-400">This payment could not be completed. Please ask {props.merchantName} for a new payment link — and don&apos;t pay again on this one.</p>
@@ -308,21 +308,30 @@ export default function PayClient(props: PayClientProps) {
             <h1 className="mt-6 text-xl font-medium text-slate-50">Pay securely with {props.pgName}</h1>
             <p className="mt-2 max-w-sm text-sm text-slate-400">You&apos;ll complete the payment on {props.pgName}&apos;s secure checkout using UPI, card or netbanking, then come back here automatically.</p>
             {startError && <div className="mt-6 flex max-w-sm items-start gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-left text-sm text-red-300 ring-1 ring-red-500/30">{startError}</div>}
-            <button className="btn btn-primary btn-lg mt-8 w-full max-w-sm" onClick={startHosted} disabled={starting}>
+            <button className="mt-8 inline-flex min-h-12 w-full max-w-sm items-center justify-center gap-2 rounded-lg bg-[#f93f28] px-5 py-3 text-base font-bold text-[#331200] transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f2b380] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1226] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50" style={{ touchAction: "manipulation" }} onClick={startHosted} disabled={starting}>
               {starting ? "Starting secure checkout…" : `Pay ₹${fmt(payAmount)} with ${props.pgName}`}
             </button>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {appLinks.map((a) => (
-                <a key={a.name} href={a.href} className={`flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-white/10 hover:bg-slate-700 ${a.text}`}>
+              {props.upiIntent && appLinks.map((a) => (
+                <a key={a.name} href={a.href} style={{ touchAction: "manipulation" }} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.06] px-3.5 py-2 text-xs font-medium text-slate-200 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/10">
                   <Image src={a.logo} alt={a.name} width={16} height={16} className="rounded-sm" />{a.name}
                 </a>
               ))}
-              <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-400 ring-1 ring-slate-700">Cards</span>
-              <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-400 ring-1 ring-slate-700">Netbanking</span>
+              <span className="flex min-h-11 items-center rounded-full bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-slate-400 ring-1 ring-white/10">Cards</span>
+              <span className="flex min-h-11 items-center rounded-full bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-slate-400 ring-1 ring-white/10">Netbanking</span>
             </div>
+            {!props.upiIntent && props.upiId && (
+              <div className="mt-4 flex w-full max-w-sm items-center justify-between gap-3 rounded-xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/10">
+                <div className="min-w-0">
+                  <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Or pay to UPI ID</div>
+                  <div className="truncate font-mono text-sm font-medium text-slate-100">{props.upiId}</div>
+                </div>
+                <CopyText text={props.upiId} />
+              </div>
+            )}
             <div className="mt-auto pt-6">
-              <div className="flex items-center justify-center gap-2.5 rounded-xl bg-slate-800/60 px-4 py-3 text-sm text-slate-300 ring-1 ring-slate-800">
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-slate-200" />
+              <div className="flex items-center justify-center gap-2.5 rounded-xl bg-white/[0.04] px-4 py-3 text-sm text-slate-300 ring-1 ring-white/10">
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-[#f2b380]" />
                 <span>{statusText ?? "Waiting for payment…"}</span>
               </div>
             </div>
@@ -336,11 +345,11 @@ export default function PayClient(props: PayClientProps) {
               <p className="mt-1 text-sm text-slate-400">Open your UPI app, scan the QR and approve the payment.</p>
             </div>
             {!qrFailed && props.upiIntent ? (
-              <div className="animate-qr relative mx-auto mt-6 rounded-2xl bg-white p-3 ring-1 ring-white/10">
-                <span className="absolute -left-px -top-px h-6 w-6 rounded-tl-2xl border-l-[3px] border-t-[3px] border-brand-500" />
-                <span className="absolute -right-px -top-px h-6 w-6 rounded-tr-2xl border-r-[3px] border-t-[3px] border-brand-500" />
-                <span className="absolute -bottom-px -left-px h-6 w-6 rounded-bl-2xl border-b-[3px] border-l-[3px] border-brand-500" />
-                <span className="absolute -bottom-px -right-px h-6 w-6 rounded-br-2xl border-b-[3px] border-r-[3px] border-brand-500" />
+              <div className="animate-qr relative mx-auto mt-6 rounded-2xl bg-white p-3 shadow-[0_8px_32px_rgb(0_0_0/0.45)] ring-1 ring-white/10">
+                <span className="absolute -left-px -top-px h-6 w-6 rounded-tl-2xl border-l-[3px] border-t-[3px] border-[#f2b380]" />
+                <span className="absolute -right-px -top-px h-6 w-6 rounded-tr-2xl border-r-[3px] border-t-[3px] border-[#f2b380]" />
+                <span className="absolute -bottom-px -left-px h-6 w-6 rounded-bl-2xl border-b-[3px] border-l-[3px] border-[#f2b380]" />
+                <span className="absolute -bottom-px -right-px h-6 w-6 rounded-br-2xl border-b-[3px] border-r-[3px] border-[#f2b380]" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`/api/pay/${props.orderNo}/qr`} alt={`UPI QR code for ₹${payAmount}`} className="h-52 w-52 sm:h-56 sm:w-56" onError={() => setQrFailed(true)} />
               </div>
@@ -349,30 +358,34 @@ export default function PayClient(props: PayClientProps) {
                 QR code is unavailable right now — use the UPI app buttons or pay to the UPI ID below.
               </div>
             )}
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
-              {appLinks.map((a) => (
-                <a key={a.name} href={a.href} className={`flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-white/10 hover:bg-slate-700 ${a.text}`}>
-                  <Image src={a.logo} alt={a.name} width={16} height={16} className="rounded-sm" />{a.name}
-                </a>
-              ))}
-            </div>
-            <div className="mt-6 space-y-3 md:hidden">
-              <div className="flex items-center gap-3 text-xs text-slate-500"><span className="h-px flex-1 bg-slate-800" />Or pay on this phone<span className="h-px flex-1 bg-slate-800" /></div>
-              {props.upiIntent && (
-                <a href={props.upiIntent} className="btn btn-primary btn-lg w-full">Pay ₹{fmt(payAmount)} with UPI app</a>
-              )}
-              <div className="grid grid-cols-3 gap-2">
-                {appLinks.slice(0, 3).map((a) => (
-                  <a key={a.name} href={a.href} className={`btn btn-secondary justify-center font-medium ${a.text}`}>
-                    <Image src={a.logo} alt={a.name} width={20} height={20} className="rounded-sm" />{a.name}
+            {props.upiIntent && (
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {appLinks.map((a) => (
+                  <a key={a.name} href={a.href} style={{ touchAction: "manipulation" }} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.06] px-3.5 py-2 text-xs font-medium text-slate-200 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/10">
+                    <Image src={a.logo} alt={a.name} width={16} height={16} className="rounded-sm" />{a.name}
                   </a>
                 ))}
               </div>
+            )}
+            <div className="mt-6 space-y-3 md:hidden">
+              <div className="flex items-center gap-3 text-xs text-slate-500"><span className="h-px flex-1 bg-slate-800" />Or pay on this phone<span className="h-px flex-1 bg-slate-800" /></div>
+              {props.upiIntent && (
+                <a href={props.upiIntent} style={{ touchAction: "manipulation" }} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#f93f28] px-5 py-3 text-base font-bold text-[#331200] transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f2b380] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1226] active:scale-[0.98]">Pay ₹{fmt(payAmount)} with UPI app</a>
+              )}
+              {props.upiIntent && (
+                <div className="grid grid-cols-3 gap-2">
+                  {appLinks.slice(0, 3).map((a) => (
+                    <a key={a.name} href={a.href} style={{ touchAction: "manipulation" }} className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-lg bg-white/[0.06] px-2 py-2 text-sm font-medium text-slate-100 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/10">
+                      <Image src={a.logo} alt={a.name} width={20} height={20} className="rounded-sm" />{a.name}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
             {props.upiId && (
-              <div className="mt-6 flex items-center justify-between gap-3 rounded-xl bg-slate-800/60 px-4 py-3 ring-1 ring-slate-800">
+              <div className="mt-6 flex items-center justify-between gap-3 rounded-xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/10">
                 <div className="min-w-0">
-                  <div className="text-xs text-slate-500">Or pay to UPI ID</div>
+                  <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Or pay to UPI ID</div>
                   <div className="truncate font-mono text-sm font-medium text-slate-100">{props.upiId}</div>
                 </div>
                 <CopyText text={props.upiId} />
@@ -400,7 +413,7 @@ export function UtrForm({ orderNo, attemptsLeft, reviewNote }: { orderNo: string
   const [utr, setUtr] = useState("");
   return (
     <form
-      className="rounded-xl p-4 text-left ring-1 ring-slate-800"
+      className="rounded-xl bg-white/[0.02] p-4 text-left ring-1 ring-white/10"
       onSubmit={async (e) => {
         e.preventDefault();
         await form.submit(`/api/pay/${orderNo}/utr`, { utr });

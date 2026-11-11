@@ -1,14 +1,18 @@
 // Layouts — public nav + footer, authed sidebar shell, guest shell.
 // Ledger direction: flat logo mark (₹ in solid indigo, 8px radius), sentence
 // case, hairlines, active state = small surface step + hairline.
+// Glass direction (Meridian): sticky bars use rgba(51,52,74,.6) +
+// backdrop-blur(14px), square corners; past 8px of scroll they gain a
+// stronger blur, a visible bottom border and slightly less height
+// (ScrollHeader in layout-client.tsx owns the scroll listener).
 import Link from "next/link";
 import type { SessionUser } from "./server-data";
 import { Avatar, Icon, ICONS } from "./ui";
-import { LogoutButton, MobileMenu } from "./layout-client";
+import { LogoutButton, MobileMenu, ScrollHeader } from "./layout-client";
 
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2.5">
+    <Link href="/" className="flex touch-manipulation items-center gap-2.5">
       <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600 text-base font-medium text-white" aria-hidden="true">₹</span>
       <span className="text-base font-medium text-slate-50">UPI Gateway</span>
     </Link>
@@ -27,12 +31,12 @@ export function SiteFooter() {
             </p>
           </div>
           <nav className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm text-slate-400">
-            <Link href="/#features" className="hover:text-slate-100">Features</Link>
-            <Link href="/#how" className="hover:text-slate-100">How it works</Link>
-            <Link href="/#security" className="hover:text-slate-100">Security</Link>
-            <Link href="/docs" className="hover:text-slate-100">API docs</Link>
-            <Link href="/login" className="hover:text-slate-100">Log in</Link>
-            <Link href="/setup" className="hover:text-slate-100">Setup</Link>
+            <Link href="/#features" className="touch-manipulation hover:text-slate-100">Features</Link>
+            <Link href="/#how" className="touch-manipulation hover:text-slate-100">How it works</Link>
+            <Link href="/#security" className="touch-manipulation hover:text-slate-100">Security</Link>
+            <Link href="/docs" className="touch-manipulation hover:text-slate-100">API docs</Link>
+            <Link href="/login" className="touch-manipulation hover:text-slate-100">Log in</Link>
+            <Link href="/setup" className="touch-manipulation hover:text-slate-100">Setup</Link>
           </nav>
         </div>
         <div className="mt-8 flex flex-col gap-2 border-t border-white/5 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
@@ -54,30 +58,33 @@ const PUBLIC_LINKS = [
 
 export function PublicNav({ user }: { user: SessionUser | null }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/90">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+    <ScrollHeader
+      className="sticky top-0 z-40 border-b border-transparent bg-[rgba(51,52,74,0.6)] backdrop-blur-[14px] transition-[background-color,border-color,backdrop-filter] duration-200 motion-reduce:transition-none"
+      scrolledClassName="border-white/10 bg-[rgba(51,52,74,0.85)] backdrop-blur-[20px]"
+    >
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 transition-[height] duration-200 motion-reduce:transition-none group-data-[scrolled=true]:h-14 sm:px-6">
         <Logo />
         <nav className="hidden items-center gap-6 text-sm font-medium text-slate-400 md:flex" aria-label="Primary">
           {PUBLIC_LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="transition-colors duration-150 hover:text-slate-100">{l.label}</a>
+            <a key={l.href} href={l.href} className="touch-manipulation transition-colors duration-150 hover:text-slate-100">{l.label}</a>
           ))}
         </nav>
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              <Link href="/dashboard" className="btn btn-secondary btn-sm">Dashboard</Link>
+              <Link href="/dashboard" className="btn btn-secondary btn-sm touch-manipulation">Dashboard</Link>
               <LogoutButton compact />
             </>
           ) : (
             <>
-              <Link href="/login" className="hidden text-sm font-medium text-slate-400 transition-colors duration-150 hover:text-slate-100 sm:block">Log in</Link>
-              <Link href="/setup" className="btn btn-primary btn-sm">Get started</Link>
+              <Link href="/login" className="hidden text-sm font-medium text-slate-400 transition-colors duration-150 hover:text-slate-100 sm:block touch-manipulation">Log in</Link>
+              <Link href="/setup" className="btn btn-primary btn-sm touch-manipulation">Get started</Link>
             </>
           )}
           <MobileMenu links={PUBLIC_LINKS} />
         </div>
       </div>
-    </header>
+    </ScrollHeader>
   );
 }
 
@@ -106,7 +113,7 @@ function NavList({ links, active }: { links: { href: string; label: string; icon
     <nav className="space-y-0.5" aria-label="Sections">
       {links.map((l) => (
         <Link key={l.href} href={l.href} aria-current={active === l.href ? "page" : undefined}
-          className={`navlink ${active === l.href ? "navlink-active" : ""}`}>
+          className={`navlink touch-manipulation ${active === l.href ? "navlink-active" : ""}`}>
           <Icon d={l.icon} />{l.label}
         </Link>
       ))}
@@ -124,7 +131,7 @@ export function AppShell({
   const allLinks = isAdmin ? [...MERCHANT_LINKS, ...ADMIN_LINKS] : MERCHANT_LINKS;
   return (
     <div className="min-h-screen lg:flex">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-white/10 px-4 py-5 lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-white/10 bg-[rgba(51,52,74,0.4)] px-4 py-5 backdrop-blur-[14px] lg:flex">
         <Logo />
         <div className="mt-8">
           <p className="mb-2 px-3 text-xs font-medium text-slate-500">Merchant</p>
@@ -150,21 +157,27 @@ export function AppShell({
       </aside>
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/90">
-          <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 sm:px-6">
+        <ScrollHeader
+          className="sticky top-0 z-30 border-b border-transparent bg-[rgba(51,52,74,0.6)] backdrop-blur-[14px] transition-[background-color,border-color,backdrop-filter] duration-200 motion-reduce:transition-none"
+          scrolledClassName="border-white/10 bg-[rgba(51,52,74,0.85)] backdrop-blur-[20px]"
+        >
+          <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 transition-[min-height] duration-200 motion-reduce:transition-none group-data-[scrolled=true]:min-h-12 sm:px-6">
             <div className="lg:hidden"><Logo /></div>
             <div className="hidden min-w-0 lg:block">
               <span className="truncate text-sm text-slate-400">{user.businessName ?? user.name}</span>
               <span className="ml-2 font-mono text-xs text-slate-500">{user.role}</span>
             </div>
             <div className="flex items-center gap-2 lg:hidden">
-              <MobileMenu links={allLinks.map(({ href, label }) => ({ href, label }))} active={active} />
+              {/* below="lg": the sidebar only appears at lg, so the menu must
+                  stay reachable through 768–1023px (previously MobileMenu's
+                  md:hidden left NO navigation at all in that range). */}
+              <MobileMenu links={allLinks.map(({ href, label }) => ({ href, label }))} active={active} below="lg" />
             </div>
             <div className="hidden items-center gap-3 lg:flex">
               <Avatar name={user.businessName ?? user.name} className="h-8 w-8 text-xs" />
             </div>
           </div>
-        </header>
+        </ScrollHeader>
         <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
           <div className="animate-rise mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>

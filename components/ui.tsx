@@ -1,6 +1,8 @@
 // Shared server-safe UI helpers (formatting, status, cards, empty states).
 // Ledger direction: mono figures, one format (₹ with 2dp), sentence case,
 // quiet status text — no glowing pills, no icons stuffed into stat cards.
+// Meridian accents: deep navy #020816 context, peach #f2b380 highlights,
+// single red #f93f28 for the one thing that needs to shout.
 
 export function inr(amount: number | string | null | undefined): string {
   const n = Number(amount ?? 0);
@@ -54,7 +56,7 @@ export function StatusPill({ status, label }: { status: string; label?: string }
   const style = STATUS_STYLE[status] ?? STATUS_STYLE.expired;
   const dot = STATUS_DOT[status] ?? STATUS_DOT.expired;
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${style}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full bg-white/[0.03] px-2 py-0.5 text-xs font-medium ring-1 ring-white/10 ${style}`}>
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
       {label ?? status}
     </span>
@@ -69,7 +71,7 @@ export function initials(name: string | null | undefined): string {
 
 export function Avatar({ name, className = "h-10 w-10 text-sm" }: { name: string | null | undefined; className?: string }) {
   return (
-    <span className={`inline-flex shrink-0 items-center justify-center rounded-lg bg-brand-600/20 font-medium text-brand-300 ring-1 ring-brand-500/30 ${className}`}>
+    <span className={`inline-flex shrink-0 items-center justify-center rounded-lg bg-[#f2b380]/10 font-medium text-[#f2b380] ring-1 ring-[#f2b380]/25 ${className}`}>
       {initials(name)}
     </span>
   );
@@ -78,7 +80,7 @@ export function Avatar({ name, className = "h-10 w-10 text-sm" }: { name: string
 export function EmptyState({ title, hint, children }: { title: string; hint?: string; children?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
-      <div className="grid h-12 w-12 place-items-center rounded-xl bg-slate-800 text-slate-400 ring-1 ring-white/10">
+      <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/[0.03] text-[#f2b380] ring-1 ring-white/10">
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
           <circle cx="12" cy="12" r="9" /><path d="M8 12h8" />
         </svg>
@@ -94,7 +96,7 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 className="text-xl font-medium text-slate-50 sm:text-2xl">{title}</h1>
+        <h1 className="text-xl font-medium text-[#f6f8fc] sm:text-2xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -107,8 +109,9 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
 export function StatCard({ label, value, hint, children }: { label: string; value: string; hint?: string; children?: React.ReactNode }) {
   return (
     <div className="card p-4 sm:p-5">
-      <div className="text-xs font-medium text-slate-500">{label}</div>
-      <div className="mt-2 truncate font-mono text-xl font-medium text-slate-50 tabular-nums sm:text-2xl">
+      <span aria-hidden="true" className="mb-3 block h-0.5 w-6 rounded-full bg-[#f2b380]/70" />
+      <div className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-[#989eac]">{label}</div>
+      <div className="mt-2 truncate font-mono text-xl font-medium text-[#f6f8fc] tabular-nums sm:text-2xl">
         {children ?? value}
       </div>
       {hint && <div className="mt-1.5 text-xs text-slate-500">{hint}</div>}
@@ -169,4 +172,9 @@ export const ICONS = {
   docs: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5",
   check: "m5 12.5 4.5 4.5L19 7.5",
   warn: "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z",
+  chart: "M3 3v18h18M7 14l4-4 3 3 5-6",
+  wallet: "M21 12V7H5a2 2 0 0 1 0-4h14v4M3 5v14a2 2 0 0 0 2 2h16v-5M18 12a2 2 0 0 0 0 4h4v-4h-4z",
+  shield: "M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10zM9 11.5l2 2 4-4",
+  qr: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h3v3h-3zM20 14h1M14 20h1M20 20h1M17 17h1",
+  receipt: "M5 3h14v18l-2-1.5L15 21l-2-1.5L11 21l-2-1.5L7 21l-2-1.5V3zM9 7h6M9 11h6",
 } as const;
