@@ -52,7 +52,7 @@ export function ApproveUtrForm({ orderNo, amount }: { orderNo: string; amount: s
       <div>
         <label htmlFor="bank-utr" className="label">Bank UTR (12 digits)</label>
         <input id="bank-utr" inputMode="numeric" autoComplete="off" maxLength={14} required
-          placeholder="e.g. 412345678901" className="input font-mono tracking-wider"
+          placeholder="e.g. 412345678901" className="input font-monor"
           value={bankUtr} onChange={(e) => setBankUtr(e.target.value)} />
         <FieldError errors={form.errors} name="bank_utr" />
       </div>

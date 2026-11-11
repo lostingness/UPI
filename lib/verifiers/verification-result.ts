@@ -24,9 +24,21 @@ export interface VerificationResult {
 
 export interface OrderLike {
   id: number; order_no: string; amount: string | number;
+  /** The amount the customer was actually asked to pay (migration 013).
+   * Verifiers must compare the provider amount against this, not `amount`. */
+  payable_amount?: string | number | null;
   payment_account_id: number | null;
   original_expires_at: string | Date | null; expires_at: string | Date | null;
   created_at: string | Date;
+}
+
+/** The amount the customer was actually asked to pay: the unique allocated
+ * amount when set, otherwise the order amount (Same-Amount QR, sandbox,
+ * pre-013 orders). Always a 2dp string. */
+export function expectedAmount(order: OrderLike): string {
+  return order.payable_amount != null && order.payable_amount !== ""
+    ? Number(order.payable_amount).toFixed(2)
+    : Number(order.amount).toFixed(2);
 }
 
 export function originalExpiryDeadline(order: OrderLike): Date {
@@ -74,7 +86,12 @@ function successful(order: OrderLike, provider: Provider, amount: string | numbe
   if (!((utr ?? "").trim()) && !((txnId ?? "").trim())) {
     throw new Error("Provider verification requires a transaction reference.");
   }
-  const occurred = occurredAt ?? (Object.keys(raw).length ? extractRawTimestamp(provider, raw) : null) ?? new Date();
+  // occurredAt is NEVER defaulted to now: when the provider gives no
+  // usable timestamp the result carries null, and markPaid rejects it
+  // (GATEWAY_EVIDENCE_REQUIRE_TIMESTAMP, default true). A fabricated
+  // "occurred now" would let evidence pass the age/grace windows it is
+  // supposed to be checked against.
+  const occurred = occurredAt ?? (Object.keys(raw).length ? extractRawTimestamp(provider, raw) : null);
   return {
     paid: true, utr: utr ?? null, txnId: txnId ?? null, raw, provider,
     orderId: order.id, orderNumber: order.order_no,

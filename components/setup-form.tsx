@@ -34,8 +34,8 @@ export function SetupWizard({ databaseConfigured, installed }: { databaseConfigu
       {/* Step 1 — database */}
       <section>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-slate-100">1 · Database</h2>
-          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${dbOk ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30" : "bg-red-500/15 text-red-300 ring-red-500/30"}`}>
+          <h2 className="text-base font-medium text-slate-100">1 · Database</h2>
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${dbOk ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30" : "bg-red-500/15 text-red-300 ring-red-500/30"}`}>
             {dbOk ? "Configured" : "Not configured"}
           </span>
         </div>
@@ -47,7 +47,7 @@ export function SetupWizard({ databaseConfigured, installed }: { databaseConfigu
           </p>
         ) : (
           <div className="mt-3 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-300 ring-1 ring-red-500/30">
-            <p className="font-semibold">Database not configured</p>
+            <p className="font-medium">Database not configured</p>
             <p className="mt-1 text-red-200/80">
               Set the Neon pooled <code className="kbd">DATABASE_URL</code> environment variable (Production + Preview as needed),
               apply <code className="kbd">db/migrations/*.sql</code>, then come back. Setup cannot continue without a real database —
@@ -68,7 +68,7 @@ export function SetupWizard({ databaseConfigured, installed }: { databaseConfigu
 
       {/* Step 2 — admin */}
       <section className="border-t border-slate-800 pt-6">
-        <h2 className="text-base font-semibold text-slate-100">2 · Create the first admin</h2>
+        <h2 className="text-base font-medium text-slate-100">2 · Create the first admin</h2>
         <p className="mt-1 text-sm text-slate-400">
           This account administers the gateway (merchants, orders, webhooks, audit logs). Choose a strong password — minimum 10 characters.
         </p>

@@ -22,7 +22,8 @@ export async function POST(req: Request) {
     if (order.verification_expires_at && new Date(order.verification_expires_at).getTime() > Date.now()) {
       throw new ApiError(422, "The verification lease has not expired yet.");
     }
-    if (order.verification_generation !== body.generation) {
+    // Neon returns BIGINT ids/generations as strings — compare numerically.
+    if (Number(order.verification_generation) !== Number(body.generation)) {
       throw new ApiError(422, "Generation mismatch — the lease has changed.");
     }
     const sql = getSql();

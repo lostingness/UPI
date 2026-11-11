@@ -27,7 +27,13 @@ const CSP = [
 
 function sessionSecret(): Uint8Array {
   const s = process.env.SESSION_SECRET;
-  return new TextEncoder().encode(s ?? "dev-only-session-secret-do-not-use-in-production");
+  if (!s) {
+    // Fail closed in production — no dev fallback is ever trusted there
+    // (same rule as lib/auth.ts). Local dev keeps the fixed fallback.
+    if (process.env.NODE_ENV === "production") throw new Error("SESSION_SECRET is not set");
+    return new TextEncoder().encode("dev-only-session-secret-do-not-use-in-production");
+  }
+  return new TextEncoder().encode(s);
 }
 
 export async function middleware(req: NextRequest) {

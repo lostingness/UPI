@@ -8,10 +8,20 @@ import { adminOverview } from "@/components/server-data";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const o = await adminOverview();
   return (
     <AdminShell active="/admin" title="Admin" subtitle="All merchants, orders, accounts, webhooks and audit logs." next="/admin">
-      {() => (
+      {() => <AdminBody />}
+    </AdminShell>
+  );
+}
+
+// Data is fetched here, inside AdminShell's children callback — i.e. only
+// AFTER the admin + password-confirm gate has passed. Fetching before
+// AdminShell would run admin queries (and audit writes) for unconfirmed or
+// signed-out visitors.
+async function AdminBody() {
+  const o = await adminOverview();
+  return (
         <>
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <StatCard label="Merchants" value={String(o.merchants)} hint="Registered merchant accounts" />
@@ -23,8 +33,8 @@ export default async function AdminPage() {
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-base font-semibold text-slate-100">UTR review queue</h2>
-                <Link href="/admin/orders?status=review" className="text-sm font-semibold text-brand-400 hover:text-brand-300">All review orders →</Link>
+                <h2 className="text-base font-medium text-slate-100">UTR review queue</h2>
+                <Link href="/admin/orders?status=review" className="text-sm font-medium text-brand-400 hover:text-brand-300">All review orders →</Link>
               </div>
               <OrdersTable
                 orders={o.reviewQueue.map((r) => ({
@@ -72,7 +82,7 @@ export default async function AdminPage() {
                   ["/admin/audit-logs", "Audit logs", "Every admin action, newest first."],
                 ].map(([href, label, hint]) => (
                   <Link key={href} href={href} className="rounded-lg bg-slate-800/50 px-4 py-3 ring-1 ring-slate-800 hover:bg-slate-800">
-                    <span className="font-semibold text-slate-100">{label}</span>
+                    <span className="font-medium text-slate-100">{label}</span>
                     <span className="block text-xs text-slate-500">{hint}</span>
                   </Link>
                 ))}
@@ -80,7 +90,5 @@ export default async function AdminPage() {
             </div>
           </div>
         </>
-      )}
-    </AdminShell>
   );
 }

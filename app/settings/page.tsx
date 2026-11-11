@@ -10,6 +10,7 @@ import {
   RevokeSandboxKeysButton, RotationForm, WebhookForm,
 } from "@/components/settings-forms";
 import { DbNotConfigured } from "@/components/ui";
+import { QrSettings } from "@/components/qr-settings";
 import { dbConfigured, getMerchantSettings, getSessionSafe, requireUser } from "@/components/server-data";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +121,10 @@ export default async function SettingsPage() {
             <p className="help">Random picks any active account with room today; Default always uses your default account.</p>
           </div>
           <RedirectDomainsForm initial={s.redirectDomains} />
+        </Section>
+
+        <Section title="QR settings" intro="How QR codes are generated for new orders — unique amount per order, or one shared QR for a fixed amount.">
+          <QrSettings />
         </Section>
 
         <Section title="Security" intro="Change your password, or re-confirm it for admin pages.">

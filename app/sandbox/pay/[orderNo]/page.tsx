@@ -20,7 +20,7 @@ export default async function SandboxPayPage({ params }: { params: Promise<{ ord
       <main className="min-h-screen bg-slate-950 px-4 py-10">
         <div className="mx-auto max-w-lg">
           <div className="card p-8 text-center">
-            <h1 className="text-xl font-bold text-slate-50">Not a sandbox order</h1>
+            <h1 className="text-xl font-medium text-slate-50">Not a sandbox order</h1>
             <p className="mt-2 text-sm text-slate-400">
               <span className="font-mono">{orderNo}</span> is not a sandbox (TST…) order. Sandbox checkout only works for test orders.
             </p>

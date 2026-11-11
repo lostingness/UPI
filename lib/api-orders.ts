@@ -18,8 +18,8 @@ import { toApiArray } from "./orders/serialize";
 import { gatewayConfig } from "./config/gateway";
 import { getSql, first, type Row } from "./db";
 import { ApiError } from "./errors";
-import { checkIdempotency, storeIdempotentResponse, defaultIdempotencyStore, type IdempotencyStore } from "./idempotency";
-import { checkMemoryRateLimit, getClientIp, rateLimitHeaders, orderCreateLimit, apiIpLimit, type RateLimitResult } from "./rate-limit";
+import { storeIdempotentResponse, defaultIdempotencyStore, claimOrReplay, type IdempotencyStore } from "./idempotency";
+import { checkMemoryRateLimit, checkDurableRateLimit, getClientIp, rateLimitHeaders, orderCreateLimit, apiIpLimit, type RateLimitResult } from "./rate-limit";
 import { json, handleError, readJson } from "./http";
 import { getSession, type SessionUser } from "./auth";
 import { assertAccountOwnedBy } from "./merchant-orders";
@@ -58,8 +58,12 @@ export async function handleCreateOrder(req: Request) {
   try {
     const merchant = await authenticateApiKey(req);
     // Rate limits: per-key order-create bucket 1000/min + shared per-IP 600/min.
+    // Memory bucket first, durable DB bucket second (the memory bucket alone
+    // does not hold across Vercel instances).
     const keyCheck = checkMemoryRateLimit(`api:order-create:${merchant.id}`, orderCreateLimit());
     if (!keyCheck.allowed) return json({ message: "Too many requests" }, 429, rateLimitHeaders(keyCheck));
+    const durableCheck = await checkDurableRateLimit(`api:order-create:${merchant.id}`, orderCreateLimit());
+    if (!durableCheck.allowed) return json({ message: "Too many requests" }, 429, rateLimitHeaders(durableCheck));
     const body = await readJson(req);
     const data = parseBody(createOrderApiSchema, body);
     if (data.redirect_url && !isRedirectUrlAllowed(data.redirect_url, merchant.redirectDomains)) {
@@ -68,8 +72,14 @@ export async function handleCreateOrder(req: Request) {
     const idemKey = req.headers.get("Idempotency-Key") ?? req.headers.get("X-Idempotency-Key") ?? null;
     const store = defaultIdempotencyStore();
     if (idemKey) {
-      const replay = await checkIdempotency(store, `${merchant.id}:${idemKey}`, body);
-      if (replay) return json(replay.body, replay.status);
+      // Claim-first: the key is owned before createOrder runs, so a
+      // concurrent duplicate replays (or waits) instead of creating a
+      // second order. See lib/idempotency.ts claimOrReplay().
+      const claim = await claimOrReplay(store, `${merchant.id}:${idemKey}`, body);
+      if (claim.kind === "replay") return json(claim.body, claim.status);
+      if (claim.kind === "in-progress") {
+        return json({ message: "A request with this idempotency key is already in progress" }, 409);
+      }
     }
     return await finishCreate({
       userId: merchant.id, environment: merchant.environment, amount: data.amount,
@@ -98,6 +108,8 @@ export async function handleCreateOrderSession(req: Request, deps: CreateOrderDe
     if (!ipCheck.allowed) return json({ message: "Too many requests" }, 429, rateLimitHeaders(ipCheck));
     const keyCheck = rateLimitCheck(`session:order-create:${user.id}`, orderCreateLimit());
     if (!keyCheck.allowed) return json({ message: "Too many requests" }, 429, rateLimitHeaders(keyCheck));
+    const durableCheck = await checkDurableRateLimit(`session:order-create:${user.id}`, orderCreateLimit());
+    if (!durableCheck.allowed) return json({ message: "Too many requests" }, 429, rateLimitHeaders(durableCheck));
     const body = await readJson(req);
     const data = parseBody(createOrderDashboardSchema, body);
     if (data.payment_account_id != null) {
@@ -107,8 +119,12 @@ export async function handleCreateOrderSession(req: Request, deps: CreateOrderDe
     const idemKey = req.headers.get("Idempotency-Key") ?? req.headers.get("X-Idempotency-Key") ?? null;
     const store = depsOr(deps.idempotencyStore, () => defaultIdempotencyStore());
     if (idemKey) {
-      const replay = await checkIdempotency(store, `${user.id}:${idemKey}`, body);
-      if (replay) return json(replay.body, replay.status);
+      // Claim-first (see handleCreateOrder above).
+      const claim = await claimOrReplay(store, `${user.id}:${idemKey}`, body);
+      if (claim.kind === "replay") return json(claim.body, claim.status);
+      if (claim.kind === "in-progress") {
+        return json({ message: "A request with this idempotency key is already in progress" }, 409);
+      }
     }
     const createOrderFn = depsOr(deps.createOrderFn, () => createOrder);
     return await finishCreate({

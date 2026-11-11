@@ -52,7 +52,7 @@ export default async function AccountsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-base font-semibold text-slate-100">{String(a.label)}</h2>
+                    <h2 className="text-base font-medium text-slate-100">{String(a.label)}</h2>
                     <StatusPill status={a.is_active ? "active" : "disabled"} label={a.is_active ? "Active" : "Disabled"} />
                     {a.is_default && <StatusPill status="live" label="Default" />}
                   </div>
@@ -68,9 +68,9 @@ export default async function AccountsPage() {
               )}
               {a.payee_name && <p className="mt-2 text-sm text-slate-400">Payee: {String(a.payee_name)}</p>}
               <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-800 pt-4 text-sm">
-                <div><dt className="text-xs text-slate-500">Used today</dt><dd className="mt-0.5 font-semibold text-slate-100 tabular-nums">{inr(Number(a.used_today ?? 0))}</dd></div>
-                <div><dt className="text-xs text-slate-500">Remaining</dt><dd className="mt-0.5 font-semibold text-slate-100 tabular-nums">{a.remaining_today === null || a.remaining_today === undefined ? "No limit" : inr(Number(a.remaining_today))}</dd></div>
-                <div><dt className="text-xs text-slate-500">Daily limit</dt><dd className="mt-0.5 font-semibold text-slate-100 tabular-nums">{a.daily_limit ? inr(Number(a.daily_limit)) : "—"}</dd></div>
+                <div><dt className="text-xs text-slate-500">Used today</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{inr(Number(a.used_today ?? 0))}</dd></div>
+                <div><dt className="text-xs text-slate-500">Remaining</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{a.remaining_today === null || a.remaining_today === undefined ? "No limit" : inr(Number(a.remaining_today))}</dd></div>
+                <div><dt className="text-xs text-slate-500">Daily limit</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{a.daily_limit ? inr(Number(a.daily_limit)) : "—"}</dd></div>
               </dl>
               <div className="mt-4 border-t border-slate-800 pt-4">
                 <AccountActions id={Number(a.id)} isActive={Boolean(a.is_active)} isDefault={Boolean(a.is_default)} />

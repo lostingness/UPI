@@ -11,15 +11,25 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   const sp = await searchParams;
   const status = STATUSES.includes(sp.status ?? "") ? (sp.status ?? "") : "";
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
-  const { orders } = await listAdminOrders(status, page);
   return (
     <AdminShell active="/admin/orders" title="All orders" subtitle="Every order from every merchant. Select an order for the read-only detail view and manual override." next="/admin/orders">
-      {() => (
+      {() => <OrdersBody status={status} page={page} />}
+    </AdminShell>
+  );
+}
+
+// Data is fetched here, inside AdminShell's children callback — i.e. only
+// AFTER the admin + password-confirm gate has passed. Fetching before
+// AdminShell would run admin queries (and audit writes) for unconfirmed or
+// signed-out visitors.
+async function OrdersBody({ status, page }: { status: string; page: number }) {
+  const { orders } = await listAdminOrders(status, page);
+  return (
         <>
           <div className="mb-4 flex flex-wrap gap-2">
             {STATUSES.map((s) => (
               <Link key={s || "all"} href={s ? `/admin/orders?status=${s}` : "/admin/orders"}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${status === s ? "bg-brand-600/20 text-brand-300 ring-brand-500/40" : "bg-slate-900 text-slate-400 ring-slate-800 hover:text-slate-200"}`}>
+                className={`rounded-full px-3 py-1.5 text-xs font-medium ring-1 ${status === s ? "bg-brand-600/20 text-brand-300 ring-brand-500/40" : "bg-slate-900 text-slate-400 ring-slate-800 hover:text-slate-200"}`}>
                 {s === "" ? "All" : s}
               </Link>
             ))}
@@ -38,7 +48,5 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
           />
           <Pagination page={page} hasMore={orders.length === 30} href={(p) => `/admin/orders?${new URLSearchParams({ ...(status ? { status } : {}), page: String(p) }).toString()}`} />
         </>
-      )}
-    </AdminShell>
   );
 }

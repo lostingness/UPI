@@ -10,9 +10,9 @@ import { CopyButton } from "./forms";
 function OnceSecret({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div className="rounded-lg bg-emerald-500/10 p-4 ring-1 ring-emerald-500/30">
-      <label className="label font-semibold text-emerald-300">{label} · copy now (will not be shown again)</label>
+      <label className="label font-medium text-emerald-300">{label} · copy now (will not be shown again)</label>
       <div className="flex gap-2">
-        <input readOnly value={value} className="input font-mono font-semibold" />
+        <input readOnly value={value} className="input font-mono font-medium" />
         <CopyButton text={value} />
       </div>
       {note && <p className="mt-2 text-xs text-emerald-200/80">{note}</p>}

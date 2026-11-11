@@ -46,7 +46,14 @@ async function acquireLease(order: OrderRow): Promise<{ token: string; generatio
   return row ? { token, generation: Number(row.verification_generation) } : null;
 }
 
-export async function checkOrder(order: OrderRow, force = false): Promise<OrderRow> {
+export interface CheckOrderOpts {
+  /** Called exactly when the verification lease is acquired, so batch
+   * callers can count "actually checked" orders (throttled / lease-held
+   * orders never acquire a lease and must not be counted). */
+  onLeaseAcquired?: () => void;
+}
+
+export async function checkOrder(order: OrderRow, force = false, opts: CheckOrderOpts = {}): Promise<OrderRow> {
   const now = new Date();
   if (order.status === "paid" || order.status === "failed") return order;
   if (order.environment === "sandbox") {
@@ -66,6 +73,7 @@ export async function checkOrder(order: OrderRow, force = false): Promise<OrderR
   }
   const lease = await acquireLease(order);
   if (!lease) return order; // another invocation holds the lease / throttled
+  opts.onLeaseAcquired?.();
   const creds = decryptAccountCredentials(account);
   const result = await verifyOrder(
     { ...order, amount: order.amount, payment_account_id: order.payment_account_id },
@@ -73,23 +81,43 @@ export async function checkOrder(order: OrderRow, force = false): Promise<OrderR
     { id: account.id, credentials: creds, environment: creds.environment ?? "live" },
   );
   if (result.paid) {
-    const outcome = await markPaidInDb(order, result, {
-      accountProvider: account.provider, accountId: account.id,
-      accountEnvironment: creds.environment ?? (account.provider === "paytm_pg" || account.provider === "phonepe_pg" ? creds.environment ?? null : "live"),
-      existingUtrUsed: async (utr, userId) => {
-        const sql = getSql();
-        const rows = await sql`SELECT id FROM orders WHERE user_id = ${userId} AND utr = ${utr} AND id <> ${order.id} LIMIT 1`;
-        return (rows as unknown[]).length > 0;
-      },
-    });
-    return outcome === "paid" ? { ...order, status: "paid" } : order;
+    try {
+      const outcome = await markPaidInDb(order, result, {
+        accountProvider: account.provider, accountId: account.id,
+        accountEnvironment: creds.environment ?? (account.provider === "paytm_pg" || account.provider === "phonepe_pg" ? creds.environment ?? null : "live"),
+        existingUtrUsed: async (utr, userId) => {
+          const sql = getSql();
+          const rows = await sql`SELECT id FROM orders WHERE user_id = ${userId} AND (utr = ${utr} OR customer_utr = ${utr}) AND id <> ${order.id} LIMIT 1`;
+          return (rows as unknown[]).length > 0;
+        },
+      });
+      return outcome === "paid" ? { ...order, status: "paid" } : order;
+    } catch (e) {
+      // markPaid failed (evidence rejected / status changed): clear the
+      // lease so the next check is not blocked until it expires, then
+      // let the error propagate — the caller decides how to report it.
+      const sql = getSql();
+      await sql`UPDATE orders SET verification_token = NULL, verification_expires_at = NULL, updated_at = NOW()
+        WHERE id = ${order.id} AND verification_token = ${lease.token}`;
+      throw e;
+    }
   }
   // Not paid: persist provider response for the debugger, clear the lease.
   const sql = getSql();
   await sql`UPDATE orders SET provider_response = ${JSON.stringify(result.raw)}::jsonb,
     verification_token = NULL, verification_expires_at = NULL, updated_at = NOW()
     WHERE id = ${order.id} AND verification_token = ${lease.token}`;
-  if (isPastExpiry(order, now)) { await expireOrderInDb({ ...order }); return { ...order, status: "expired" }; }
+  if (isPastExpiry(order, now)) {
+    // REVIEW ORDERS STAY IN REVIEW: expireOrderInDb only transitions
+    // pending → expired. Only report 'expired' when the DB transition
+    // actually succeeded; a review order whose expiry passed keeps its
+    // status until the merchant approves or rejects the submitted UTR.
+    // (Previously this returned status 'expired' unconditionally — a
+    // phantom expiry the merchant never approved.)
+    const expired = await expireOrderInDb({ ...order });
+    if (expired === "expired") return { ...order, status: "expired" };
+    return order;
+  }
   return order;
 }
 
@@ -102,8 +130,11 @@ export async function checkPendingBatch(): Promise<{ checked: number; paid: numb
     ORDER BY last_checked_at NULLS FIRST, created_at ASC
     LIMIT ${gatewayConfig.pendingVerificationBatchSize}`) as OrderRow[];
   let checked = 0, paid = 0, expired = 0;
+  // `checked` counts only orders whose verification lease was actually
+  // acquired — throttled / lease-held orders are skipped, not counted.
+  const countLease = () => { checked++; };
   for (const o of due) {
-    try { const after = await checkOrder(o); checked++; if (after.status === "paid") paid++; if (after.status === "expired") expired++; }
+    try { const after = await checkOrder(o, false, { onLeaseAcquired: countLease }); if (after.status === "paid") paid++; if (after.status === "expired") expired++; }
     catch { /* per-order errors isolated; last_checked_at was advanced by the lease claim */ }
   }
   const recoverable = (await sql`
@@ -113,7 +144,7 @@ export async function checkPendingBatch(): Promise<{ checked: number; paid: numb
     ORDER BY last_checked_at NULLS FIRST, created_at ASC
     LIMIT ${gatewayConfig.latePaymentBatchSize}`) as OrderRow[];
   for (const o of recoverable) {
-    try { const after = await checkOrder(o); checked++; if (after.status === "paid") paid++; }
+    try { const after = await checkOrder(o, false, { onLeaseAcquired: countLease }); if (after.status === "paid") paid++; }
     catch { /* isolated */ }
   }
   return { checked, paid, expired };

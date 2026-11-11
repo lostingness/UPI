@@ -20,7 +20,7 @@ export default async function PayRedirectPage({ params }: { params: Promise<{ or
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
         <div className="card w-full max-w-md p-8 text-center">
-          <h1 className="text-xl font-bold text-slate-50">No active checkout</h1>
+          <h1 className="text-xl font-medium text-slate-50">No active checkout</h1>
           <p className="mt-2 text-sm text-slate-400">There is no hosted checkout waiting for this order. It may have expired or already been paid.</p>
           <Link href={`/pay/${orderNo}`} className="btn btn-primary mt-6 w-full">Back to payment page</Link>
         </div>
@@ -31,7 +31,7 @@ export default async function PayRedirectPage({ params }: { params: Promise<{ or
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
         <div className="card w-full max-w-md p-8 text-center">
-          <h1 className="text-xl font-bold text-slate-50">Redirecting to secure checkout…</h1>
+          <h1 className="text-xl font-medium text-slate-50">Redirecting to secure checkout…</h1>
           <p className="mt-2 text-sm text-slate-400">You are being taken to the payment gateway&apos;s secure page.</p>
           <a href={checkout.url} className="btn btn-primary mt-6 w-full">Continue to secure checkout →</a>
         </div>

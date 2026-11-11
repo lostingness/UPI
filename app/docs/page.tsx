@@ -12,7 +12,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
   return (
     <div className="relative">
       <div className="absolute right-3 top-3"><CopyButton text={code} /></div>
-      <pre className="overflow-x-auto rounded-xl bg-slate-950 p-4 text-[13px] leading-relaxed text-slate-200 ring-1 ring-slate-800">
+      <pre className="overflow-x-auto rounded-xl bg-slate-950 p-4 text-[13px] leading-relaxed text-slate-200 ring-1 ring-white/10">
         <code>{code}</code>
       </pre>
       <span className="sr-only">{lang}</span>
@@ -22,8 +22,8 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24 border-t border-slate-800/80 pt-10 first:border-t-0 first:pt-0">
-      <h2 className="text-2xl font-bold tracking-tight text-slate-50">{title}</h2>
+    <section id={id} className="scroll-mt-24 border-t border-white/10 pt-10 first:border-t-0 first:pt-0">
+      <h2 className="text-2xl font-medium tracking-tight text-slate-50">{title}</h2>
       <div className="mt-4 space-y-4 text-sm leading-relaxed text-slate-400">{children}</div>
     </section>
   );
@@ -35,15 +35,15 @@ export default async function DocsPage() {
     <div className="flex min-h-screen flex-col">
       <PublicNav user={user} />
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:py-14">
-        <p className="text-sm font-semibold text-brand-400">API DOCUMENTATION</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-50 sm:text-4xl">UPI Gateway API</h1>
+        <p className="text-sm font-medium text-brand-400">API documentation</p>
+        <h1 className="mt-2 text-3xl font-medium tracking-tight text-slate-50 sm:text-4xl">UPI Gateway API</h1>
         <p className="mt-3 max-w-2xl text-base text-slate-400">
           Accept UPI payments from your website or app with one API call. Create an order, send your customer to the
           hosted checkout page, and get a signed webhook when the payment lands.
         </p>
         <nav className="mt-8 flex flex-wrap gap-2 text-sm">
           {["Authentication", "Create an order", "Check an order", "Payment accounts", "Rotation & limits", "Webhooks", "Errors", "Examples"].map((s) => (
-            <a key={s} href={`#${s.toLowerCase().replace(/[^a-z]+/g, "-")}`} className="rounded-full bg-slate-900 px-3 py-1.5 text-slate-300 ring-1 ring-slate-800 hover:bg-slate-800">{s}</a>
+            <a key={s} href={`#${s.toLowerCase().replace(/[^a-z]+/g, "-")}`} className="rounded-lg bg-slate-900 px-3 py-1.5 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800">{s}</a>
           ))}
         </nav>
 
@@ -51,7 +51,7 @@ export default async function DocsPage() {
           <Section id="authentication" title="Authentication">
             <p>
               Every API request sends two headers: <code className="kbd">X-Api-Key</code> and <code className="kbd">X-Api-Secret</code>.
-              Find them in <Link href="/settings" className="font-semibold text-brand-400">Settings → API credentials</Link>. Keep the secret on your server only — never ship it in a browser or mobile app.
+              Find them in <Link href="/settings" className="font-medium text-brand-400">Settings → API credentials</Link>. Keep the secret on your server only — never ship it in a browser or mobile app.
             </p>
             <p>
               <strong className="text-slate-200">Live vs Sandbox.</strong> Live keys start with <code className="kbd">key_</code>, sandbox keys with <code className="kbd">test_key_</code>.
@@ -64,8 +64,8 @@ export default async function DocsPage() {
             <p><code className="kbd">POST /api/v1/orders</code> — creates a payment order and returns the checkout URL. Idempotent: send an <code className="kbd">Idempotency-Key</code> header to safely retry.</p>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] border-collapse text-sm">
-                <thead><tr className="border-b border-slate-800"><th className="th">Field</th><th className="th">Type</th><th className="th">Description</th></tr></thead>
-                <tbody className="divide-y divide-slate-800/70">
+                <thead><tr className="border-b border-white/10"><th className="th">Field</th><th className="th">Type</th><th className="th">Description</th></tr></thead>
+                <tbody className="divide-y divide-white/5">
                   {[
                     ["amount", "number · 1–100,000", "Required. Amount in INR (up to 2 decimals)."],
                     ["client_order_id", "string · ≤64, [A-Za-z0-9_-]", "Required. Your unique order reference (unique per merchant + environment)."],
@@ -108,7 +108,7 @@ export default async function DocsPage() {
 
           <Section id="payment-accounts" title="Payment accounts">
             <p><code className="kbd">GET /api/v1/accounts</code> — your live UPI accounts with <code className="kbd">used_today</code> / <code className="kbd">remaining_today</code> against each daily limit. Sandbox credentials return <code className="kbd">{`{environment: "sandbox", rotation_mode: null, data: []}`}</code>.</p>
-            <p>Account types: <strong className="text-slate-200">Manual UPI</strong> (personal UPI ID, UTR review), <strong className="text-slate-200">Paytm for Business</strong> (unofficial status API), <strong className="text-slate-200">PhonePe PG v2</strong> and <strong className="text-slate-200">Paytm PG</strong> (hosted checkout). Manage them in <Link href="/accounts" className="font-semibold text-brand-400">Payment accounts</Link>.</p>
+            <p>Account types: <strong className="text-slate-200">Manual UPI</strong> (personal UPI ID, UTR review), <strong className="text-slate-200">Paytm for Business</strong> (unofficial status API), <strong className="text-slate-200">PhonePe PG v2</strong> and <strong className="text-slate-200">Paytm PG</strong> (hosted checkout). Manage them in <Link href="/accounts" className="font-medium text-brand-400">Payment accounts</Link>.</p>
           </Section>
 
           <Section id="rotation-limits" title="Rotation & daily limits">
@@ -139,8 +139,8 @@ export default async function DocsPage() {
             <p>Errors are JSON: <code className="kbd">{`{message, errors?}`}</code>. Validation failures (422) include an <code className="kbd">errors</code> map. Every response carries an <code className="kbd">X-Request-Id</code> header — include it when reporting a problem.</p>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] border-collapse text-sm">
-                <thead><tr className="border-b border-slate-800"><th className="th">Code</th><th className="th">Meaning</th></tr></thead>
-                <tbody className="divide-y divide-slate-800/70">
+                <thead><tr className="border-b border-white/10"><th className="th">Code</th><th className="th">Meaning</th></tr></thead>
+                <tbody className="divide-y divide-white/5">
                   {[
                     ["401", "Invalid API key / secret."],
                     ["403", "Merchant account is disabled."],

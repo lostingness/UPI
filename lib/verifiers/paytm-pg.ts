@@ -9,7 +9,7 @@
 // HTTP timeout 15 s. Provider errors → pending, never a throw for not-paid.
 import { gatewayConfig } from "../config/gateway";
 import { generatePaytmChecksum } from "./paytm-checksum";
-import { VerificationResult, amountMatches, extractRawTimestamp, type OrderLike, type VerificationResult as VR } from "./verification-result";
+import { VerificationResult, amountMatches, extractRawTimestamp, expectedAmount, type OrderLike, type VerificationResult as VR } from "./verification-result";
 import type { AccountLike, FetchFn } from "./paytm-business";
 import type { HostedCheckoutResult } from "./hosted-checkout";
 
@@ -37,7 +37,8 @@ export async function startPaytmPgCheckout(order: OrderLike, account: AccountLik
     requestType: "Payment", mid,
     websiteName: account.credentials.website_name || "DEFAULT",
     orderId: order.order_no, callbackUrl: returnUrl,
-    txnAmount: { value: Number(order.amount).toFixed(2), currency: "INR" },
+    // The PG charges the PAYABLE amount, so its status response carries it back.
+    txnAmount: { value: expectedAmount(order), currency: "INR" },
     userInfo: { custId: `CUST${(order as unknown as { user_id: number }).user_id}X${order.id}` },
   }, fetchFn);
   const body = (resp.body ?? {}) as Record<string, unknown>;
@@ -65,7 +66,7 @@ export async function checkPaytmPg(order: OrderLike, account: AccountLike | null
   if ((body.resultInfo as Record<string, unknown> | undefined)?.resultStatus !== "TXN_SUCCESS") return VerificationResult.pending(body);
   if (body.orderId !== order.order_no) return VerificationResult.pending({ error: "Order ID mismatch" });
   const amt = body.txnAmount;
-  if ((typeof amt !== "string" && typeof amt !== "number") || !/^\d+(?:\.\d{1,2})?$/.test(String(amt)) || !amountMatches(amt, order.amount)) {
+  if ((typeof amt !== "string" && typeof amt !== "number") || !/^\d+(?:\.\d{1,2})?$/.test(String(amt)) || !amountMatches(amt, expectedAmount(order))) {
     return VerificationResult.pending({ error: "Amount mismatch" });
   }
   if ((body.currency ?? "INR") !== "INR") return VerificationResult.pending({ error: "Currency mismatch" });

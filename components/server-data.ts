@@ -46,10 +46,20 @@ export async function getSessionSafe(): Promise<SessionUser | null> {
   }
 }
 
-export async function getInstallState(): Promise<{ installed: boolean; databaseConfigured: boolean }> {
+export async function getInstallState(): Promise<{ installed: boolean; databaseConfigured: boolean; dbUnreachable?: boolean }> {
   let installed = false;
-  try { installed = await isInstalled(); } catch { installed = false; }
-  return { installed, databaseConfigured: isDbConfigured() };
+  let dbUnreachable = false;
+  try {
+    installed = await isInstalled();
+  } catch (e) {
+    // DatabaseNotConfigured (no DATABASE_URL / DB unreachable) is NOT
+    // "not installed" — surface it separately so pages can tell a down
+    // database apart from a fresh install. Any other failure still means
+    // "not installed" (isInstalled already maps missing tables to false).
+    if ((e as Error)?.name === "DatabaseNotConfigured") dbUnreachable = true;
+    installed = false;
+  }
+  return { installed, databaseConfigured: isDbConfigured(), ...(dbUnreachable ? { dbUnreachable: true as const } : {}) };
 }
 
 export function allowRegistration(): boolean {
@@ -60,9 +70,13 @@ export function appName(): string {
   return gatewayConfig.appName;
 }
 
-/** Guard helper for authed pages: redirect to /login?next=… when signed out. */
+/** Guard helper for authed pages: redirect to /login?next=… when signed out.
+ * Disabled accounts are also bounced to login — a disabled merchant/admin
+ * holds a still-valid JWT (120-min window) but must not render any authed
+ * page. (API routes enforce the same via requireSession in lib/auth.ts.) */
 export function requireUser(user: SessionUser | null, next: string): SessionUser {
   if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
+  if (!user.isActive) redirect(`/login?next=${encodeURIComponent(next)}&disabled=1`);
   return user;
 }
 

@@ -27,7 +27,7 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
     <GuestShell title="Set up UPI Gateway" subtitle="First run: connect the database and create the first admin.">
       <SetupWizard databaseConfigured={databaseConfigured} installed={installed} />
       <p className="mt-8 text-center text-xs text-slate-500">
-        Already installed? <Link href="/login" className="font-semibold text-brand-400 hover:text-brand-300">Log in</Link>
+        Already installed? <Link href="/login" className="font-medium text-brand-400 hover:text-brand-300">Log in</Link>
       </p>
     </GuestShell>
   );

@@ -9,7 +9,7 @@
 //   COMPLETED paymentDetails entry's rail.utr or transactionId/orderId.
 // HTTP timeout 15 s. Errors → pending, never a throw for not-paid.
 import { gatewayConfig } from "../config/gateway";
-import { VerificationResult, toPaise, extractRawTimestamp, type OrderLike, type VerificationResult as VR } from "./verification-result";
+import { VerificationResult, toPaise, extractRawTimestamp, expectedAmount, type OrderLike, type VerificationResult as VR } from "./verification-result";
 import type { AccountLike, FetchFn } from "./paytm-business";
 import type { HostedCheckoutResult } from "./hosted-checkout";
 
@@ -64,7 +64,7 @@ export async function startPhonePeCheckout(order: OrderLike, account: AccountLik
   const data = await phonePeRequest(account, async (token, base) => fetchFn(`${base}/checkout/v2/pay`, {
     method: "POST", headers: { "Content-Type": "application/json", Authorization: `O-Bearer ${token}` },
     body: JSON.stringify({
-      merchantOrderId: order.order_no, amount: toPaise(order.amount),
+      merchantOrderId: order.order_no, amount: toPaise(expectedAmount(order)),
       expireAfter: Math.max(300, Math.min(3600, secondsLeft)),
       paymentFlow: { type: "PG_CHECKOUT", message: (order as unknown as { note?: string }).note || `Payment for ${(order as unknown as { client_order_id: string }).client_order_id}`, merchantUrls: { redirectUrl: returnUrl } },
       metaInfo: { udf1: (order as unknown as { client_order_id: string }).client_order_id },
@@ -89,13 +89,20 @@ export async function checkPhonePePg(order: OrderLike, account: AccountLike | nu
   }
   if (data.state !== "COMPLETED") return VerificationResult.pending(data);
   if (data.merchantOrderId !== order.order_no) return VerificationResult.pending({ error: "Order ID mismatch" });
-  if (!/^\d+$/.test(String(data.amount ?? "")) || Number(data.amount) !== toPaise(order.amount)) {
+  if (!/^\d+$/.test(String(data.amount ?? "")) || Number(data.amount) !== toPaise(expectedAmount(order))) {
     return VerificationResult.pending({ error: "Amount mismatch" });
   }
   const details = Array.isArray(data.paymentDetails) ? data.paymentDetails : [];
   const payment = (details.find((d) => (d as Record<string, unknown>).state === "COMPLETED") ?? {}) as Record<string, unknown>;
   if ((data.currency ?? "INR") !== "INR") return VerificationResult.pending({ error: "Currency mismatch" });
   const utr = (payment.rail as Record<string, unknown> | undefined)?.utr as string | undefined;
+  // DECISION (documented, accepted provider evidence): PhonePe does not
+  // always return a rail UTR for a COMPLETED payment. When it is absent,
+  // the transaction reference falls back to PhonePe's own transactionId,
+  // else its internal orderId — both are provider-issued identifiers for
+  // this exact COMPLETED payment, so they bind the evidence to the
+  // provider's record exactly as a UTR would. A result with neither is
+  // still pending (never paid on no reference at all).
   const txnId = (payment.transactionId as string) || (data.orderId as string) || "";
   if (!String(utr ?? "").trim() && !String(txnId).trim()) return VerificationResult.pending({ error: "Missing transaction reference" });
   const occurredAt = extractRawTimestamp("phonepe_pg", data);

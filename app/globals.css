@@ -1,7 +1,12 @@
 @import "tailwindcss";
 
-/* Design tokens — ported from the Laravel original (resources/css/app.css),
-   re-skinned dark: the original UI is a dark checkout / dark dashboards. */
+/* UPI Gateway — ledger / passbook direction.
+   Dark graphite ramp, one indigo accent (#4f46e5, the real brand colour),
+   hairline borders, Inter for UI + JetBrains Mono for figures and order numbers.
+   Motion: one ease-out curve, named transitions only, no looping motion.
+   Unslop method by Damir Sokolovsky / unslop (CC BY 4.0) — see references in
+   the redesign report; applied here: spacing, colour, icons, copy, type,
+   layout, details, visuals, motion, in that order. */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -18,50 +23,61 @@
   --color-brand-900: #312e81;
   --color-brand-950: #1e1b4b;
 
-  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 0 rgb(0 0 0 / 0.25);
-  --shadow-pop: 0 20px 50px -12px rgb(0 0 0 / 0.6);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 8px 24px 0 rgb(0 0 0 / 0.4);
 }
 
 @layer base {
-  html {
-    color-scheme: dark;
-  }
-  body {
-    @apply bg-slate-950 text-slate-200 antialiased;
-  }
-  ::selection {
-    @apply bg-brand-600/40 text-white;
-  }
+  html { color-scheme: dark; scroll-behavior: smooth; }
+  body { @apply bg-slate-950 text-slate-200 antialiased; font-size: 15px; line-height: 1.5; }
+  ::selection { @apply bg-brand-600/40 text-white; }
+  :focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; border-radius: 4px; }
   input[type="number"]::-webkit-outer-spin-button,
-  input[type="number"]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  /* One entrance: fade + rise 8px, 400ms, stagger via inline --d. */
+  @keyframes rise-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes qr-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+  @keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+  .animate-rise { animation: rise-in 400ms var(--ease-out) both; animation-delay: var(--d, 0ms); }
+  .animate-qr { animation: qr-in 300ms var(--ease-out) both; }
+  .animate-menu { animation: menu-in 180ms var(--ease-out) both; }
+  .animate-spin-slow { animation: spin-slow 1s linear infinite; }
+  .reveal { opacity: 0; transform: translateY(8px); transition: opacity 400ms var(--ease-out), transform 400ms var(--ease-out); transition-delay: var(--d, 0ms); }
+  .reveal.is-visible { opacity: 1; transform: translateY(0); }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; transition-duration: 0.01ms !important; }
+    .reveal { opacity: 1; transform: none; }
   }
 }
 
 @layer components {
   .btn {
     @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2
-           text-sm font-semibold transition
+           text-sm font-medium transition-colors duration-150
            focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
-           disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50;
+           disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50
+           active:scale-[0.98];
   }
   .btn-sm { @apply min-h-8 px-3 py-1.5 text-xs; }
-  .btn-lg { @apply px-5 py-3 text-base; }
-  .btn-primary { @apply bg-brand-600 text-white shadow-sm hover:bg-brand-500; }
-  .btn-secondary { @apply bg-slate-900 text-slate-200 ring-1 ring-inset ring-slate-700 shadow-sm hover:bg-slate-800; }
-  .btn-dark { @apply bg-slate-100 text-slate-900 shadow-sm hover:bg-white; }
-  .btn-success { @apply bg-emerald-600 text-white shadow-sm hover:bg-emerald-500; }
+  .btn-lg { @apply min-h-12 px-5 py-3 text-base; }
+  .btn-primary { @apply bg-brand-600 text-white hover:bg-brand-500; }
+  .btn-secondary { @apply bg-slate-900 text-slate-200 ring-1 ring-inset ring-white/10 hover:bg-slate-800; }
+  .btn-dark { @apply bg-slate-100 text-slate-900 hover:bg-white; }
+  .btn-success { @apply bg-emerald-600 text-white hover:bg-emerald-500; }
   .btn-danger { @apply bg-transparent text-red-400 ring-1 ring-inset ring-red-500/40 hover:bg-red-500/10; }
   .btn-ghost { @apply text-slate-400 hover:bg-slate-800 hover:text-slate-100; }
 
-  .card { @apply rounded-xl bg-slate-900 ring-1 ring-slate-800 shadow-card; }
-  .card-header { @apply flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-4 py-4 sm:px-5; }
-  .card-title { @apply text-sm font-semibold text-slate-100; }
+  .card { @apply rounded-2xl bg-slate-900 ring-1 ring-white/10 shadow-card; }
+  .card-header { @apply flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-5; }
+  .card-title { @apply text-sm font-medium text-slate-100; }
 
   .label { @apply mb-1.5 block text-sm font-medium text-slate-300; }
   .input {
     @apply block min-h-10 w-full rounded-lg border-0 bg-slate-800/80 px-3 py-2 text-sm text-slate-100
-           shadow-sm ring-1 ring-inset ring-slate-700
+           ring-1 ring-inset ring-white/10 transition-colors duration-150
            placeholder:text-slate-500
            focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500
            disabled:cursor-not-allowed disabled:bg-slate-800/40 disabled:text-slate-500;
@@ -75,10 +91,18 @@
   }
   textarea.input { @apply min-h-24 py-2.5; }
   .help { @apply mt-1.5 text-xs text-slate-500; }
-  .th { @apply whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5; }
+  .th { @apply whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-slate-500 sm:px-5; }
   .td { @apply px-4 py-3.5 text-sm sm:px-5; }
-  .kbd { @apply rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[13px] text-slate-200 ring-1 ring-slate-700; }
+  .kbd { @apply rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[13px] text-slate-200 ring-1 ring-white/10; }
 
-  .navlink { @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800/70 hover:text-slate-100; }
-  .navlink-active { @apply bg-slate-800 text-slate-100 ring-1 ring-slate-700/60; }
+  .navlink { @apply flex h-9 items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-slate-400 transition-colors duration-150 hover:bg-slate-800/70 hover:text-slate-100; }
+  .navlink-active { @apply bg-slate-800 text-slate-100 ring-1 ring-white/10; }
+  .navlink svg { @apply h-4 w-4 shrink-0 text-slate-500; }
+  .navlink-active svg { @apply text-brand-400; }
+
+  .receipt-row { @apply flex items-center justify-between gap-4 border-b border-white/5 px-4 py-3 text-sm last:border-b-0 sm:px-5; }
+  .receipt-row dt { @apply text-slate-500; }
+  .receipt-row dd { @apply text-right font-medium text-slate-100 tabular-nums; }
+  .meta { @apply font-mono text-xs text-slate-500 tabular-nums; }
+  .skeleton { @apply animate-pulse rounded-lg bg-slate-800; }
 }

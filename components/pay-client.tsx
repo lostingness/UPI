@@ -40,10 +40,10 @@ export interface PayClientProps {
 }
 
 const APPS: { name: string; scheme: string; logo: string; text: string }[] = [
-  { name: "GPay", scheme: "tez://upi/pay", logo: "/images/upi/gpay.svg", text: "text-[#60a5fa]" },
-  { name: "PhonePe", scheme: "phonepe://pay", logo: "/images/upi/phonepe.svg", text: "text-[#c084fc]" },
-  { name: "Paytm", scheme: "paytmmp://pay", logo: "/images/upi/paytm.svg", text: "text-[#38bdf8]" },
-  { name: "BHIM", scheme: "upi://pay", logo: "/images/upi/bhim.svg", text: "text-[#fb923c]" },
+  { name: "GPay", scheme: "tez://upi/pay", logo: "/images/upi/gpay.svg", text: "text-slate-300" },
+  { name: "PhonePe", scheme: "phonepe://pay", logo: "/images/upi/phonepe.svg", text: "text-slate-300" },
+  { name: "Paytm", scheme: "paytmmp://pay", logo: "/images/upi/paytm.svg", text: "text-slate-300" },
+  { name: "BHIM", scheme: "upi://pay", logo: "/images/upi/bhim.svg", text: "text-slate-300" },
 ];
 
 function useCountdown(expiresAt: string | null, createdAt: string) {
@@ -121,16 +121,19 @@ export default function PayClient(props: PayClientProps) {
         if (!alive || !res.ok || !res.data) { timer = setTimeout(poll, pollDelay); return; }
         if (res.data.status !== statusRef.current) {
           if (res.data.status === "paid") {
-            setStatusText("Payment received! Redirecting…");
+            setStatusText("Payment received — redirecting…");
             setStatus("paid");
             setTimeout(() => {
               if (res.data?.redirect) window.location.href = res.data.redirect;
-              else window.location.reload();
+              else router.refresh(); // re-render from the server props (paid panel, UTR, paid_at) without a full reload
             }, 1500);
             return;
           }
           setStatus(res.data.status);
-          window.location.reload();
+          // Re-render from the server props (e.g. pending → review needs
+          // the submitted UTR + attempts the server now reports) instead
+          // of a full page reload.
+          router.refresh();
           return;
         }
       } catch { /* transient — keep polling */ }
@@ -138,7 +141,7 @@ export default function PayClient(props: PayClientProps) {
     };
     timer = setTimeout(poll, pollDelay);
     return () => { alive = false; clearTimeout(timer); };
-  }, [props.orderNo, props.lateRecoveryUntil, pollDelay, status]);
+  }, [props.orderNo, props.lateRecoveryUntil, pollDelay, status, router]);
 
   const query = props.upiIntent ? props.upiIntent.split("?")[1] ?? "" : "";
   const appLinks = APPS.map((a) => ({ ...a, href: `${a.scheme}?${query}` }));
@@ -160,31 +163,30 @@ export default function PayClient(props: PayClientProps) {
   return (
     <div className="grid md:grid-cols-5">
       {/* Summary panel */}
-      <div className="relative overflow-hidden bg-slate-950 p-6 text-white sm:p-8 md:col-span-2">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_20%_0%,rgb(99_102_241/0.25),transparent)]" />
-        <div className="relative flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-base font-bold text-white ring-1 ring-white/20">
+      <div className="bg-slate-950 p-6 text-white sm:p-8 md:col-span-2">
+        <div className="flex items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-brand-600 text-base font-medium text-white">
             {(props.merchantName[0] ?? "?").toUpperCase()}
           </span>
           <div className="min-w-0">
             <div className="text-xs text-slate-400">Paying to</div>
-            <div className="truncate font-semibold">{props.merchantName}</div>
+            <div className="truncate font-medium">{props.merchantName}</div>
           </div>
         </div>
-        <div className="relative mt-8">
-          <div className="text-xs uppercase tracking-wider text-slate-400">Amount</div>
-          <div className="mt-1 text-4xl font-bold tracking-tight tabular-nums">
+        <div className="mt-8">
+          <div className="text-xs text-slate-400">Amount</div>
+          <div className="mt-1 font-mono text-4xl font-medium tabular-nums">
             ₹{Number(props.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           {props.note && <div className="mt-2 text-sm text-slate-300">{props.note}</div>}
         </div>
-        <dl className="relative mt-8 space-y-3 text-sm">
+        <dl className="mt-8 space-y-3 text-sm">
           <div className="flex justify-between gap-4"><dt className="whitespace-nowrap text-slate-400">Order ID</dt><dd className="truncate font-mono text-xs text-slate-200">{props.orderNo}</dd></div>
           {props.customerName && <div className="flex justify-between gap-4"><dt className="whitespace-nowrap text-slate-400">Customer</dt><dd className="truncate text-slate-200">{props.customerName}</dd></div>}
           {props.upiId && <div className="flex justify-between gap-4"><dt className="whitespace-nowrap text-slate-400">UPI ID</dt><dd className="truncate font-mono text-xs text-slate-200">{props.upiId}</dd></div>}
         </dl>
         {status === "pending" && props.expiresAt && (
-          <div className="relative mt-8 flex items-center gap-4 pt-8 md:mt-auto">
+          <div className="mt-8 flex items-center gap-4 border-t border-white/10 pt-8 md:mt-auto">
             <TimerRing display={display} frac={frac} left={left} />
             <div className="text-sm">
               <div className="font-medium">Complete payment in time</div>
@@ -198,10 +200,10 @@ export default function PayClient(props: PayClientProps) {
       <div className="flex flex-col bg-slate-900 p-6 sm:p-8 md:col-span-3">
         {status === "paid" && (
           <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30">
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-emerald-500">
               <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
             </div>
-            <h1 className="mt-6 text-2xl font-bold tracking-tight text-slate-50">Payment successful</h1>
+            <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment successful</h1>
             <p className="mt-2 text-slate-400">₹{Number(props.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })} paid to {props.merchantName}</p>
             <dl className="mt-8 w-full max-w-xs divide-y divide-slate-800 rounded-xl bg-slate-800/60 text-left text-sm ring-1 ring-slate-800">
               {props.utr && <div className="flex justify-between px-4 py-3"><dt className="text-slate-500">UTR</dt><dd className="font-mono font-medium text-slate-100">{props.utr}</dd></div>}
@@ -214,10 +216,10 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "review" && (
           <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-sky-500/15 text-sky-400 ring-1 ring-sky-500/30">
+            <div className="grid h-20 w-20 place-items-center rounded-xl bg-sky-500/15 text-sky-400 ring-1 ring-sky-500/30">
               <svg viewBox="0 0 24 24" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z" /><path d="m9 12 2 2 4-4" /></svg>
             </div>
-            <h1 className="mt-6 text-2xl font-bold tracking-tight text-slate-50">Verifying your payment</h1>
+            <h1 className="mt-6 text-2xl font-medium text-slate-50">Verifying your payment</h1>
             <p className="mt-2 max-w-sm text-sm text-slate-400">{props.merchantName} is confirming your UTR with their bank. This page updates automatically once it&apos;s approved.</p>
             <dl className="mt-8 w-full max-w-xs divide-y divide-slate-800 rounded-xl bg-slate-800/60 text-left text-sm ring-1 ring-slate-800">
               <div className="flex justify-between px-4 py-3"><dt className="text-slate-500">Your UTR</dt><dd className="font-mono font-medium text-slate-100">{props.customerUtr}</dd></div>
@@ -229,10 +231,10 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "expired" && (
           <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-slate-800 text-slate-400">
+            <div className="grid h-20 w-20 place-items-center rounded-xl bg-slate-800 text-slate-400">
               <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
             </div>
-            <h1 className="mt-6 text-2xl font-bold tracking-tight text-slate-50">Payment link expired</h1>
+            <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment link expired</h1>
             {props.canRecover && props.lateRecoveryUntil && (
               <p className="mt-2 max-w-sm text-sm text-slate-400">
                 Already paid? Don&apos;t pay again. We can still check the provider until{" "}
@@ -249,7 +251,7 @@ export default function PayClient(props: PayClientProps) {
               <>
                 <p className="mt-2 max-w-xs text-sm text-slate-400">Please ask {props.merchantName} for a new payment link.</p>
                 <div className="mt-8 flex max-w-sm items-start gap-3 rounded-xl bg-amber-500/10 px-4 py-3 text-left text-sm text-amber-300 ring-1 ring-amber-500/30">
-                  <span className="mt-0.5">⚠</span>
+                  <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
                   <span>If money was debited from your account, don&apos;t pay again. Share your UTR with the merchant to confirm the payment.</span>
                 </div>
               </>
@@ -259,20 +261,20 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "failed" && (
           <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-red-500/15 text-red-400 ring-1 ring-red-500/30">
+            <div className="grid h-20 w-20 place-items-center rounded-xl bg-red-500/15 text-red-400 ring-1 ring-red-500/30">
               <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
             </div>
-            <h1 className="mt-6 text-2xl font-bold tracking-tight text-slate-50">Payment failed</h1>
+            <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment failed</h1>
             <p className="mt-2 max-w-sm text-sm text-slate-400">This payment could not be completed. Please ask {props.merchantName} for a new payment link — and don&apos;t pay again on this one.</p>
           </div>
         )}
 
         {status === "pending" && props.hosted && (
           <div className="flex flex-1 flex-col items-center justify-center py-6 text-center">
-            <div className={`grid h-20 w-20 place-items-center rounded-2xl text-white shadow-lg ${props.pgName === "PhonePe" ? "bg-[#5f259f]" : "bg-[#00baf2]"}`}>
+            <div className={`grid h-20 w-20 place-items-center rounded-2xl text-white ${props.pgName === "PhonePe" ? "bg-[#5f259f]" : "bg-[#00baf2]"}`}>
               <svg viewBox="0 0 24 24" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
             </div>
-            <h1 className="mt-6 text-xl font-bold tracking-tight text-slate-50">Pay securely with {props.pgName}</h1>
+            <h1 className="mt-6 text-xl font-medium text-slate-50">Pay securely with {props.pgName}</h1>
             <p className="mt-2 max-w-sm text-sm text-slate-400">You&apos;ll complete the payment on {props.pgName}&apos;s secure checkout using UPI, card or netbanking, then come back here automatically.</p>
             {startError && <div className="mt-6 flex max-w-sm items-start gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-left text-sm text-red-300 ring-1 ring-red-500/30">{startError}</div>}
             <button className="btn btn-primary btn-lg mt-8 w-full max-w-sm" onClick={startHosted} disabled={starting}>
@@ -280,9 +282,9 @@ export default function PayClient(props: PayClientProps) {
             </button>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {appLinks.map((a) => (
-                <span key={a.name} className={`flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-xs font-bold ring-1 ring-slate-700 ${a.text}`}>
+                <a key={a.name} href={a.href} className={`flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-white/10 hover:bg-slate-700 ${a.text}`}>
                   <Image src={a.logo} alt={a.name} width={16} height={16} className="rounded-sm" />{a.name}
-                </span>
+                </a>
               ))}
               <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-400 ring-1 ring-slate-700">Cards</span>
               <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-400 ring-1 ring-slate-700">Netbanking</span>
@@ -303,7 +305,7 @@ export default function PayClient(props: PayClientProps) {
               <p className="mt-1 text-sm text-slate-400">Open your UPI app, scan the QR and approve the payment.</p>
             </div>
             {!qrFailed && props.upiIntent ? (
-              <div className="relative mx-auto mt-6 rounded-2xl bg-white p-3 ring-1 ring-slate-700">
+              <div className="animate-qr relative mx-auto mt-6 rounded-2xl bg-white p-3 ring-1 ring-white/10">
                 <span className="absolute -left-px -top-px h-6 w-6 rounded-tl-2xl border-l-[3px] border-t-[3px] border-brand-500" />
                 <span className="absolute -right-px -top-px h-6 w-6 rounded-tr-2xl border-r-[3px] border-t-[3px] border-brand-500" />
                 <span className="absolute -bottom-px -left-px h-6 w-6 rounded-bl-2xl border-b-[3px] border-l-[3px] border-brand-500" />
@@ -318,19 +320,19 @@ export default function PayClient(props: PayClientProps) {
             )}
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {appLinks.map((a) => (
-                <span key={a.name} className={`flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-xs font-bold ring-1 ring-slate-700 ${a.text}`}>
+                <a key={a.name} href={a.href} className={`flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-white/10 hover:bg-slate-700 ${a.text}`}>
                   <Image src={a.logo} alt={a.name} width={16} height={16} className="rounded-sm" />{a.name}
-                </span>
+                </a>
               ))}
             </div>
             <div className="mt-6 space-y-3 md:hidden">
-              <div className="flex items-center gap-3 text-xs text-slate-500"><span className="h-px flex-1 bg-slate-800" />OR PAY ON THIS PHONE<span className="h-px flex-1 bg-slate-800" /></div>
+              <div className="flex items-center gap-3 text-xs text-slate-500"><span className="h-px flex-1 bg-slate-800" />Or pay on this phone<span className="h-px flex-1 bg-slate-800" /></div>
               {props.upiIntent && (
                 <a href={props.upiIntent} className="btn btn-primary btn-lg w-full">Pay ₹{Number(props.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })} with UPI app</a>
               )}
               <div className="grid grid-cols-3 gap-2">
                 {appLinks.slice(0, 3).map((a) => (
-                  <a key={a.name} href={a.href} className={`btn btn-secondary justify-center font-bold ${a.text}`}>
+                  <a key={a.name} href={a.href} className={`btn btn-secondary justify-center font-medium ${a.text}`}>
                     <Image src={a.logo} alt={a.name} width={20} height={20} className="rounded-sm" />{a.name}
                   </a>
                 ))}
@@ -375,8 +377,8 @@ export function UtrForm({ orderNo, attemptsLeft, reviewNote }: { orderNo: string
     >
       {reviewNote && (
         <div className="mb-3 flex items-start gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300 ring-1 ring-red-500/30">
-          <span>⚠</span>
-          <div><b>Couldn&apos;t verify your last UTR.</b> {reviewNote} Please check the 12-digit UTR in your UPI app and try again.</div>
+          <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
+          <div><span className="font-medium text-red-200">Couldn&apos;t verify your last UTR.</span> {reviewNote} Please check the 12-digit UTR in your UPI app and try again.</div>
         </div>
       )}
       {form.ok && (
@@ -385,11 +387,11 @@ export function UtrForm({ orderNo, attemptsLeft, reviewNote }: { orderNo: string
         </div>
       )}
       <FormMessage message={form.message} ok={false} />
-      <label htmlFor={`utr-${orderNo}`} className="text-sm font-semibold text-slate-100">Already paid? Enter your UTR</label>
-      <p className="mb-3 mt-0.5 text-xs text-slate-500">Find the 12-digit <b>UTR / UPI Ref. No.</b> in your UPI app&apos;s transaction details.</p>
+      <label htmlFor={`utr-${orderNo}`} className="text-sm font-medium text-slate-100">Already paid? Enter your UTR</label>
+      <p className="mb-3 mt-0.5 text-xs text-slate-500">Find the 12-digit <span className="font-medium text-slate-300">UTR / UPI Ref. No.</span> in your UPI app&apos;s transaction details.</p>
       <div className="flex gap-2">
         <input id={`utr-${orderNo}`} inputMode="numeric" autoComplete="off" maxLength={14} required
-          placeholder="e.g. 412345678901" className="input font-mono tracking-wider"
+          placeholder="e.g. 412345678901" className="input font-mono"
           value={utr} onChange={(e) => setUtr(e.target.value)} />
         <button className="btn btn-dark shrink-0" disabled={form.pending || form.ok}>
           {form.pending ? "Submitting…" : "Submit"}

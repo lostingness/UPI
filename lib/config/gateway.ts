@@ -40,6 +40,12 @@ export const gatewayConfig = {
   maxDispatchGenerations: Math.max(1, num(process.env.WEBHOOK_MAX_DISPATCH_GENERATIONS, 10)),
   deliveryLockSeconds: Math.max(1, num(process.env.WEBHOOK_DELIVERY_LOCK_SECONDS, 60)),
   retentionDays: Math.max(1, num(process.env.WEBHOOK_RETENTION_DAYS, 30)),
+  // QR amounts (§13): per-merchant method + allocation tuning. Env values
+  // are the platform defaults; a merchant's users-table columns
+  // (qr_method / qr_increment_paise, migration 013) override them.
+  qrMethod: (process.env.GATEWAY_QR_METHOD === "unique" ? "unique" : "same") as "unique" | "same",
+  qrIncrementPaise: clamp(num(process.env.GATEWAY_QR_INCREMENT_PAISE, 1), 1, 99),
+  qrMaxAllocationAttempts: Math.max(1, num(process.env.GATEWAY_QR_MAX_ALLOCATION_ATTEMPTS, 100)),
   bcryptRounds: num(process.env.BCRYPT_ROUNDS, 12),
   sessionLifetimeMinutes: 120,
   adminPasswordConfirmSeconds: 900,

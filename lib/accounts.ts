@@ -61,6 +61,23 @@ export async function accountUsage(sql: ReturnType<typeof getSql>, accountId: nu
   const limit = row?.daily_limit == null ? null : Number(row.daily_limit);
   return { used_today: used, remaining_today: limit === null ? null : Math.max(0, limit - used) };
 }
+
+/** One aggregate query for a merchant's accounts (was one usedToday +
+ * one daily_limit SELECT per account). `accounts` already carries
+ * daily_limit, so no per-account query is needed at all. */
+export async function accountUsageMany(
+  sql: ReturnType<typeof getSql>, userId: number, accounts: AccountRow[],
+): Promise<Map<number, { used_today: number; remaining_today: number | null }>> {
+  const { usedTodayByAccount } = await import("./orders/create");
+  const used = await usedTodayByAccount(sql, userId);
+  const out = new Map<number, { used_today: number; remaining_today: number | null }>();
+  for (const a of accounts) {
+    const usedToday = used.get(Number(a.id)) ?? 0;
+    const limit = a.daily_limit == null ? null : Number(a.daily_limit);
+    out.set(Number(a.id), { used_today: usedToday, remaining_today: limit === null ? null : Math.max(0, limit - usedToday) });
+  }
+  return out;
+}
 export function decryptCreds(a: AccountRow): Record<string, string> {
   if (!a.credentials) return {};
   try { return JSON.parse(decryptText(a.credentials) ?? "{}"); } catch { return {}; }

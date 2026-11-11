@@ -6,7 +6,7 @@
 // throw. Credentials (MID) are never logged. Feature-flagged by
 // GATEWAY_ENABLE_PAYTM_BUSINESS (default true).
 import { gatewayConfig } from "../config/gateway";
-import { VerificationResult, amountMatches, extractRawTimestamp, type OrderLike, type VerificationResult as VR } from "./verification-result";
+import { VerificationResult, amountMatches, extractRawTimestamp, expectedAmount, type OrderLike, type VerificationResult as VR } from "./verification-result";
 
 export interface AccountLike { id: number; credentials: Record<string, string>; environment: string | null; }
 export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
@@ -32,7 +32,10 @@ export async function checkPaytmBusiness(order: OrderLike, account: AccountLike 
   if (data.STATUS !== "TXN_SUCCESS") return VerificationResult.pending(sanitize(data));
   if (data.ORDERID !== order.order_no) return VerificationResult.pending({ error: "Order ID mismatch", code: "order_id_mismatch" });
   const amt = data.TXNAMOUNT;
-  if (typeof amt !== "string" && typeof amt !== "number" || !/^\d+(?:\.\d{1,2})?$/.test(String(amt)) || !amountMatches(amt, order.amount)) {
+  // The provider amount must equal the PAYABLE amount (unique allocated
+  // amount when set), not the order amount. If Paytm does not return an
+  // exact amount, verification cannot confirm by amount and stays pending.
+  if (typeof amt !== "string" && typeof amt !== "number" || !/^\d+(?:\.\d{1,2})?$/.test(String(amt)) || !amountMatches(amt, expectedAmount(order))) {
     return VerificationResult.pending({ error: "Amount mismatch", code: "amount_mismatch" });
   }
   if ((data.CURRENCY ?? "INR") !== "INR") return VerificationResult.pending({ error: "Currency mismatch", code: "currency_mismatch" });

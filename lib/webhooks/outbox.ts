@@ -5,8 +5,9 @@
 // (order.paid→paid, expired→expired, under_review→review, failed→failed,
 // pending/timeout→pending). order.paid is deduped by transition_key
 // 'paid:{orderId}' (returns the existing row); other events use
-// 'transition:{orderId}:{sequence}'. sequence = order.webhook_event_sequence+1
-// (counter kept on the order row — avoids MAX()/gap-lock deadlocks).
+// 'transition:{orderId}:{sequence}', where sequence is the value RETURNED
+// by the bump in this same call — never the pre-bump value + 1, so two
+// concurrent records for the same order cannot mint the same key.
 // Payload envelope: {event_id (UUID), event_sequence, occurred_at (ISO-8601),
 // event, data: toApiArray()}. Identity/snapshot fields are immutable after insert.
 import type { Sql } from "../db";
@@ -27,12 +28,15 @@ export async function recordOutboxEvent(sql: Sql, order: OrderRow, event: string
   if (expected && order.status !== expected) {
     throw new Error(`Outbox event ${event} does not match order status ${order.status}`);
   }
-  const transitionKey = event === "order.paid" ? `paid:${order.id}` : `transition:${order.id}:${order.webhook_event_sequence + 1}`;
-  // Bump the per-order sequence counter (single statement, guarded).
+  // Bump the per-order sequence counter (single statement, guarded) FIRST,
+  // then derive the transition key from the RETURNING value — two
+  // concurrent callers get different sequences, so their keys cannot
+  // collide (the old code derived the key from the pre-bump value + 1).
   const bumped = await sql`
     UPDATE orders SET webhook_event_sequence = webhook_event_sequence + 1, updated_at = NOW()
     WHERE id = ${order.id} RETURNING webhook_event_sequence`;
   const sequence = Number((bumped as { webhook_event_sequence: number }[])[0]?.webhook_event_sequence ?? order.webhook_event_sequence + 1);
+  const transitionKey = event === "order.paid" ? `paid:${order.id}` : `transition:${order.id}:${sequence}`;
   const eventId = crypto.randomUUID();
   const payload = {
     event_id: eventId, event_sequence: sequence,

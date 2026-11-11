@@ -1,6 +1,8 @@
 // Admin manual-payment override — port of OrderService::adminOverridePaid.
-// Live orders only; not already paid; amount must equal the order amount;
-// reference 6–80 [A-Za-z0-9_-]; reason 20–500 chars. Sets status paid,
+// Live orders only; not already paid; amount must equal the order's PAYABLE
+// amount (the amount the customer was actually asked to pay — a few paise
+// above the order amount for a Unique-Amount QR); reference 6–80
+// [A-Za-z0-9_-]; reason 20–500 chars. Sets status paid,
 // utr = provider_txn_id = reference (uppercased), verified_by=admin_override,
 // paid_at now; writes an AdminAuditLog row; emits order.paid.
 import { getSql } from "../db";
@@ -8,11 +10,13 @@ import { ApiError } from "../errors";
 import { recordOutboxEvent } from "../webhooks/outbox";
 import { auditLog } from "../audit";
 import type { OrderRow } from "./types";
+import { payableAmountFor } from "./types";
+import { releaseAllocation } from "./allocations";
 
 export async function adminOverridePaid(order: OrderRow, adminId: number, ip: string | null, amount: number, reference: string, reason: string): Promise<OrderRow> {
   if (order.environment !== "live") throw new ApiError(422, "Only live orders can be overridden.");
   if (order.status === "paid") throw new ApiError(422, "Order is already paid.");
-  if (Number(amount).toFixed(2) !== Number(order.amount).toFixed(2)) throw new ApiError(422, "Amount must equal the order amount.");
+  if (Number(amount).toFixed(2) !== payableAmountFor(order)) throw new ApiError(422, "Amount must equal the payable amount.");
   const ref = reference.toUpperCase();
   const sql = getSql();
   const clash = await sql`SELECT id FROM orders WHERE user_id = ${order.user_id} AND utr = ${ref} AND id <> ${order.id} LIMIT 1`;
@@ -23,6 +27,8 @@ export async function adminOverridePaid(order: OrderRow, adminId: number, ip: st
     WHERE id = ${order.id} AND status <> 'paid' RETURNING *`;
   const row = (updated as OrderRow[])[0];
   if (!row) throw new ApiError(409, "Order status changed while applying the override");
+  // Paid: the unique amount can be reused (row kept for audit).
+  try { await releaseAllocation(sql, order.id, "paid"); } catch { /* best-effort */ }
   await auditLog(sql, adminId, "order_manual_payment_override", "order", order.id, {
     order_no: order.order_no, merchant_id: order.user_id, amount: Number(order.amount).toFixed(2),
     verification_reference: ref, reason,

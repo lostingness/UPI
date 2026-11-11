@@ -11,15 +11,25 @@ const STATUSES = ["", "pending", "delivered", "failed", "blocked"];
 export default async function AdminWebhooksPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const sp = await searchParams;
   const status = STATUSES.includes(sp.status ?? "") ? (sp.status ?? "") : "";
-  const events = await listOutbox(status);
   return (
     <AdminShell active="/admin/webhooks" title="Webhook outbox" subtitle="Every webhook delivery, pending / failed / delivered. Exactly-once-ish, sequenced, claim/lease based." next="/admin/webhooks">
-      {() => (
+      {() => <WebhooksBody status={status} />}
+    </AdminShell>
+  );
+}
+
+// Data is fetched here, inside AdminShell's children callback — i.e. only
+// AFTER the admin + password-confirm gate has passed. Fetching before
+// AdminShell would run admin queries (and audit writes) for unconfirmed or
+// signed-out visitors.
+async function WebhooksBody({ status }: { status: string }) {
+  const events = await listOutbox(status);
+  return (
         <>
           <div className="mb-4 flex flex-wrap gap-2">
             {STATUSES.map((s) => (
               <Link key={s || "all"} href={s ? `/admin/webhooks?status=${s}` : "/admin/webhooks"}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${status === s ? "bg-brand-600/20 text-brand-300 ring-brand-500/40" : "bg-slate-900 text-slate-400 ring-slate-800 hover:text-slate-200"}`}>
+                className={`rounded-full px-3 py-1.5 text-xs font-medium ring-1 ${status === s ? "bg-brand-600/20 text-brand-300 ring-brand-500/40" : "bg-slate-900 text-slate-400 ring-slate-800 hover:text-slate-200"}`}>
                 {s === "" ? "All" : s}
               </Link>
             ))}
@@ -61,7 +71,5 @@ export default async function AdminWebhooksPage({ searchParams }: { searchParams
             If a payload was offloaded to the archive, restore it first. Delivery is HMAC-SHA256 signed (<code className="kbd">t=…,v1=…</code>, 5-minute tolerance).
           </p>
         </>
-      )}
-    </AdminShell>
   );
 }

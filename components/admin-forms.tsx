@@ -78,7 +78,7 @@ export function LeaseRecoveryForm() {
       <FormMessage message={form.message} ok={form.ok} />
       {form.ok && <p className="text-sm text-emerald-300">Lease recovered — the order can be verified again. The recovery is recorded in the audit table.</p>}
       <p className="text-xs leading-relaxed text-slate-500">
-        Recover an <em>expired</em> verification lease so a stuck order can be checked again. Only recover a lease after you are sure
+        Recover an <span className="font-medium text-slate-200">expired</span> verification lease so a stuck order can be checked again. Only recover a lease after you are sure
         the process that held it is stopped — on Vercel there is no process identity, so the check is: lease expired + generation matches.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">

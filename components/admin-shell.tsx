@@ -19,12 +19,12 @@ export async function AdminShell({ active, title, subtitle, next, children }: {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
         <div className="card w-full max-w-md p-8 text-center">
-          <h1 className="text-xl font-bold text-slate-50">Password confirmation required</h1>
+          <h1 className="text-xl font-medium text-slate-50">Password confirmation required</h1>
           <p className="mt-2 text-sm text-slate-400">
             Admin pages need your password re-confirmed within the last 15 minutes. Confirm it to continue.
           </p>
           <Link href={`/confirm-password?next=${encodeURIComponent(next)}`} className="btn btn-primary mt-6 w-full">Confirm password →</Link>
-          <p className="mt-4 text-xs text-slate-500"><Link href="/dashboard" className="font-semibold text-brand-400">Back to dashboard</Link></p>
+          <p className="mt-4 text-xs text-slate-500"><Link href="/dashboard" className="font-medium text-brand-400">Back to dashboard</Link></p>
         </div>
       </div>
     );

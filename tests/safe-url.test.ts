@@ -44,4 +44,23 @@ describe("SafeUrl", () => {
     expect(isPublicIp("2606:4700:4700::1111")).toBe(true);
     expect(isPublicIp("8.8.8.8")).toBe(true);
   });
+  it("isPublicIp: expanded + mapped IPv6 forms are normalised before the check", () => {
+    // Expanded loopback / unspecified (the old prefix match missed these).
+    expect(isPublicIp("0:0:0:0:0:0:0:1")).toBe(false);
+    expect(isPublicIp("0:0:0:0:0:0:0:0")).toBe(false);
+    // IPv4-mapped loopback / private, dotted and hex tails.
+    expect(isPublicIp("::ffff:127.0.0.1")).toBe(false);
+    expect(isPublicIp("::ffff:7f00:1")).toBe(false);
+    expect(isPublicIp("0:0:0:0:0:ffff:7f00:1")).toBe(false);
+    expect(isPublicIp("::ffff:192.168.0.5")).toBe(false);
+    // IPv4-mapped public stays public.
+    expect(isPublicIp("::ffff:93.184.216.34")).toBe(true);
+    // Expanded link-local / ULA.
+    expect(isPublicIp("fe80:0:0:0:0:0:0:1")).toBe(false);
+    expect(isPublicIp("fc00:0:0:0:0:0:0:1")).toBe(false);
+  });
+  it("mapped private IPv6 answers are blocked", async () => {
+    await expect(checkSafeUrl("https://evil.example/hook", resolver(["::ffff:127.0.0.1"]))).rejects.toThrow();
+    await expect(checkSafeUrl("https://evil.example/hook", resolver(["0:0:0:0:0:ffff:7f00:1"]))).rejects.toThrow();
+  });
 });

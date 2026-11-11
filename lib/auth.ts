@@ -55,6 +55,13 @@ export async function setSessionCookie(token: string): Promise<void> {
 }
 
 export async function clearSessionCookie(): Promise<void> {
+  // DECISION (documented): logout only clears the cookie. Sessions are
+  // stateless signed JWTs with no server-side revocation list, so a
+  // logged-out token stays technically valid until it expires (120-min
+  // window). That is accepted: the token is httpOnly + SameSite=lax, and a
+  // password change invalidates all sessions at once (the `ph` prefix).
+  // A DB revocation list was NOT added — it would need a lookup on every
+  // request and a new table for a marginal gain.
   const jar = await cookies();
   jar.delete(SESSION_COOKIE);
 }

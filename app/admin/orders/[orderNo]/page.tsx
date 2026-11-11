@@ -29,8 +29,8 @@ async function AdminOrderBody({ orderNo, adminId, ip }: { orderNo: string; admin
         <div className="card p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-xs uppercase tracking-wide text-slate-500">Amount</div>
-              <div className="mt-1 text-3xl font-bold tracking-tight text-slate-50 tabular-nums">{inr(Number(order.amount))}</div>
+              <div className="text-xs text-slate-500">Amount</div>
+              <div className="mt-1 font-mono text-3xl font-medium text-slate-50 tabular-nums">{inr(Number(order.amount))}</div>
             </div>
             <StatusPill status={order.status} />
           </div>

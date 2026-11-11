@@ -2,7 +2,14 @@
 import { z } from "zod";
 import { ApiError } from "./errors";
 
-export const amountSchema = z.number().min(1).max(100000);
+// Amounts are compared as integer paise downstream (never float equality),
+// so every amount entering the system must be exactly representable to
+// 2 decimal places — never silently rounded (500.005 is rejected, not
+// stored as 500.01 or 500.00).
+const twoDp = (v: number) => Math.abs(v * 100 - Math.round(v * 100)) < 1e-9;
+
+export const amountSchema = z.number().min(1).max(100000)
+  .refine(twoDp, "Amount must have at most 2 decimal places");
 export const amountStringSchema = z.string().regex(/^\d+(\.\d{1,2})?$/, "Amount must have at most 2 decimal places")
   .refine((v) => Number(v) >= 1 && Number(v) <= 100000, "Amount must be between 1 and 100000");
 
@@ -28,11 +35,13 @@ export const createOrderDashboardSchema = z.object({
 export const utrSchema = z.object({ utr: z.string().regex(/^\s*\d{12}\s*$/, "UTR must be 12 digits") });
 export const approveUtrSchema = z.object({
   bank_utr: z.string().regex(/^\s*\d{12}\s*$/, "bank_utr must be 12 digits"),
-  received_amount: z.number().min(0.01),
+  received_amount: z.number().min(0.01).max(100000)
+    .refine(twoDp, "received_amount must have at most 2 decimal places"),
 });
 export const rejectUtrSchema = z.object({ reason: z.string().max(150).optional() });
 export const manualOverrideSchema = z.object({
-  amount: z.number().min(0.01),
+  amount: z.number().min(0.01).max(100000)
+    .refine(twoDp, "amount must have at most 2 decimal places"),
   verification_reference: z.string().min(6).max(80).regex(/^[A-Za-z0-9_-]+$/),
   reason: z.string().min(20).max(500),
 });

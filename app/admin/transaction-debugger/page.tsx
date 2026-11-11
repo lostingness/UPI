@@ -19,6 +19,18 @@ export default async function DebuggerPage({ searchParams }: {
   const dateFrom = sp.date_from ?? "";
   const dateTo = sp.date_to ?? "";
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
+  return (
+    <AdminShell active="/admin/transaction-debugger" title="Transaction debugger" subtitle="Search every order by order no, client order ID or UTR. Merchant PII is masked." next="/admin/transaction-debugger">
+      {() => <DebuggerBody q={q} status={status} provider={provider} environment={environment} dateFrom={dateFrom} dateTo={dateTo} page={page} />}
+    </AdminShell>
+  );
+}
+
+// Data is fetched here, inside AdminShell's children callback — i.e. only
+// AFTER the admin + password-confirm gate has passed. Fetching before
+// AdminShell would run admin queries (and audit writes) for unconfirmed or
+// signed-out visitors.
+async function DebuggerBody({ q, status, provider, environment, dateFrom, dateTo, page }: { q: string; status: string; provider: string; environment: string; dateFrom: string; dateTo: string; page: number }) {
   const { orders } = await listDebugger({ q, status, provider, environment, dateFrom, dateTo, page });
   const qs = (extra: Record<string, string>) => {
     const p = new URLSearchParams();
@@ -33,8 +45,6 @@ export default async function DebuggerPage({ searchParams }: {
     return s ? `/admin/transaction-debugger?${s}` : "/admin/transaction-debugger";
   };
   return (
-    <AdminShell active="/admin/transaction-debugger" title="Transaction debugger" subtitle="Search every order by order no, client order ID or UTR. Merchant PII is masked." next="/admin/transaction-debugger">
-      {() => (
         <>
           <form method="GET" action="/admin/transaction-debugger" className="card mb-4 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
@@ -91,7 +101,5 @@ export default async function DebuggerPage({ searchParams }: {
           <Pagination page={page} hasMore={orders.length === 25} href={(p) => qs({ page: String(p) })} />
           <p className="mt-4 text-xs text-slate-500">Each row also shows its webhook-log count on the detail page. Opening a detail view writes a transaction_debugger_viewed audit entry.</p>
         </>
-      )}
-    </AdminShell>
   );
 }

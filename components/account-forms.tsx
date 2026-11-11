@@ -61,9 +61,9 @@ export function CreateAccountForm() {
             <button
               key={p.id} type="button"
               onClick={() => setProvider(p.id)}
-              className={`rounded-xl p-4 text-left ring-1 transition ${provider === p.id ? "bg-brand-600/15 ring-brand-500" : "bg-slate-800/50 ring-slate-700 hover:ring-slate-600"}`}
+              className={`rounded-xl p-4 text-left ring-1 transition-colors duration-150 ${provider === p.id ? "bg-brand-600/15 ring-brand-500" : "bg-slate-800/50 ring-slate-700 hover:ring-slate-600"}`}
             >
-              <div className="text-sm font-semibold text-slate-100">{p.label}</div>
+              <div className="text-sm font-medium text-slate-100">{p.label}</div>
               <div className="mt-1 text-xs leading-relaxed text-slate-400">{p.hint}</div>
             </button>
           ))}
@@ -106,7 +106,7 @@ export function CreateAccountForm() {
           </div>
           <div>
             <label htmlFor="a-website" className="label">Website name</label>
-            <input id="a-website" maxLength={40} placeholder="DEFAULT" className="input font-mono" value={v.website_name} onChange={set("website_name")} />
+            <input id="a-website" maxLength={40} placeholder="My store" className="input font-mono" value={v.website_name} onChange={set("website_name")} />
             <FieldError errors={form.errors} name="website_name" />
           </div>
         </>

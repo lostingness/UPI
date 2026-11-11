@@ -38,7 +38,7 @@ export function CreateOrderForm({ accounts }: { accounts: { id: number; label: s
       <div>
         <label htmlFor="o-amount" className="label">Amount (₹)</label>
         <input id="o-amount" type="number" min="1" max="100000" step="0.01" required placeholder="e.g. 499"
-          className="input text-lg font-semibold tabular-nums" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          className="input text-lg font-medium tabular-nums" value={amount} onChange={(e) => setAmount(e.target.value)} />
         <p className="help">You are charging <strong className="text-slate-300">{preview}</strong> · ₹1 – ₹1,00,000</p>
         <FieldError errors={form.errors} name="amount" />
       </div>

@@ -42,16 +42,54 @@ function isPrivateIpv4(ip: string): boolean {
   if (a === 203 && b === 0 && p[2] === 113) return true; // TEST-NET-3
   return false;
 }
-function isPrivateIpv6(ip: string): boolean {
-  const lower = ip.toLowerCase();
-  if (lower === "::1" || lower === "::") return true;
-  if (lower.startsWith("fe8") || lower.startsWith("fe9") || lower.startsWith("fea") || lower.startsWith("feb")) return true; // fe80::/10 link-local
-  if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // unique-local fc00::/7
-  if (lower.startsWith("ff")) return true; // multicast
-  if (lower.startsWith("::ffff:")) { // IPv4-mapped
-    const v4 = lower.slice(7);
-    return isPrivateIpv4(v4);
+/** Expand an IPv6 literal into its 8 16-bit groups. Handles `::`
+ * compression, dotted-quad mapped tails (::ffff:127.0.0.1) and zone ids
+ * (%eth0, stripped). Returns null when the literal does not parse. */
+function expandIpv6(ip: string): number[] | null {
+  let s = ip.toLowerCase().split("%")[0];
+  // Dotted-quad tail → two hex groups (e.g. ::ffff:127.0.0.1 → ::ffff:7f00:1).
+  const dotted = s.match(/:(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) {
+    const parts = dotted[1].split(".").map(Number);
+    if (parts.some((p) => !Number.isInteger(p) || p < 0 || p > 255)) return null;
+    s = `${s.slice(0, dotted.index)}:${((parts[0] << 8) | parts[1]).toString(16)}:${((parts[2] << 8) | parts[3]).toString(16)}`;
   }
+  const halves = s.split("::");
+  if (halves.length > 2) return null;
+  const parse = (side: string): number[] | null => {
+    if (side === "") return [];
+    const out: number[] = [];
+    for (const g of side.split(":")) {
+      if (!/^[0-9a-f]{1,4}$/.test(g)) return null;
+      out.push(parseInt(g, 16));
+    }
+    return out;
+  };
+  if (halves.length === 1) {
+    const groups = parse(halves[0]);
+    return groups && groups.length === 8 ? groups : null;
+  }
+  const left = parse(halves[0]);
+  const right = parse(halves[1]);
+  if (!left || !right) return null;
+  if (left.length + right.length > 7) return null;
+  return [...left, ...Array<number>(8 - left.length - right.length).fill(0), ...right];
+}
+
+function isPrivateIpv6(ip: string): boolean {
+  const groups = expandIpv6(ip);
+  if (!groups) return true; // unparseable literal: fail closed
+  const [g0, g1, g2, g3, g4, g5, g6, g7] = groups;
+  // IPv4-mapped ::ffff:a.b.c.d (dotted or hex tail) — judge the IPv4.
+  if (g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0xffff) {
+    return isPrivateIpv4(`${g6 >> 8}.${g6 & 0xff}.${g7 >> 8}.${g7 & 0xff}`);
+  }
+  const allZero = groups.every((g) => g === 0);
+  if (allZero) return true; // :: unspecified
+  if (groups.slice(0, 7).every((g) => g === 0) && g7 === 1) return true; // ::1 loopback
+  if (g0 >= 0xfe80 && g0 <= 0xfebf) return true; // fe80::/10 link-local
+  if (g0 >= 0xfc00 && g0 <= 0xfdff) return true; // fc00::/7 unique-local
+  if (g0 >= 0xff00) return true; // ff00::/8 multicast
   return false;
 }
 export function isPublicIp(ip: string): boolean {

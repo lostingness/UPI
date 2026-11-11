@@ -38,23 +38,23 @@ export default function PayReturnPage({ params }: { params: Promise<{ orderNo: s
         {!status && !error && (
           <>
             <span className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-slate-600 border-t-brand-400" />
-            <h1 className="mt-5 text-xl font-bold text-slate-50">Checking your payment…</h1>
+            <h1 className="mt-5 text-xl font-medium text-slate-50">Checking your payment…</h1>
             <p className="mt-2 text-sm text-slate-400">We are confirming the payment with the provider. This status comes from the server — nothing the payment page sent is trusted.</p>
           </>
         )}
         {error && (
           <>
-            <h1 className="text-xl font-bold text-slate-50">Couldn&apos;t check the payment</h1>
+            <h1 className="text-xl font-medium text-slate-50">Couldn&apos;t check the payment</h1>
             <p className="mt-2 text-sm text-slate-400">{error}</p>
             {orderNo && <Link href={`/pay/${orderNo}`} className="btn btn-secondary mt-6">Back to payment page</Link>}
           </>
         )}
         {status === "paid" && (
           <>
-            <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30">
+            <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-500">
               <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
             </div>
-            <h1 className="mt-6 text-2xl font-bold text-slate-50">Payment successful</h1>
+            <h1 className="mt-6 text-2xl font-medium text-slate-50">Payment successful</h1>
             <p className="mt-2 text-sm text-slate-400">Confirmed with the payment provider. You can safely close this page.</p>
             {redirect ? (
               <a href={redirect} className="btn btn-primary mt-6 w-full">Continue to merchant site →</a>
@@ -65,7 +65,7 @@ export default function PayReturnPage({ params }: { params: Promise<{ orderNo: s
         )}
         {status && status !== "paid" && (
           <>
-            <h1 className="text-xl font-bold text-slate-50">Payment status: {status}</h1>
+            <h1 className="text-xl font-medium text-slate-50">Payment status: {status}</h1>
             <p className="mt-2 text-sm text-slate-400">
               {status === "pending" || status === "review"
                 ? "Your payment is still being confirmed. This page shows the server-checked status only."

@@ -9,10 +9,20 @@ export const dynamic = "force-dynamic";
 export default async function AdminMerchantsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
-  const { merchants } = await listAdminMerchants(page);
   return (
     <AdminShell active="/admin/merchants" title="Merchants" subtitle="Every merchant account, with live order counts and paid totals." next="/admin/merchants">
-      {() => (
+      {() => <MerchantsBody page={page} />}
+    </AdminShell>
+  );
+}
+
+// Data is fetched here, inside AdminShell's children callback — i.e. only
+// AFTER the admin + password-confirm gate has passed. Fetching before
+// AdminShell would run admin queries (and audit writes) for unconfirmed or
+// signed-out visitors.
+async function MerchantsBody({ page }: { page: number }) {
+  const { merchants } = await listAdminMerchants(page);
+  return (
         <>
           {merchants.length === 0 ? (
             <div className="card"><EmptyState title="No merchants yet" hint="Merchant accounts created via registration or by an admin will appear here." /></div>
@@ -32,14 +42,14 @@ export default async function AdminMerchantsPage({ searchParams }: { searchParam
                         <div className="flex items-center gap-3">
                           <Avatar name={String(m.business_name ?? m.name)} className="h-9 w-9 text-xs" />
                           <div className="min-w-0">
-                            <div className="truncate font-semibold text-slate-100">{String(m.business_name ?? m.name)}</div>
+                            <div className="truncate font-medium text-slate-100">{String(m.business_name ?? m.name)}</div>
                             <div className="truncate text-xs text-slate-500">{String(m.email)}</div>
                           </div>
                         </div>
                       </td>
                       <td className="td tabular-nums">{String(m.live_order_count)}</td>
                       <td className="td tabular-nums">{String(m.paid_count)}</td>
-                      <td className="td font-semibold text-slate-100 tabular-nums">{inr(Number(m.paid_amount ?? 0))}</td>
+                      <td className="td font-medium text-slate-100 tabular-nums">{inr(Number(m.paid_amount ?? 0))}</td>
                       <td className="td whitespace-nowrap text-slate-500">{fmtDate(String(m.created_at))}</td>
                       <td className="td">{m.is_active ? <span className="text-emerald-300">Active</span> : <span className="text-slate-500">Disabled</span>}</td>
                       <td className="td text-right">
@@ -59,7 +69,5 @@ export default async function AdminMerchantsPage({ searchParams }: { searchParam
             </span>
           </div>
         </>
-      )}
-    </AdminShell>
   );
 }

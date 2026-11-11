@@ -8,10 +8,20 @@ export const dynamic = "force-dynamic";
 export default async function AdminAuditLogsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
-  const { logs } = await listAuditLogs(page);
   return (
     <AdminShell active="/admin/audit-logs" title="Audit logs" subtitle="Every admin action, newest first. Append-only — audit entries are never edited or deleted." next="/admin/audit-logs">
-      {() => (
+      {() => <AuditLogsBody page={page} />}
+    </AdminShell>
+  );
+}
+
+// Data is fetched here, inside AdminShell's children callback — i.e. only
+// AFTER the admin + password-confirm gate has passed. Fetching before
+// AdminShell would run admin queries (and audit writes) for unconfirmed or
+// signed-out visitors.
+async function AuditLogsBody({ page }: { page: number }) {
+  const { logs } = await listAuditLogs(page);
+  return (
         <>
           {logs.length === 0 ? (
             <div className="card"><EmptyState title="No audit events yet" hint="Merchant toggles, order views, manual overrides and lease recoveries are recorded here." /></div>
@@ -27,7 +37,7 @@ export default async function AdminAuditLogsPage({ searchParams }: { searchParam
                   {logs.map((l) => (
                     <tr key={String(l.id)} className="hover:bg-slate-800/40">
                       <td className="td whitespace-nowrap text-slate-400">{fmtDateTime(String(l.created_at))}</td>
-                      <td className="td font-mono text-[13px] font-semibold text-slate-100">{String(l.action)}</td>
+                      <td className="td font-mono text-[13px] font-medium text-slate-100">{String(l.action)}</td>
                       <td className="td text-slate-400">{l.subject_type ? `${String(l.subject_type)} #${String(l.subject_id ?? "")}` : "—"}</td>
                       <td className="td text-slate-400">{l.actor_admin_id ? `#${String(l.actor_admin_id)}` : "—"}</td>
                       <td className="td font-mono text-xs text-slate-500">{l.ip ? String(l.ip) : "—"}</td>
@@ -48,7 +58,5 @@ export default async function AdminAuditLogsPage({ searchParams }: { searchParam
             </span>
           </div>
         </>
-      )}
-    </AdminShell>
   );
 }

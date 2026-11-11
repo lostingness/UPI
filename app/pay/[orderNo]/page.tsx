@@ -24,7 +24,7 @@ export default async function PayPage({ params }: { params: Promise<{ orderNo: s
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
         <div className="card w-full max-w-lg p-8 text-center">
-          <h1 className="text-xl font-bold text-slate-50">Order not found</h1>
+          <h1 className="text-xl font-medium text-slate-50">Order not found</h1>
           <p className="mt-2 text-sm text-slate-400">
             This payment link (<span className="font-mono">{orderNo}</span>) does not exist or was removed.
             Please ask the merchant for a new payment link.
@@ -71,7 +71,7 @@ export default async function PayPage({ params }: { params: Promise<{ orderNo: s
       <footer className="flex flex-col items-center gap-1.5 pb-6 text-xs text-slate-500">
         <div className="flex items-center gap-1.5">
           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
-          Secured by <span className="font-semibold text-slate-400">UPI Gateway</span>
+          Secured by <span className="font-medium text-slate-400">UPI Gateway</span>
         </div>
         <div>Payments go directly to the merchant&apos;s bank account via UPI.</div>
       </footer>

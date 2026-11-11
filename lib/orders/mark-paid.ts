@@ -8,7 +8,11 @@
 //   provider ∈ {paytm_business, paytm_pg, phonepe_pg} and matches the account;
 //   verification.paymentAccountId === account.id; env live on both sides;
 //   orderId/orderNumber match; currency INR; verifiedAt present and not future;
-//   UTR or txnId present; verified amount string-equals order amount (2dp);
+//   UTR or txnId present; verified amount string-equals the order's
+//   PAYABLE amount (2dp) — the amount the customer was actually asked to
+//   pay (unique allocated amount when set; `amount` for pre-013 orders).
+//   A provider amount equal to `amount` but different from `payable_amount`
+//   is rejected;
 //   originalExpiresAt timestamp-equals the order's originalExpiryDeadline();
 //   occurredAt not future beyond clock-skew (300 s), not older than
 //   evidence_max_age_seconds (86400 s / 24 h), not before created_at − skew,
@@ -19,11 +23,12 @@
 // lib/db.ts for why no multi-statement FOR UPDATE transaction is used.
 import { gatewayConfig } from "../config/gateway";
 import type { OrderRow } from "./types";
-import { originalExpiryDeadline } from "./types";
+import { originalExpiryDeadline, payableAmountFor } from "./types";
 import type { VerificationResult } from "../verifiers/verification-result";
 import { recordOutboxEvent } from "../webhooks/outbox";
 import { getSql } from "../db";
 import { ApiError } from "../errors";
+import { releaseAllocation } from "./allocations";
 
 export interface EvidenceContext {
   accountProvider: string;
@@ -36,15 +41,16 @@ export function validateVerificationEvidence(order: OrderRow, v: VerificationRes
   const providers = ["paytm_business", "paytm_pg", "phonepe_pg"];
   if (!v.provider || !providers.includes(v.provider)) return "Invalid provider";
   if (v.provider !== ctx.accountProvider) return "Provider does not match payment account";
-  if (v.paymentAccountId !== ctx.accountId) return "Verification payment account mismatch";
+  // Neon returns BIGINT ids as strings — compare numerically, never ===.
+  if (Number(v.paymentAccountId) !== Number(ctx.accountId)) return "Verification payment account mismatch";
   if (order.environment !== "live" || ctx.accountEnvironment !== "live") return "Environment mismatch";
   if (v.orderNumber !== order.order_no) return "Order number mismatch";
-  if (v.orderId !== order.id) return "Order ID mismatch";
+  if (Number(v.orderId) !== Number(order.id)) return "Order ID mismatch";
   if ((v.currency ?? "INR") !== "INR") return "Currency mismatch";
   if (!v.verifiedAt) return "Missing verification timestamp";
   if (v.verifiedAt.getTime() > now.getTime() + gatewayConfig.evidenceClockSkewSeconds * 1000) return "Verification timestamp is in the future";
   if (!((v.utr ?? "").trim()) && !((v.txnId ?? "").trim())) return "Missing transaction reference";
-  if (v.amount === null || Number(v.amount).toFixed(2) !== Number(order.amount).toFixed(2)) return "Amount mismatch";
+  if (v.amount === null || Number(v.amount).toFixed(2) !== payableAmountFor(order)) return "Amount mismatch";
   const deadline = originalExpiryDeadline(order);
   if (!v.originalExpiresAt || v.originalExpiresAt.getTime() !== deadline.getTime()) return "Original expiry deadline mismatch";
   if (gatewayConfig.evidenceRequireTimestamp && !v.occurredAt) return "Missing provider transaction timestamp";
@@ -87,6 +93,10 @@ export async function markPaidInDb(order: OrderRow, v: VerificationResult, ctx: 
     throw new ApiError(409, "Order status changed while verifying payment");
   }
   const paidOrder: OrderRow = { ...order, status: "paid", utr, provider_txn_id: v.txnId ?? null, verified_by: "provider", paid_at: paidAt };
+  // The unique amount is free again once the payment is confirmed; the
+  // allocation row is kept for audit. A release failure must never undo a
+  // confirmed payment — the expiry sweep reclaims it instead.
+  try { await releaseAllocation(sql, order.id, "paid"); } catch { /* best-effort */ }
   await recordOutboxEvent(sql, paidOrder, "order.paid");
   return "paid";
 }

@@ -5,10 +5,20 @@ import { listAllAccounts } from "@/components/server-data";
 export const dynamic = "force-dynamic";
 
 export default async function AdminAccountsPage() {
-  const accounts = await listAllAccounts();
   return (
     <AdminShell active="/admin/accounts" title="All payment accounts" subtitle="Every payment account from every merchant. Credentials are never shown." next="/admin/accounts">
-      {() => (
+      {() => <AccountsBody />}
+    </AdminShell>
+  );
+}
+
+// Data is fetched here, inside AdminShell's children callback — i.e. only
+// AFTER the admin + password-confirm gate has passed. Fetching before
+// AdminShell would run admin queries (and audit writes) for unconfirmed or
+// signed-out visitors.
+async function AccountsBody() {
+  const accounts = await listAllAccounts();
+  return (
         <>
           {accounts.length === 0 ? (
             <div className="card"><EmptyState title="No payment accounts yet" hint="Merchants have not added any payment accounts." /></div>
@@ -24,7 +34,7 @@ export default async function AdminAccountsPage() {
                 <tbody className="divide-y divide-slate-800/70">
                   {accounts.map((a) => (
                     <tr key={String(a.id)} className="hover:bg-slate-800/40">
-                      <td className="td font-semibold text-slate-100">{String(a.label)}{a.is_default ? " ★" : ""}</td>
+                      <td className="td font-medium text-slate-100">{String(a.label)}{a.is_default ? " (default)" : ""}</td>
                       <td className="td">
                         <div className="text-slate-200">{String(a.merchant_name ?? "—")}</div>
                         <div className="text-xs text-slate-500">{String(a.merchant_email ?? "")}</div>
@@ -42,7 +52,5 @@ export default async function AdminAccountsPage() {
           )}
           <p className="mt-4 text-xs text-slate-500">Showing up to 100 accounts, newest first. Credentials are stored encrypted and are never displayed to anyone, including admins.</p>
         </>
-      )}
-    </AdminShell>
   );
 }

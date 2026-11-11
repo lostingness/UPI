@@ -1,18 +1,17 @@
 import { requireMerchant } from "@/lib/auth";
-import { listAccounts, validateAccountInput, credentialsJson, publicAccount } from "@/lib/accounts";
+import { listAccounts, validateAccountInput, credentialsJson, publicAccount, accountUsageMany } from "@/lib/accounts";
 import { createAccountSchema, parseBody } from "@/lib/validate";
 import { getSql, first, type Row } from "@/lib/db";
 import { ApiError } from "@/lib/errors";
 import { ok, handleError, readJson } from "@/lib/http";
-import { accountUsage } from "@/lib/accounts";
 export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const user = await requireMerchant();
     const sql = getSql();
     const accounts = await listAccounts(user.id);
-    const data = [];
-    for (const a of accounts) data.push({ ...publicAccount(a), ...(await accountUsage(sql, a.id)) });
+    const usage = await accountUsageMany(sql, user.id, accounts);
+    const data = accounts.map((a) => ({ ...publicAccount(a), ...(usage.get(Number(a.id)) ?? { used_today: 0, remaining_today: null }) }));
     return ok(data);
   } catch (e) { return handleError(e); }
 }

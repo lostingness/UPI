@@ -9,7 +9,7 @@ export default function ConfirmPasswordPage() {
     <GuestShell title="Confirm your password" subtitle="Please re-enter your password to continue.">
       <ConfirmPasswordForm />
       <p className="mt-8 text-center text-sm text-slate-500">
-        <Link href="/dashboard" className="font-semibold text-brand-400 hover:text-brand-300">Back to dashboard</Link>
+        <Link href="/dashboard" className="font-medium text-brand-400 hover:text-brand-300">Back to dashboard</Link>
       </p>
     </GuestShell>
   );

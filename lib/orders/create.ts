@@ -7,10 +7,23 @@
 // used_today = paid-today sum (IST day) + open pending + review.
 // NOTE on atomicity: see lib/db.ts — the insert is guarded by the unique
 // (user_id, environment, client_order_id) constraint; a race returns 409.
+//
+// QR amounts (migration 013, lib/orders/allocations.ts): the merchant's
+// qr_method decides the payable amount. 'same' → payable = amount, no
+// allocation row. 'unique' → a distinct amount a few paise above the base.
+// Sandbox orders never use unique allocation: sandbox payments are
+// simulated, and amount matching there is by order, not by money.
+// ORDERING NOTE: the allocation row has a NOT NULL order_id FK, so the
+// order row must exist before allocating. The order is therefore inserted
+// first (payable_amount NULL), then allocated, then updated. If allocation
+// fails (exhausted → 409) or the update fails, the just-inserted order row
+// is deleted again and the allocation released — no order row is ever left
+// behind by a failed allocation, which is the guarantee that matters.
 import { getSql, first, type Row } from "../db";
 import { ApiError } from "../errors";
 import { gatewayConfig } from "../config/gateway";
 import { decryptText } from "../crypto";
+import { allocatePayableAmount, getMerchantQrSettings, releaseAllocation, toPaiseStrict, paiseToAmount, type QrMethod } from "./allocations";
 import crypto from "node:crypto";
 
 export interface AccountRow {
@@ -38,6 +51,23 @@ export async function usedToday(sql: ReturnType<typeof getSql>, accountId: numbe
   return Number((rows as { total: string }[])[0]?.total ?? 0);
 }
 
+/** One aggregate query for every account of a merchant (IST day, same
+ * definition as usedToday). Used by resolveAccount's rotation loop and by
+ * the accounts routes — the old per-account loop was N+1. */
+export async function usedTodayByAccount(sql: ReturnType<typeof getSql>, userId: number): Promise<Map<number, number>> {
+  const rows = await sql`
+    SELECT payment_account_id, COALESCE(SUM(amount), 0) AS total FROM orders
+    WHERE user_id = ${userId}
+      AND ((status = 'paid' AND paid_at >= (NOW() AT TIME ZONE 'Asia/Kolkata')::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+        OR status IN ('pending', 'review'))
+    GROUP BY payment_account_id`;
+  const out = new Map<number, number>();
+  for (const r of rows as { payment_account_id: number | string; total: string }[]) {
+    out.set(Number(r.payment_account_id), Number(r.total ?? 0));
+  }
+  return out;
+}
+
 export async function resolveAccount(sql: ReturnType<typeof getSql>, userId: number, amount: number, accountId?: number | null, rotationMode = "random"): Promise<AccountRow> {
   const accounts = (await sql`SELECT * FROM payment_accounts WHERE user_id = ${userId} AND is_active = true ORDER BY id ASC`) as AccountRow[];
   if (accountId != null) {
@@ -50,9 +80,11 @@ export async function resolveAccount(sql: ReturnType<typeof getSql>, userId: num
     return a;
   }
   const live = accounts.filter((a) => accountEnvironment(a) === "live" && !(a.provider === "paytm_business" && !gatewayConfig.enablePaytmBusiness));
+  // Single aggregate query for all accounts (was one usedToday per account).
+  const usedByAccount = await usedTodayByAccount(sql, userId);
   const withRoom: AccountRow[] = [];
   for (const a of live) {
-    const used = await usedToday(sql, a.id);
+    const used = usedByAccount.get(Number(a.id)) ?? 0;
     if (a.daily_limit === null || used + amount <= Number(a.daily_limit)) withRoom.push(a);
   }
   if (!withRoom.length) {
@@ -90,16 +122,61 @@ export async function createOrder(input: CreateOrderInput) {
     throw new ApiError(422, "payment_account_id is not allowed for sandbox orders.");
   }
   const expiresAt = new Date(Date.now() + gatewayConfig.orderExpiryMinutes * 60 * 1000).toISOString();
+  // QR method for live orders (merchant setting, env defaults before
+  // migration 013). Sandbox always pays the plain amount.
+  let qrMethod: QrMethod = gatewayConfig.qrMethod;
+  let qrIncrementPaise = gatewayConfig.qrIncrementPaise;
+  if (input.environment === "live") {
+    const settings = await getMerchantQrSettings(sql, input.userId);
+    qrMethod = settings.method;
+    qrIncrementPaise = settings.incrementPaise;
+  }
+  const basePaise = toPaiseStrict(input.amount);
+  const useUnique = input.environment === "live" && qrMethod === "unique";
   try {
     const rows = await sql`
-      INSERT INTO orders (order_no, user_id, payment_account_id, client_order_id, amount, status, environment,
+      INSERT INTO orders (order_no, user_id, payment_account_id, client_order_id, amount, payable_amount, status, environment,
         customer_name, customer_email, customer_mobile, note, redirect_url, expires_at, original_expires_at)
-      VALUES (${orderNo}, ${input.userId}, ${account?.id ?? null}, ${clientOrderId}, ${input.amount}, 'pending', ${input.environment},
+      VALUES (${orderNo}, ${input.userId}, ${account?.id ?? null}, ${clientOrderId}, ${input.amount}, ${useUnique ? null : paiseToAmount(basePaise)}, 'pending', ${input.environment},
         ${input.customerName ?? null}, ${input.customerEmail ?? null}, ${input.customerMobile ?? null},
         ${input.note ?? null}, ${input.redirectUrl ?? null}, ${expiresAt}, ${expiresAt})
       RETURNING *`;
-    return (rows as import("./types").OrderRow[])[0];
+    const order = (rows as import("./types").OrderRow[])[0];
+    // DAILY-LIMIT RACE (best-effort guard): resolveAccount checked the
+    // limit before the insert, but two concurrent creates can both pass
+    // that check. Re-check after the insert — usedToday now includes this
+    // just-inserted pending order — and delete the order again when the
+    // account is over its limit. This is best-effort on the Neon HTTP
+    // driver: a true serializable guard is not available (no multi-
+    // statement FOR UPDATE transaction across awaits — see lib/db.ts),
+    // so a narrow race window remains; the check still closes the common
+    // case where the limit was already exceeded before this request.
+    if (account && account.daily_limit !== null) {
+      const usedAfter = await usedToday(sql, account.id);
+      if (usedAfter > Number(account.daily_limit)) {
+        try { await sql`DELETE FROM orders WHERE id = ${order.id} AND status = 'pending'`; } catch { /* best-effort */ }
+        throw new ApiError(422, "This payment account has reached its daily limit.");
+      }
+    }
+    if (!useUnique) return order;
+    try {
+      const allocated = await allocatePayableAmount(sql, {
+        userId: input.userId, paymentAccountId: account?.id ?? null, orderId: order.id,
+        orderNo, baseAmount: input.amount, method: "unique",
+        incrementPaise: qrIncrementPaise, expiresAt,
+      });
+      const updated = await sql`UPDATE orders SET payable_amount = ${allocated.payableAmount}, updated_at = NOW() WHERE id = ${order.id} RETURNING *`;
+      return (updated as import("./types").OrderRow[])[0];
+    } catch (e) {
+      // Allocation (or the payable update) failed: leave no order row behind.
+      try { await releaseAllocation(sql, order.id, "failed"); } catch { /* best-effort */ }
+      try { await sql`DELETE FROM orders WHERE id = ${order.id} AND status = 'pending'`; } catch { /* best-effort */ }
+      throw e;
+    }
   } catch (e) {
+    // ApiErrors (e.g. the 409 from an exhausted allocation) pass through
+    // untouched; only a raw DB duplicate-key becomes the idempotency 409.
+    if (e instanceof ApiError) throw e;
     const msg = String((e as Error)?.message ?? "");
     if (msg.includes("orders_user_environment_client_unique") || msg.includes("duplicate key")) {
       throw new ApiError(409, "client_order_id already exists for this environment.");

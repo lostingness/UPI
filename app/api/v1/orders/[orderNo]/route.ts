@@ -5,12 +5,15 @@ import { gatewayConfig } from "@/lib/config/gateway";
 import { getSql, first, type Row } from "@/lib/db";
 import { ApiError } from "@/lib/errors";
 import { json, ok, handleError } from "@/lib/http";
+import { checkTwoLayerRateLimit, rateLimitHeaders, apiKeyLimit } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 // GET /api/v1/orders/{orderNo} — order_no first, else client_order_id, scoped
 // to the merchant + environment; triggers check() (live provider poll) first.
 export async function GET(req: Request, { params }: { params: Promise<{ orderNo: string }> }) {
   try {
     const merchant = await authenticateApiKey(req);
+    const rl = await checkTwoLayerRateLimit(`api:v1:read:${merchant.id}`, apiKeyLimit());
+    if (!rl.allowed) return json({ message: "Too many requests" }, 429, rateLimitHeaders(rl));
     const { orderNo } = await params;
     const sql = getSql();
     let order = await loadOrderByNo(orderNo);

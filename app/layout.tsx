@@ -1,14 +1,23 @@
-// Minimal root layout (backend phase). The frontend phase owns app/(pages)/,
-// components/, app/globals.css and public/ — this file only provides the
-// shell needed for the health/setup status page and for `next build` to pass.
+// Root layout — Inter for UI, JetBrains Mono for figures and order numbers.
 import type { Metadata } from "next";
 import "./globals.css";
 
-export const metadata: Metadata = { title: "UPI Gateway", description: "Multi-merchant UPI payment gateway" };
+export const metadata: Metadata = {
+  title: "UPI Gateway",
+  description: "Self-hosted UPI payment gateway for Indian merchants — payments go directly to the merchant's bank account, verified by the provider.",
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body>{children}</body>
     </html>
   );
