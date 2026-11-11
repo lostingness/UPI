@@ -27,7 +27,7 @@ import time
 
 TEAM = "team_km0mMMgLef2Bm1M85qBjoTNU"
 PROJECT_NAME = "upi-gateway"
-APP_URL = "https://upi-gateway.vercel.app"
+APP_URL = "https://upi-gateway-gamma.vercel.app"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VERCEL = "/opt/hatch/bin/vercel"
 
