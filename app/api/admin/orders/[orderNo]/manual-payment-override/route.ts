@@ -1,0 +1,20 @@
+import { requireAdminConfirmed } from "@/lib/auth";
+import { loadOrderByNo } from "@/lib/orders/check";
+import { adminOverridePaid } from "@/lib/orders/admin-override";
+import { manualOverrideSchema, parseBody } from "@/lib/validate";
+import { ApiError } from "@/lib/errors";
+import { ok, handleError, readJson } from "@/lib/http";
+import { getClientIp } from "@/lib/rate-limit";
+export const dynamic = "force-dynamic";
+export async function POST(req: Request, { params }: { params: Promise<{ orderNo: string }> }) {
+  try {
+    const admin = await requireAdminConfirmed();
+    const { orderNo } = await params;
+    const order = await loadOrderByNo(orderNo);
+    if (!order) throw new ApiError(404, "Not found");
+    const body = await readJson(req);
+    const data = parseBody(manualOverrideSchema, body);
+    const updated = await adminOverridePaid(order, admin.id, getClientIp(req), data.amount, data.verification_reference, data.reason);
+    return ok({ status: updated.status });
+  } catch (e) { return handleError(e); }
+}

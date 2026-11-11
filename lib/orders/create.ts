@@ -1,0 +1,109 @@
+// Order creation — port of OrderService::create / createFor / resolveAccount.
+// Live: resolve account (explicit id → must exist, be live-compatible, active,
+// within daily limit, Paytm Business not disabled — NEVER silently falls back;
+// no id → rotation random/default among active live accounts with room today).
+// Sandbox: no payment account, order_no TST…. Expiry: now + expiry minutes,
+// stored in both expires_at and original_expires_at.
+// used_today = paid-today sum (IST day) + open pending + review.
+// NOTE on atomicity: see lib/db.ts — the insert is guarded by the unique
+// (user_id, environment, client_order_id) constraint; a race returns 409.
+import { getSql, first, type Row } from "../db";
+import { ApiError } from "../errors";
+import { gatewayConfig } from "../config/gateway";
+import { decryptText } from "../crypto";
+import crypto from "node:crypto";
+
+export interface AccountRow {
+  id: number; user_id: number; provider: string; label: string; upi_id: string | null;
+  payee_name: string | null; credentials: string | null; is_active: boolean; is_default: boolean;
+  daily_limit: string | null;
+}
+export function decryptAccountCredentials(a: AccountRow): Record<string, string> {
+  if (!a.credentials) return {};
+  try { return JSON.parse(decryptText(a.credentials) ?? "{}"); } catch { return {}; }
+}
+export function accountEnvironment(a: AccountRow): string | null {
+  const c = decryptAccountCredentials(a);
+  if (a.provider === "paytm_pg" || a.provider === "phonepe_pg") return c.environment ?? null;
+  return "live"; // paytm_business / manual
+}
+export function isHostedProvider(p: string): boolean { return p === "paytm_pg" || p === "phonepe_pg"; }
+
+export async function usedToday(sql: ReturnType<typeof getSql>, accountId: number): Promise<number> {
+  const rows = await sql`
+    SELECT COALESCE(SUM(amount), 0) AS total FROM orders
+    WHERE payment_account_id = ${accountId}
+      AND ((status = 'paid' AND paid_at >= (NOW() AT TIME ZONE 'Asia/Kolkata')::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+        OR status IN ('pending', 'review'))`;
+  return Number((rows as { total: string }[])[0]?.total ?? 0);
+}
+
+export async function resolveAccount(sql: ReturnType<typeof getSql>, userId: number, amount: number, accountId?: number | null, rotationMode = "random"): Promise<AccountRow> {
+  const accounts = (await sql`SELECT * FROM payment_accounts WHERE user_id = ${userId} AND is_active = true ORDER BY id ASC`) as AccountRow[];
+  if (accountId != null) {
+    const a = accounts.find((x) => Number(x.id) === accountId);
+    if (!a) throw new ApiError(422, "Payment account not found or not active.");
+    if (a.provider === "paytm_business" && !gatewayConfig.enablePaytmBusiness) throw new ApiError(422, "Paytm for Business is disabled.");
+    if (accountEnvironment(a) !== "live") throw new ApiError(422, "Payment account is not a live account.");
+    const used = await usedToday(sql, a.id);
+    if (a.daily_limit !== null && used + amount > Number(a.daily_limit)) throw new ApiError(422, "This payment account has reached its daily limit.");
+    return a;
+  }
+  const live = accounts.filter((a) => accountEnvironment(a) === "live" && !(a.provider === "paytm_business" && !gatewayConfig.enablePaytmBusiness));
+  const withRoom: AccountRow[] = [];
+  for (const a of live) {
+    const used = await usedToday(sql, a.id);
+    if (a.daily_limit === null || used + amount <= Number(a.daily_limit)) withRoom.push(a);
+  }
+  if (!withRoom.length) {
+    if (!live.length) throw new ApiError(422, "Add an active Live payment account before creating orders.");
+    throw new ApiError(422, "All UPI accounts have reached their daily limit. Try again tomorrow or raise a daily limit.");
+  }
+  if (rotationMode === "default") {
+    return withRoom.find((a) => a.is_default) ?? withRoom[0];
+  }
+  return withRoom[crypto.randomInt(withRoom.length)];
+}
+
+export function newOrderNo(environment: "live" | "sandbox"): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const suffix = Array.from({ length: 16 }, () => chars[crypto.randomInt(chars.length)]).join("");
+  return (environment === "sandbox" ? "TST" : "ORD") + suffix;
+}
+
+export interface CreateOrderInput {
+  userId: number; environment: "live" | "sandbox"; amount: number;
+  clientOrderId?: string; paymentAccountId?: number | null;
+  customerName?: string | null; customerEmail?: string | null; customerMobile?: string | null;
+  note?: string | null; redirectUrl?: string | null;
+}
+
+export async function createOrder(input: CreateOrderInput) {
+  const sql = getSql();
+  const orderNo = newOrderNo(input.environment);
+  const clientOrderId = input.clientOrderId ?? orderNo;
+  let account: AccountRow | null = null;
+  if (input.environment === "live") {
+    const merchant = first<Row>(await sql`SELECT rotation_mode FROM users WHERE id = ${input.userId}`);
+    account = await resolveAccount(sql, input.userId, input.amount, input.paymentAccountId ?? null, (merchant?.rotation_mode as string) ?? "random");
+  } else if (input.paymentAccountId) {
+    throw new ApiError(422, "payment_account_id is not allowed for sandbox orders.");
+  }
+  const expiresAt = new Date(Date.now() + gatewayConfig.orderExpiryMinutes * 60 * 1000).toISOString();
+  try {
+    const rows = await sql`
+      INSERT INTO orders (order_no, user_id, payment_account_id, client_order_id, amount, status, environment,
+        customer_name, customer_email, customer_mobile, note, redirect_url, expires_at, original_expires_at)
+      VALUES (${orderNo}, ${input.userId}, ${account?.id ?? null}, ${clientOrderId}, ${input.amount}, 'pending', ${input.environment},
+        ${input.customerName ?? null}, ${input.customerEmail ?? null}, ${input.customerMobile ?? null},
+        ${input.note ?? null}, ${input.redirectUrl ?? null}, ${expiresAt}, ${expiresAt})
+      RETURNING *`;
+    return (rows as import("./types").OrderRow[])[0];
+  } catch (e) {
+    const msg = String((e as Error)?.message ?? "");
+    if (msg.includes("orders_user_environment_client_unique") || msg.includes("duplicate key")) {
+      throw new ApiError(409, "client_order_id already exists for this environment.");
+    }
+    throw e;
+  }
+}

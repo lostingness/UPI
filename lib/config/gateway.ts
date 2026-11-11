@@ -1,0 +1,48 @@
+// Port of config/gateway.php + config/webhooks.php (INVENTORY §14.2).
+// All values read from env with the same defaults/clamps as the Laravel source.
+export const gatewayConfig = {
+  appName: process.env.APP_NAME ?? "UPI Gateway",
+  appUrl: process.env.APP_URL ?? "http://localhost:3000",
+  appEnv: process.env.NODE_ENV ?? "development",
+  timezone: "Asia/Kolkata",
+  allowRegistration: process.env.ALLOW_REGISTRATION === "true",
+  orderExpiryMinutes: num(process.env.GATEWAY_ORDER_EXPIRY_MINUTES, 15),
+  latePaymentGraceHours: Math.max(0, num(process.env.GATEWAY_LATE_PAYMENT_GRACE_HOURS, 24)),
+  latePaymentCheckIntervalSeconds: Math.max(120, num(process.env.GATEWAY_LATE_PAYMENT_CHECK_INTERVAL_SECONDS, 300)),
+  latePaymentBatchSize: clamp(num(process.env.GATEWAY_LATE_PAYMENT_BATCH_SIZE, 100), 1, 1000),
+  pendingVerificationBatchSize: clamp(num(process.env.GATEWAY_PENDING_VERIFICATION_BATCH_SIZE, 100), 1, 1000),
+  schedulerLockSeconds: clamp(num(process.env.GATEWAY_SCHEDULER_LOCK_SECONDS, 300), 60, 3600),
+  checkIntervalSeconds: 3, // hardcoded in source
+  verificationLeaseSeconds: Math.max(15, num(process.env.GATEWAY_VERIFICATION_LEASE_SECONDS, 120)),
+  evidenceRequireTimestamp: process.env.GATEWAY_EVIDENCE_REQUIRE_TIMESTAMP !== "false",
+  evidenceMaxAgeSeconds: Math.max(60, num(process.env.GATEWAY_EVIDENCE_MAX_AGE_SECONDS, 86400)),
+  evidenceClockSkewSeconds: Math.max(0, num(process.env.GATEWAY_EVIDENCE_CLOCK_SKEW_SECONDS, 300)),
+  providerTimezone: process.env.GATEWAY_PROVIDER_TIMEZONE ?? "Asia/Kolkata",
+  paytmStatusUrl: process.env.PAYTM_STATUS_URL ?? "https://securegw.paytm.in/merchant-status/getTxnStatus",
+  enablePaytmBusiness: process.env.GATEWAY_ENABLE_PAYTM_BUSINESS !== "false",
+  paytmPgSandboxUrl: process.env.PAYTM_PG_SANDBOX_URL ?? "https://securestage.paytmpayments.com",
+  paytmPgProductionUrl: process.env.PAYTM_PG_PRODUCTION_URL ?? "https://secure.paytmpayments.com",
+  phonepeSandbox: { tokenUrl: "https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token", baseUrl: "https://api-preprod.phonepe.com/apis/pg-sandbox" },
+  phonepeProduction: { tokenUrl: "https://api.phonepe.com/apis/identity-manager/v1/oauth/token", baseUrl: "https://api.phonepe.com/apis/pg" },
+  webhookAllowInsecure: process.env.NODE_ENV === "production" ? false : process.env.GATEWAY_WEBHOOK_ALLOW_INSECURE === "true",
+  allowInsecureRedirects: process.env.NODE_ENV === "production" ? false : process.env.GATEWAY_ALLOW_INSECURE_REDIRECTS === "true",
+  cspEnforce: process.env.GATEWAY_CSP_ENFORCE !== "false",
+  apiKeyRateLimit: num(process.env.GATEWAY_API_KEY_RATE_LIMIT, 120),
+  orderCreateApiKeyRateLimit: (() => { const v = num(process.env.GATEWAY_ORDER_CREATE_API_KEY_RATE_LIMIT, 1000); return v > 0 ? v : 1000; })(),
+  apiIpRateLimit: num(process.env.GATEWAY_API_IP_RATE_LIMIT, 600),
+  apiFailedAuthIpRateLimit: num(process.env.GATEWAY_API_FAILED_AUTH_IP_RATE_LIMIT, 30),
+  // config/webhooks.php
+  outboxBatchSize: clamp(num(process.env.WEBHOOK_OUTBOX_BATCH_SIZE, 100), 1, 1000),
+  claimSeconds: 120,
+  dispatchRetrySeconds: 60,
+  reconcileSeconds: 10800,
+  failedRetrySeconds: 3600,
+  maxDispatchGenerations: Math.max(1, num(process.env.WEBHOOK_MAX_DISPATCH_GENERATIONS, 10)),
+  deliveryLockSeconds: Math.max(1, num(process.env.WEBHOOK_DELIVERY_LOCK_SECONDS, 60)),
+  retentionDays: Math.max(1, num(process.env.WEBHOOK_RETENTION_DAYS, 30)),
+  bcryptRounds: num(process.env.BCRYPT_ROUNDS, 12),
+  sessionLifetimeMinutes: 120,
+  adminPasswordConfirmSeconds: 900,
+} as const;
+function num(v: string | undefined, d: number): number { const n = Number(v); return Number.isFinite(n) ? n : d; }
+function clamp(v: number, lo: number, hi: number): number { return Math.max(lo, Math.min(hi, v)); }
