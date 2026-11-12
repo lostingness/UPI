@@ -289,3 +289,34 @@ export async function markNotificationsRead(
   );
   return (rows as unknown[]).length;
 }
+
+/**
+ * Permanently delete notifications for one merchant — the "Clear all"
+ * action (Round 9). Either `all: true` (delete every row for the
+ * merchant) or `readOnly: true` (delete only rows already marked read).
+ * Returns the number of rows deleted. Never touches another merchant's
+ * rows (user_id guard).
+ *
+ * WHY DELETE, NOT MARK-READ: the list endpoint returns read rows too, so
+ * "Mark all read" only flipped is_read and every "cleared" notification
+ * reappeared on the next reload — there was no way to make one go away.
+ * Deletion is the only clear that survives a reload.
+ */
+export async function clearNotifications(
+  sql: Sql,
+  userId: number,
+  opts: { all?: boolean; readOnly?: boolean },
+): Promise<number> {
+  await ensureNotificationsTable(sql);
+  if (opts.all) {
+    const rows = await sql`
+      DELETE FROM upi_notifications WHERE user_id = ${userId} RETURNING id`;
+    return (rows as unknown[]).length;
+  }
+  if (opts.readOnly) {
+    const rows = await sql`
+      DELETE FROM upi_notifications WHERE user_id = ${userId} AND is_read = true RETURNING id`;
+    return (rows as unknown[]).length;
+  }
+  return 0;
+}

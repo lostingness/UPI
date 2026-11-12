@@ -1,5 +1,9 @@
 // GET /api/notifications — merchant's notification list + unread count.
 // POST /api/notifications — mark as read ({ ids: number[] } or { all: true }).
+// DELETE /api/notifications — permanently clear ({ all: true } clears
+// everything; { read: true } clears read ones only). Deletion is the only
+// clear that survives a reload: the list returns read rows too, so
+// mark-as-read alone could never make a notification go away (Round 9).
 // Session-authenticated, merchant-scoped by the session user (never another
 // merchant's rows). The table is lazily created on first use (migration
 // 015 is canonical), so the bell works even before `npm run migrate`.
@@ -8,6 +12,7 @@ import { getSql } from "@/lib/db";
 import { ApiError } from "@/lib/errors";
 import { ok, handleError, readJson } from "@/lib/http";
 import {
+  clearNotifications,
   listNotifications,
   markNotificationsRead,
   type NotificationRow,
@@ -61,5 +66,19 @@ export async function POST(req: Request) {
     }
     const marked = await markNotificationsRead(getSql(), user.id, { ids, all });
     return ok({ marked_read: marked });
+  } catch (e) { return handleError(e); }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const user = await requireMerchant();
+    const body = (await readJson(req)) as { all?: unknown; read?: unknown };
+    const all = body.all === true;
+    const read = body.read === true;
+    if (!all && !read) {
+      throw new ApiError(422, "Provide { all: true } or { read: true } to clear notifications.");
+    }
+    const cleared = await clearNotifications(getSql(), user.id, { all, readOnly: read && !all });
+    return ok({ cleared });
   } catch (e) { return handleError(e); }
 }

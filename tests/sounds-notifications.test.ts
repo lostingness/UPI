@@ -23,6 +23,7 @@ import {
 import {
   buildNotification,
   formatInr,
+  clearNotifications,
   createNotification,
   createNotificationSafe,
   listNotifications,
@@ -224,5 +225,40 @@ describe("notification creation (fake sql client)", () => {
     await markNotificationsRead(sql, 3, { all: true });
     const update = calls.find((c) => c.includes("UPDATE upi_notifications"));
     expect(update).toContain("is_read = false");
+  });
+});
+
+describe("notification clear (Round 9a — delete, not just mark-read)", () => {
+  it("clear all deletes only the merchant's rows", async () => {
+    const { sql, calls } = makeFakeSql(() => [{ id: 1 }, { id: 2 }]);
+    const n = await clearNotifications(sql, 3, { all: true });
+    expect(n).toBe(2);
+    const del = calls.find((c) => c.includes("DELETE FROM upi_notifications"));
+    expect(del).toContain("user_id = ");
+    expect(del).not.toContain("is_read");
+  });
+  it("clear read deletes only rows already marked read", async () => {
+    const { sql, calls } = makeFakeSql(() => [{ id: 1 }]);
+    const n = await clearNotifications(sql, 3, { readOnly: true });
+    expect(n).toBe(1);
+    const del = calls.find((c) => c.includes("DELETE FROM upi_notifications"));
+    expect(del).toContain("is_read = true");
+  });
+  it("no flag deletes nothing and issues no DELETE", async () => {
+    const { sql, calls } = makeFakeSql(() => [{ id: 1 }]);
+    const n = await clearNotifications(sql, 3, {});
+    expect(n).toBe(0);
+    expect(calls.some((c) => c.includes("DELETE FROM upi_notifications"))).toBe(false);
+  });
+  it("clearing is a delete, so a cleared row can never be listed again", async () => {
+    // Regression test for the Round 9 (a) report: mark-as-read only flips
+    // is_read and the list returns read rows too, so "cleared" items kept
+    // reappearing after reload. The DELETE path is the only clear that
+    // survives a reload — assert the SQL is a DELETE, not an UPDATE.
+    const { sql, calls } = makeFakeSql(() => [{ id: 1 }]);
+    await clearNotifications(sql, 3, { all: true });
+    const del = calls.find((c) => c.includes("DELETE FROM upi_notifications"));
+    expect(del).toMatch(/DELETE FROM upi_notifications/);
+    expect(calls.some((c) => c.includes("UPDATE upi_notifications"))).toBe(false);
   });
 });

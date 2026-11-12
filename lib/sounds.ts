@@ -55,6 +55,37 @@ export const ORDER_CREATED_TICK_NOTES: NoteEvent[] = [
   { note: "C6", at: 0, dur: 0.12 },
 ];
 
+// --- Round 9 (Worker E): click bubble pop -----------------------------------
+// A short synthesised bubble/pop for EVERY real user click, site-wide
+// (see components/click-feedback.tsx). One sine blip that drops in pitch
+// fast (520 Hz → 170 Hz) with a quick decay — a pop, not a beep. Quiet
+// (peak 0.12) and ~0.1 s so rapid clicks never become noise; the
+// throttle below dedupes them as well.
+export const BUBBLE_POP_SPEC = {
+  /** Pitch at the start of the pop, Hz. */
+  fromHz: 520,
+  /** Pitch at the end of the pop, Hz. */
+  toHz: 170,
+  /** Total length in seconds. */
+  dur: 0.1,
+  /** Peak gain (0–1). Quieter than the chime (0.18). */
+  peak: 0.12,
+} as const;
+
+/** Minimum gap between two bubble pops, ms. Clicks faster than this
+ * (double-taps, rapid tapping) play at most one pop — no overlap noise. */
+export const BUBBLE_POP_THROTTLE_MS = 90;
+
+/**
+ * Pure throttle check: true when enough time has passed since the last
+ * pop. Exported for unit tests (the real clock path is playBubblePop).
+ */
+export function bubblePopDue(lastPlayedAt: number, now: number = Date.now()): boolean {
+  return now - lastPlayedAt >= BUBBLE_POP_THROTTLE_MS;
+}
+
+let lastBubblePopAt = 0;
+
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
 
 function defaultStorage(): StorageLike | null {
@@ -115,7 +146,7 @@ let audioCtx: AudioContext | null = null;
 let gestureUnlocked = false;
 let gestureListenersInstalled = false;
 
-/** Test seam: reset module state (gesture flag, context, listeners). */
+/** Test seam: reset module state (gesture flag, context, listeners, pop throttle). */
 export function __resetSoundStateForTests(): void {
   if (typeof window !== "undefined") {
     window.removeEventListener("pointerdown", unlockAudio);
@@ -124,6 +155,7 @@ export function __resetSoundStateForTests(): void {
   audioCtx = null;
   gestureUnlocked = false;
   gestureListenersInstalled = false;
+  lastBubblePopAt = 0;
 }
 
 /**
@@ -208,4 +240,46 @@ export function playSuccessChime(): boolean {
  */
 export function playOrderCreatedTick(): boolean {
   return playNotes(ORDER_CREATED_TICK_NOTES);
+}
+
+/**
+ * Play the click bubble pop (Round 9). Returns true only when a pop
+ * actually played. Call ONLY from a real user click (the global listener
+ * in components/click-feedback.tsx checks event.isTrusted first) —
+ * never on page load, never on a programmatic click. Gating, in order:
+ *   1. throttle — at most one pop per BUBBLE_POP_THROTTLE_MS, so rapid
+ *      taps never overlap into noise;
+ *   2. the `upi-sounds-enabled` mute toggle (read at call time, so the
+ *      toggle takes effect immediately);
+ *   3. the gesture gate — silent no-op before the first user gesture
+ *      (the click handler calls unlockAudio() first, so a real click
+ *      always passes this).
+ * Silent no-op (false) when throttled, muted, ungated, or when Web Audio
+ * is unavailable — never throws.
+ */
+export function playBubblePop(now: number = Date.now()): boolean {
+  if (!bubblePopDue(lastBubblePopAt, now)) return false;
+  if (!isSoundEnabled()) return false;
+  if (!gestureUnlocked || !audioCtx) return false;
+  try {
+    const ctx = audioCtx;
+    const t0 = ctx.currentTime + 0.005;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    // Fast downward pitch sweep = the "pop": a bubble bursting.
+    osc.frequency.setValueAtTime(BUBBLE_POP_SPEC.fromHz, t0);
+    osc.frequency.exponentialRampToValueAtTime(BUBBLE_POP_SPEC.toHz, t0 + BUBBLE_POP_SPEC.dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(BUBBLE_POP_SPEC.peak, t0 + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + BUBBLE_POP_SPEC.dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + BUBBLE_POP_SPEC.dur + 0.02);
+    lastBubblePopAt = now;
+    return true;
+  } catch {
+    return false;
+  }
 }

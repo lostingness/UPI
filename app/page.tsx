@@ -18,7 +18,6 @@ import { PublicNav, SiteFooter } from "@/components/layout";
 import { FaqItem, Reveal } from "@/components/layout-client";
 import { getInstallState, getSessionSafe } from "@/components/server-data";
 import { BowlGlow } from "@/components/bowl-glow";
-import { DemoCta } from "@/components/demo-cta";
 import { HaldenCta } from "@/components/halden-cta";
 import { HaldenReveals, LetterReveal, ShipImage } from "@/components/letter-reveal";
 import { LogoMarquee } from "@/components/logo-marquee";
@@ -239,11 +238,6 @@ export default async function Home() {
           <div className="hero-ctas fade-up" style={{ "--d": "1.3s" } as React.CSSProperties}>
             <HaldenCta href={ctaHref} label="Get started" large />
             <Link href="/docs" className="hbtn-ghost">View docs</Link>
-            {/* Round 8: demo payment link CTA — same hero CTA row, third
-                button. Logged-in merchants create a ₹10.00 demo link in one
-                click; logged-out visitors go to /login (a demo order needs
-                a merchant to own it). */}
-            <DemoCta loggedIn={!!user} />
           </div>
         </section>
 

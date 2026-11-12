@@ -131,6 +131,10 @@ html.dark {
     html { scroll-behavior: auto; }
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; transition-duration: 0.01ms !important; }
     .reveal, .reveal.is-visible { opacity: 1; transform: none; animation: none; }
+    /* Round 9: no press pulse, no bubble ring when reduced motion is on
+       (the JS listener skips them too — this is the belt). */
+    .click-pressed { animation: none; }
+    .click-bubble { display: none; }
   }
 }
 
@@ -303,6 +307,27 @@ html.dark {
     opacity: 0; transition: opacity 200ms var(--ease-out);
   }
   .blur-overlay.is-blurring { opacity: 1; }
+
+  /* ---------- Round 9: click feedback (press pulse + bubble ring) ----------
+     Applied by the global listener in components/click-feedback.tsx to
+     every clickable element (a, button, [role=button], summary, ...).
+     The pulse is a 150ms keyframe scale (not a transition) so it never
+     replaces an element's own transition list, and it self-reverses —
+     the class only has to be present, then it is removed after 140ms.
+     The bubble is a fixed ring spawned at the tap point (JS sets left /
+     top / size inline); it expands and fades in 450ms. Both are
+     pointer-events-none and sit above the nav (z-40) so the ring is
+     visible even over the header. Reduced motion kills both (see the
+     base-layer media query above + the JS guard). */
+  @keyframes click-press { 0% { transform: scale(1); } 45% { transform: scale(0.96); } 100% { transform: scale(1); } }
+  .click-pressed { animation: click-press 150ms var(--ease-out); }
+  @keyframes bubble-pop { from { transform: scale(0.25); opacity: 0.9; } to { transform: scale(1.6); opacity: 0; } }
+  .click-bubble {
+    position: fixed; z-index: 60; pointer-events: none; border-radius: 9999px;
+    border: 2px solid color-mix(in srgb, var(--accent-text) 55%, transparent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    animation: bubble-pop 450ms var(--ease-out) forwards;
+  }
 }
 
 /* Mobile bottom sheet (LiquidNav menu) — slides up, eased. The <details>

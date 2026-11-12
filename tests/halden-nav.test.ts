@@ -46,8 +46,26 @@ describe("shouldShowNavCta", () => {
     ).toBe(false);
   });
 
-  it("is always on off the landing page (dashboard/docs/etc.)", () => {
+  it("is always on off the landing page for a guest (dashboard/docs/etc.)", () => {
     expect(shouldShowNavCta({ isLanding: false, stmtP: null, ...base })).toBe(true);
     expect(shouldShowNavCta({ isLanding: false, stmtP: 0, ...base })).toBe(true);
+    expect(shouldShowNavCta({ isLanding: false, stmtP: null, authed: false, ...base })).toBe(true);
+  });
+
+  it("is never on for an authed user, on any page (Round 9)", () => {
+    // Landing, even past the statement threshold / past the hero.
+    expect(shouldShowNavCta({ isLanding: true, stmtP: 1, authed: true, ...base })).toBe(false);
+    expect(
+      shouldShowNavCta({
+        isLanding: true,
+        stmtP: null,
+        authed: true,
+        scrollY: 800 * HALDEN_HERO_SCROLL_FRACTION + 1,
+        viewportH: 800,
+      }),
+    ).toBe(false);
+    // Dashboard / orders / settings / admin — the CTA must not show.
+    expect(shouldShowNavCta({ isLanding: false, stmtP: null, authed: true, ...base })).toBe(false);
+    expect(shouldShowNavCta({ isLanding: false, stmtP: 0, authed: true, ...base })).toBe(false);
   });
 });

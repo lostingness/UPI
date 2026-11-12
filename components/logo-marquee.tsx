@@ -32,13 +32,21 @@ const BRAND_ROWS_CSS = `
 .brand-row-label{margin:0;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
 .brand-chips{display:flex;flex-wrap:wrap;gap:10px}
 .brand-chip{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 18px 0 10px;border-radius:999px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border);white-space:nowrap}
-.brand-chip img{display:block;width:28px;height:28px;border-radius:7px;flex:none}
+/* Round 9: the official brand SVGs are wide wordmarks (GPay 2.67:1,
+   Paytm 3.19:1, PhonePe 3.30:1; BHIM stays the old 1:1 square). They
+   render at ONE uniform content height with width:auto so no mark is
+   ever stretched or squashed. All three wordmarks are dark-on-
+   transparent, so each sits on a small white plate — without it the
+   navy/purple/charcoal lettering disappears on the dark chip
+   (surface-2 #0d1322). The plate is the img itself: height below is
+   border-box (20px mark + 3px padding top/bottom). */
+.brand-chip img{display:block;height:26px;width:auto;max-width:84px;background:#fff;border-radius:6px;padding:3px 6px;flex:none;object-fit:contain}
 .brand-chip-text{padding:0 18px}
 .brand-name{font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
 @media (max-width:640px){
   .brand-row{grid-template-columns:1fr;gap:10px;padding:16px 0}
   .brand-chip{height:44px;padding:0 14px 0 8px}
-  .brand-chip img{width:26px;height:26px}
+  .brand-chip img{height:22px;padding:2px 5px;max-width:76px}
   .brand-name{font-size:14px}
 }
 `;
@@ -53,7 +61,7 @@ export function LogoMarquee() {
           <div className="brand-chips">
             {PAY_VIA.map((a) => (
               <span key={a.label} className="brand-chip">
-                <img src={a.logo} alt="" width={28} height={28} loading="lazy" />
+                <img src={a.logo} alt="" loading="lazy" />
                 <span className="brand-name">{a.label}</span>
               </span>
             ))}

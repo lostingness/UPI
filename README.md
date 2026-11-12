@@ -4,7 +4,7 @@
 
 > **Accept UPI payments straight into your own bank account. No middleman, no fee on every sale.**
 
-**🔴 Live demo:** <https://upi-gateway-gamma.vercel.app> · **🧪 Try a demo payment** on the live site — a ₹10 demo order, sandbox only, clearly marked DEMO, no real money ever moves.
+**🔴 Live demo:** <https://upi-gateway-gamma.vercel.app>
 
 ![Demo — a quick tour of the landing page](docs/screenshots/demo.gif)
 
@@ -22,9 +22,9 @@ Captured 12 November 2026 from a real production build. Desktop 1280 px, phone 3
 
 | Landing, desktop | Landing, phone | Pay screen, phone |
 |---|---|---|
-| <img src="docs/screenshots/r8-landing-1280-light.jpg" width="360" alt="Landing page hero, desktop 1280 px"> | <img src="docs/screenshots/r8-landing-390-light.jpg" width="180" alt="Landing page hero, phone 390 px"> | <img src="docs/screenshots/r7-pay-390.jpg" width="180" alt="Pay screen for a ₹500.01 Unique Amount order, phone 390 px"> |
+| <img src="docs/screenshots/r9-landing-1280-light.jpg" width="360" alt="Landing page hero, desktop 1280 px"> | <img src="docs/screenshots/r9-landing-390-light.jpg" width="180" alt="Landing page hero, phone 390 px"> | <img src="docs/screenshots/r9-pay-390-light.jpg" width="180" alt="Pay screen with official UPI app chips, phone 390 px"> |
 | **New order, phone** | **Dashboard, desktop** | **Log in, desktop** |
-| <img src="docs/screenshots/r8-after-ordernew-390-light.jpg" width="180" alt="New payment link form with Unique Amount preselected, phone 390 px"> | <img src="docs/screenshots/r8-dashboard-1280-light.jpg" width="360" alt="Merchant dashboard with demo payment link card, desktop 1280 px"> | <img src="docs/screenshots/r8-after-login-1280-light.jpg" width="360" alt="Log in page with payment illustration panel, desktop 1280 px"> |
+| <img src="docs/screenshots/r8-after-ordernew-390-light.jpg" width="180" alt="New payment link form with Unique Amount preselected, phone 390 px"> | <img src="docs/screenshots/r9-dashboard-1280-light.jpg" width="360" alt="Merchant dashboard, desktop 1280 px"> | <img src="docs/screenshots/r8-after-login-1280-light.jpg" width="360" alt="Log in page with payment illustration panel, desktop 1280 px"> |
 
 ## Features
 
@@ -32,7 +32,7 @@ Captured 12 November 2026 from a real production build. Desktop 1280 px, phone 3
 - **QR codes + payment links** — one link per order, shareable anywhere, in two QR methods (see below).
 - **UTR review** — customers submit their 12-digit UTR; you approve it against your bank statement.
 - **Signed webhooks** — every payment event, delivered with an HMAC signature.
-- **Sandbox + demo links** — test everything with fake orders, no real money.
+- **Sandbox** — test everything with fake orders, no real money.
 - **Dashboard** — orders, accounts, stats, and a notification bell for new payments.
 - **Sounds** — a short sound plays when an order is created or a payment arrives (mutable, real MP3 files in `public/sounds/`).
 
@@ -117,7 +117,6 @@ Signups are **off** by default. To open them, set `ALLOW_REGISTRATION` to `true`
 
 ## Try it without real money
 
-- **Demo payment link** — on the landing page ("Try a demo payment") or in the dashboard ("Create demo payment link"). It creates a sandbox order for a fixed ₹10.00 and gives you a shareable link. The demo page is labelled DEMO everywhere and never moves real money.
 - **Sandbox** — sandbox orders start with `TST…` (live orders start with `ORD…`). They never touch a provider. The sandbox can pretend to be six outcomes: success, failure, pending, expiry, timeout, invalid reference. Get sandbox API keys in Settings → API credentials (they start with `test_key_`).
 
 ## API quickstart

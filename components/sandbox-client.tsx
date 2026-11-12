@@ -1,9 +1,6 @@
 // Sandbox checkout — port of sandbox-pay.blade.php. Clearly labelled
 // TEST ONLY: simulate one of the six outcomes; no provider is contacted,
 // no real money moves.
-// Round 8 `demo` prop: the same simulator rendered for a demo payment link
-// (/demo/pay/TST…) — banner, heading and footer say DEMO instead of
-// "Sandbox"/"TEST". Behaviour is identical; only the labels change.
 "use client";
 
 import { useState } from "react";
@@ -20,27 +17,25 @@ const OUTCOMES: { outcome: string; label: string; cls: string; hint: string }[] 
   { outcome: "invalid_reference", label: "Invalid reference", cls: "btn-danger", hint: "Provider rejects the reference — order fails verification." },
 ];
 
-export default function SandboxPayClient({ orderNo, amount, clientOrderId, customerName, status, createdAt, demo = false }: {
+export default function SandboxPayClient({ orderNo, amount, clientOrderId, customerName, status, createdAt }: {
   orderNo: string; amount: string; clientOrderId: string; customerName: string | null; status: string; createdAt: string;
-  /** Round 8: render with DEMO branding for /demo/pay links. Labels only. */
-  demo?: boolean;
 }) {
   const router = useRouter();
   const form = useApiForm<{ status: string }>();
   const [picked, setPicked] = useState<string | null>(null);
   const done = status !== "pending";
-  const tag = demo ? "DEMO" : "TEST";
+  const tag = "TEST";
 
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-5 rounded-xl bg-amber-500/10 px-5 py-4 text-center text-sm font-medium text-amber-700 dark:text-amber-300 ring-1 ring-amber-500/30">
-        {demo ? "DEMO — test transaction, no real money. Nothing here charges anyone." : "Sandbox — test transaction, no real money"}
+        Sandbox — test transaction, no real money
       </div>
       <section className="card p-6 ring-amber-500/30">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-medium text-[var(--text)]">{demo ? "Demo payment simulator" : "Payment simulator"}</h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">{demo ? "Choose one controlled outcome for this demo order — the result is simulated, never a real payment." : "Choose one controlled outcome for this test order."}</p>
+            <h1 className="text-xl font-medium text-[var(--text)]">Payment simulator</h1>
+            <p className="mt-1 text-sm text-[var(--muted)]">Choose one controlled outcome for this test order.</p>
           </div>
           <StatusPill status={status} />
         </div>
@@ -78,14 +73,12 @@ export default function SandboxPayClient({ orderNo, amount, clientOrderId, custo
           </div>
         ) : (
           <div className="mt-6 rounded-lg bg-[var(--surface-2)] px-4 py-3 text-center text-sm text-[var(--muted)]">
-            This {tag} order is complete ({status}). Create another {demo ? "demo link" : "Sandbox order"} to simulate a different outcome.
+            This {tag} order is complete ({status}). Create another Sandbox order to simulate a different outcome.
           </div>
         )}
       </section>
       <p className="mt-4 text-center text-xs text-[var(--muted)]">
-        {demo
-          ? <>Demo links are sandbox orders (TST…) created from the demo button. No real money moves and no provider is contacted.</>
-          : <>Sandbox orders are created with sandbox API credentials (<code className="kbd">test_key_…</code>) via <code className="kbd">POST /api/v1/orders</code>. See <a href="/docs" className="font-medium text-brand-600 dark:text-brand-400">API docs</a>.</>}
+        Sandbox orders are created with sandbox API credentials (<code className="kbd">test_key_…</code>) via <code className="kbd">POST /api/v1/orders</code>. See <a href="/docs" className="font-medium text-brand-600 dark:text-brand-400">API docs</a>.
       </p>
     </div>
   );

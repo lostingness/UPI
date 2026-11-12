@@ -9,6 +9,7 @@ import "./globals.css";
 import "./fonts.css";
 import { ThemeScript } from "@/components/theme-script";
 import { BlurOverlay } from "@/components/blur-overlay";
+import { ClickFeedback } from "@/components/click-feedback";
 
 const GOOGLE_FONTS_HREF =
   "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap";
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <BlurOverlay />
+        <ClickFeedback />
         {children}
       </body>
     </html>

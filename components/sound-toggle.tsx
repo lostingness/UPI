@@ -57,6 +57,7 @@ export function SoundToggle() {
       aria-label={enabled === null ? "Payment sounds" : enabled ? "Turn payment sounds off" : "Turn payment sounds on"}
       title={enabled === null ? "Payment sounds" : enabled ? "Payment sounds on — click to mute" : "Payment sounds off — click to unmute"}
       style={{ touchAction: "manipulation" }}
+      data-no-click-pop // Round 9: this button already plays the tick preview when unmuting — no bubble pop on top of it
       className="grid h-9 w-9 shrink-0 touch-manipulation place-items-center rounded-full transition-colors duration-150 hover:bg-[var(--surface-2)]"
     >
       {enabled === null ? (

@@ -70,11 +70,14 @@ function maskUtrDisplay(utr: string | null): string | null {
   return utr.length <= 4 ? "••••" : "•".repeat(utr.length - 4) + utr.slice(-4);
 }
 
-const APPS: { name: string; scheme: string; logo: string }[] = [
-  { name: "GPay", scheme: "tez://upi/pay", logo: "/images/upi/gpay.svg" },
-  { name: "PhonePe", scheme: "phonepe://pay", logo: "/images/upi/phonepe.svg" },
-  { name: "Paytm", scheme: "paytmmp://pay", logo: "/images/upi/paytm.svg" },
-  { name: "BHIM", scheme: "upi://pay", logo: "/images/upi/bhim.svg" },
+const APPS: { name: string; scheme: string; logo: string; w: number; h: number }[] = [
+  // Round 9: official wordmarks — w/h preserve each mark's aspect at a
+  // uniform 16px height (GPay 2.67:1, PhonePe 3.30:1, Paytm 3.19:1;
+  // BHIM keeps its old 1:1 square). Never render these at 16x16.
+  { name: "GPay", scheme: "tez://upi/pay", logo: "/images/upi/gpay.svg", w: 43, h: 16 },
+  { name: "PhonePe", scheme: "phonepe://pay", logo: "/images/upi/phonepe.svg", w: 53, h: 16 },
+  { name: "Paytm", scheme: "paytmmp://pay", logo: "/images/upi/paytm.svg", w: 51, h: 16 },
+  { name: "BHIM", scheme: "upi://pay", logo: "/images/upi/bhim.svg", w: 16, h: 16 },
 ];
 
 function useCountdown(expiresAt: string | null, createdAt: string, onExpire?: () => void) {
@@ -202,12 +205,17 @@ const APP_TINTS: Record<string, string> = {
   Paytm: "bg-[#00baf2]/10 ring-[#00baf2]/30",
   BHIM: "bg-[#ed752e]/10 ring-[#ed752e]/30",
 };
-function AppButtons({ appLinks }: { appLinks: { name: string; href: string; logo: string }[] }) {
+// Round 9: each logo sits on a small white plate — the official
+// wordmarks are dark-on-transparent and unreadable on the dark chip
+// tints. Plate is fixed 22px tall; the logo keeps its own aspect.
+function AppButtons({ appLinks }: { appLinks: { name: string; href: string; logo: string; w: number; h: number }[] }) {
   return (
     <div className="flex flex-wrap justify-center gap-2">
       {appLinks.map((a) => (
         <a key={a.name} href={a.href} style={{ touchAction: "manipulation" }} className={`flex min-h-11 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold whitespace-nowrap text-[var(--text)] ring-1 transition duration-150 hover:-translate-y-0.5 active:scale-[0.97] ${APP_TINTS[a.name] ?? "bg-[var(--surface-2)] ring-[var(--border)]"}`}>
-          <Image src={a.logo} alt={a.name} width={16} height={16} className="rounded-sm" />{a.name}
+          <span className="grid h-[22px] shrink-0 place-items-center rounded-[5px] bg-white px-1.5 ring-1 ring-black/5">
+            <Image src={a.logo} alt={a.name} width={a.w} height={a.h} />
+          </span>{a.name}
         </a>
       ))}
     </div>

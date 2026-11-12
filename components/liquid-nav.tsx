@@ -40,6 +40,14 @@
 // module instead, the compute() below also reads window.__haldenStmtP
 // defensively. Login loses its right padding while `on`.
 //
+// Round 9: the CTA renders ONLY for a logged-out landing visitor
+// (variant="landing" && !authed). On dashboard pages and for an authed
+// user on the landing page the .navcta element is not in the DOM at all
+// — the morph above only ever applies to the guest landing case, where
+// the CTA points at /setup. (Before Round 9 the CTA was always rendered
+// and `shouldShowNavCta` returned true for every non-landing page, so
+// it showed on /dashboard, /orders, /settings… pointing at /orders/new.)
+//
 // Mobile (<=820px): centre links hidden, pill 54px at top:12px, CTA
 // margin 8px, Login padding 0 6px, menu button icon-only (32px). At
 // 390px the pill is 350px wide and the full right cluster (mark + bell
@@ -95,22 +103,31 @@ export const HALDEN_STMT_THRESHOLD = 0.4;
 export const HALDEN_HERO_SCROLL_FRACTION = 0.8;
 
 /**
- * Pure CTA rule, exported for tests: on non-landing pages the CTA is
- * always on (no statement exists there); on the landing page it turns on
- * once the statement reveal passes the threshold or the user scrolls
- * past the hero.
+ * Pure CTA rule, exported for tests. The CTA ("Get started") is for
+ * logged-out landing visitors ONLY: it never renders for an authed user
+ * (on the landing page it would point at /orders/new; on dashboard pages
+ * it showed unconditionally — Round 9 bug: `!isLanding` returned true,
+ * so the CTA was on from the first paint on every app page) and it never
+ * renders on a dashboard-variant nav. On the landing page for a guest it
+ * turns on once the statement reveal passes the threshold or the user
+ * scrolls past the hero; off the landing page for a guest (e.g. /docs)
+ * it is on from the first paint (no statement exists there).
  */
 export function shouldShowNavCta({
   isLanding,
   stmtP,
   scrollY,
   viewportH,
+  authed = false,
 }: {
   isLanding: boolean;
   stmtP: number | null;
   scrollY: number;
   viewportH: number;
+  /** Logged-in user: the CTA never shows, on any page. */
+  authed?: boolean;
 }): boolean {
+  if (authed) return false;
   if (!isLanding) return true;
   if (stmtP !== null && stmtP > HALDEN_STMT_THRESHOLD) return true;
   if (viewportH > 0 && scrollY > viewportH * HALDEN_HERO_SCROLL_FRACTION) return true;
@@ -243,8 +260,10 @@ export function LiquidNav({
   /** Show the notification bell in the pill (authed users only — it
       polls an authed endpoint). Landing guests never get it. */
   showBell?: boolean;
-  /** Logged-in user: the pill shows no Login link (Dashboard is already
-      a centre link) and the CTA points at /orders/new, not /setup. */
+  /** Logged-in user: the pill shows no Login link and no "Get started"
+      CTA (the CTA is for logged-out landing visitors only — Round 9:
+      it used to render on every dashboard page pointing at /orders/new).
+      The dashboard nav is reached through the centre links / sidebar. */
   authed?: boolean;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -252,11 +271,21 @@ export function LiquidNav({
   const [time, setTime] = useState<string | null>(null);
   const pathname = usePathname() ?? "/";
   const isLanding = pathname === "/";
+  // Round 9: the CTA renders ONLY for a logged-out visitor on the
+  // landing variant. Gated at render (not CSS-hidden) so it is never in
+  // the DOM — and never focusable/clickable — on dashboard pages or for
+  // an authed user on the landing page. PublicNav passes variant
+  // "landing" + authed for a signed-in visitor; AppShell passes variant
+  // "dashboard" + authed for every app page.
+  const showCta = variant === "landing" && !authed;
   // Non-landing pages: CTA on from the first paint (no statement there).
   // Landing: off until the statement reveal or a past-hero scroll.
-  const [ctaOn, setCtaOn] = useState(!isLanding);
+  // Authed: always off (see shouldShowNavCta).
+  const [ctaOn, setCtaOn] = useState(showCta && !isLanding);
   const groups = groupLinks(links);
-  const ctaHref = variant === "dashboard" || authed ? "/orders/new" : "/setup";
+  // The only rendered case is a guest on the landing page, so the CTA
+  // always points at /setup (first-run admin creation).
+  const ctaHref = "/setup";
 
   useEffect(() => {
     let stmtP: number | null = null;
@@ -271,6 +300,7 @@ export function LiquidNav({
           stmtP: p,
           scrollY: window.scrollY,
           viewportH: window.innerHeight,
+          authed,
         }),
       );
     };
@@ -289,7 +319,7 @@ export function LiquidNav({
       window.removeEventListener("halden:stmt", onStmt as EventListener);
       window.removeEventListener("scroll", compute);
     };
-  }, [isLanding]);
+  }, [isLanding, authed]);
 
   useEffect(() => {
     const tick = () => setTime(istTime.format(new Date()));
@@ -368,22 +398,28 @@ export function LiquidNav({
                 Login
               </Link>
             )}
-            <div className="navcta" data-testid="nav-cta">
-              <Link
-                href={ctaHref}
-                className="navcta-btn touch-manipulation"
-                tabIndex={ctaOn ? 0 : -1}
-                aria-label="Get started"
-                style={{ touchAction: "manipulation" }}
-              >
-                <span className="dot" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#0b1d3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m9 6 6 6-6 6" />
-                  </svg>
-                </span>
-                <span className="lbl">Get started</span>
-              </Link>
-            </div>
+            {/* Round 9: rendered ONLY for a logged-out landing visitor.
+                On dashboard pages and for authed users the element is
+                absent from the DOM entirely (not CSS-hidden), so it can
+                never be tabbed to or clicked there. */}
+            {showCta && (
+              <div className="navcta" data-testid="nav-cta">
+                <Link
+                  href={ctaHref}
+                  className="navcta-btn touch-manipulation"
+                  tabIndex={ctaOn ? 0 : -1}
+                  aria-label="Get started"
+                  style={{ touchAction: "manipulation" }}
+                >
+                  <span className="dot" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#0b1d3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m9 6 6 6-6 6" />
+                    </svg>
+                  </span>
+                  <span className="lbl">Get started</span>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
