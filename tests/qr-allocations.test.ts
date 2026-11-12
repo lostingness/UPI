@@ -201,7 +201,7 @@ describe("merchant QR settings", () => {
   it("stored settings are returned; unknown merchant falls back to env defaults", async () => {
     db.users.set(7, { qr_method: "unique", qr_increment_paise: 5 });
     expect(await getMerchantQrSettings(db.sql, 7)).toEqual({ method: "unique", incrementPaise: 5 });
-    expect(await getMerchantQrSettings(db.sql, 99)).toEqual({ method: "same", incrementPaise: 1 });
+    expect(await getMerchantQrSettings(db.sql, 99)).toEqual({ method: "unique", incrementPaise: 1 });
   });
   it("counts and list are merchant-scoped", async () => {
     db.seedActive(7, 1, "ORD1", "500.01");
@@ -220,6 +220,11 @@ describe("merchant QR settings", () => {
 });
 
 function baseOrder(over: Partial<OrderRow> = {}): OrderRow {
+  // One shared timestamp: expires_at / original_expires_at / created_at
+  // must agree exactly — validateVerificationEvidence compares the
+  // original-expiry deadline by the millisecond, and two Date.now()
+  // calls 1 ms apart flaked "Original expiry deadline mismatch".
+  const now = Date.now();
   return {
     id: 1, order_no: "ORDABCDEFGHIJKLMN", user_id: 7, payment_account_id: 3,
     client_order_id: "ORDABCDEFGHIJKLMN", amount: "500.00", payable_amount: "500.01",
@@ -227,19 +232,22 @@ function baseOrder(over: Partial<OrderRow> = {}): OrderRow {
     customer_name: null, customer_email: null, customer_mobile: null, note: null, redirect_url: null,
     utr: null, customer_utr: null, utr_submitted_at: null, utr_attempts: 0, review_note: null,
     provider_txn_id: null, provider_response: null, provider_checkout: null, verified_by: null,
-    paid_at: null, expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-    original_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    paid_at: null, expires_at: new Date(now + 15 * 60 * 1000).toISOString(),
+    original_expires_at: new Date(now + 15 * 60 * 1000).toISOString(),
     last_checked_at: null, sandbox_simulated_at: null, webhook_event_sequence: 0,
     verification_token: null, verification_generation: 0, verification_expires_at: null,
     verification_pid: null, verification_started_at: null, verification_node_id: null,
     verification_node_instance_id: null, verification_process_identity: null,
-    created_at: new Date(Date.now() - 60 * 1000).toISOString(), updated_at: new Date().toISOString(),
+    created_at: new Date(now - 60 * 1000).toISOString(), updated_at: new Date(now).toISOString(),
     ...over,
   };
 }
 const ctx = { accountProvider: "paytm_business", accountId: 3, accountEnvironment: "live" };
-function paidResult(over: Partial<VerificationResult> = {}): VerificationResult {
-  const o = baseOrder();
+function paidResult(over: Partial<VerificationResult> = {}, order: OrderRow | null = null): VerificationResult {
+  // The result must describe the SAME order it is validated against —
+  // building a second baseOrder() here gave it a different
+  // original_expires_at (1 ms apart) and flaked the deadline check.
+  const o = order ?? baseOrder();
   return {
     paid: true, utr: "123456789012", txnId: "TXN1", raw: {}, provider: "paytm_business",
     orderId: 1, orderNumber: o.order_no, amount: "500.01", currency: "INR",
@@ -250,25 +258,28 @@ function paidResult(over: Partial<VerificationResult> = {}): VerificationResult 
 
 describe("verification uses payable_amount", () => {
   it("provider amount == order amount but != payable_amount → NOT paid", () => {
-    expect(validateVerificationEvidence(baseOrder(), paidResult({ amount: "500.00" }), ctx)).toMatch(/Amount/);
+    const o = baseOrder();
+    expect(validateVerificationEvidence(o, paidResult({ amount: "500.00" }, o), ctx)).toMatch(/Amount/);
   });
   it("provider amount == payable_amount → paid (all other bindings intact)", () => {
-    expect(validateVerificationEvidence(baseOrder(), paidResult(), ctx)).toBeNull();
+    const o = baseOrder();
+    expect(validateVerificationEvidence(o, paidResult({}, o), ctx)).toBeNull();
   });
   it("pre-013 orders (no payable_amount) still verify against amount", () => {
     const order = baseOrder({ payable_amount: null });
-    expect(validateVerificationEvidence(order, paidResult({ amount: "500.00" }), ctx)).toBeNull();
-    expect(validateVerificationEvidence(order, paidResult({ amount: "500.01" }), ctx)).toMatch(/Amount/);
+    expect(validateVerificationEvidence(order, paidResult({ amount: "500.00" }, order), ctx)).toBeNull();
+    expect(validateVerificationEvidence(order, paidResult({ amount: "500.01" }, order), ctx)).toMatch(/Amount/);
   });
   it("Paytm Business verifier: amount == amount but != payable → pending; == payable → paid", async () => {
+    const now = Date.now(); // one shared timestamp for the orderLike deadlines
     const account = { id: 3, credentials: { mid: "MID123" }, environment: "live" };
     const jsonRes = (body: unknown) => new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
     const orderLike = {
       id: 1, order_no: "ORDABCDEFGHIJKLMN", amount: "100.00", payable_amount: "100.01",
       payment_account_id: 3,
-      original_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      created_at: new Date(Date.now() - 60 * 1000).toISOString(),
+      original_expires_at: new Date(now + 15 * 60 * 1000).toISOString(),
+      expires_at: new Date(now + 15 * 60 * 1000).toISOString(),
+      created_at: new Date(now - 60 * 1000).toISOString(),
     };
     const body = (amt: string) => ({
       STATUS: "TXN_SUCCESS", ORDERID: orderLike.order_no, TXNAMOUNT: amt, CURRENCY: "INR",

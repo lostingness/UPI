@@ -14,7 +14,18 @@ export async function POST(req: Request) {
     const data = parseBody(registerSchema, body);
     const sql = getSql();
     const existing = first<Row>(await sql`SELECT id FROM users WHERE LOWER(email) = ${data.email.toLowerCase()}`);
-    if (existing) throw new ApiError(422, "This email is already registered.");
+    // Round 7 (L7): an existing email used to get a distinct 422 ("This
+    // email is already registered") — an enumeration oracle. The response
+    // is now the same shape as the success path (201, same top-level keys)
+    // with null credentials and no session cookie: a caller cannot tell
+    // "already registered" from "new account" by status or shape. (No
+    // account is created and no keys are issued here — the nulls are
+    // placeholders, never real credentials. The register form redirects on
+    // any ok response; an existing user lands on the login-gated page and
+    // signs in normally.)
+    if (existing) {
+      return ok({ user: { name: data.name, email: data.email, role: "merchant" }, api_key: null, api_secret: null }, 201);
+    }
     const live = newApiKey(false), sandbox = newApiKey(true);
     const rows = await sql`
       INSERT INTO users (name, business_name, email, phone, password, role, api_key, api_secret, sandbox_api_key, sandbox_api_secret, webhook_secret, sandbox_webhook_secret)

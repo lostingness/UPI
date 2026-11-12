@@ -3,7 +3,7 @@ import { simulateSandbox } from "@/lib/orders/sandbox";
 import { sandboxSimulateSchema, parseBody } from "@/lib/validate";
 import { ApiError } from "@/lib/errors";
 import { ok, handleError, readJson, json } from "@/lib/http";
-import { getSession } from "@/lib/auth";
+import { requireSession } from "@/lib/auth";
 import { authenticateApiKey } from "@/lib/api-auth";
 import { checkTwoLayerRateLimit, getClientIp, rateLimitHeaders, apiIpLimit } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
@@ -24,7 +24,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ orderNo
     const order = await loadOrderByNo(orderNo);
     if (!order) throw new ApiError(404, "Order not found");
     if (order.environment !== "sandbox") throw new ApiError(404, "Not found");
-    const session = await getSession().catch(() => null);
+    // Round 7 (L2): was getSession() — which returns a session for a
+    // DISABLED account (it never checks is_active). requireSession()
+    // rejects disabled accounts, so a disabled merchant can no longer
+    // simulate payments on their sandbox orders. The API-key branch below
+    // is unchanged (authenticateApiKey already rejects disabled merchants).
+    const session = await requireSession().catch(() => null);
     if (session && Number(session.id) === Number(order.user_id)) {
       // Owning merchant via session — allowed.
     } else if (req.headers.get("x-api-key")) {

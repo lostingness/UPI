@@ -4,7 +4,60 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { FieldError, FormMessage, useApiForm } from "./forms";
+import { unlockAudio } from "@/lib/sounds";
+import { playLoginSuccessMp3, unlockMp3Audio } from "@/lib/mp3-sounds";
+
+/** Password input with a show/hide toggle (Round 7). The toggle is a
+ * real button (never submits the form), announces its state, and keeps
+ * the input's autocomplete/value wiring untouched. */
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  autoComplete,
+  placeholder,
+  autoFocus = false,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  autoComplete: string;
+  placeholder?: string;
+  autoFocus?: boolean;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div>
+      <label htmlFor={id} className="label">{label}</label>
+      <div className="relative">
+        <input
+          id={id}
+          type={show ? "text" : "password"}
+          required
+          autoFocus={autoFocus}
+          autoComplete={autoComplete}
+          placeholder={placeholder}
+          className="input pr-11"
+          value={value}
+          onChange={onChange}
+        />
+        <button
+          type="button"
+          aria-label={show ? "Hide password" : "Show password"}
+          aria-pressed={show}
+          onClick={() => setShow((v) => !v)}
+          className="absolute inset-y-0 right-0 grid w-11 touch-manipulation place-items-center text-[var(--muted)] transition-colors duration-150 hover:text-[var(--text)]"
+        >
+          {show ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function LoginForm() {
   const router = useRouter();
@@ -18,8 +71,14 @@ export function LoginForm() {
     <form
       onSubmit={async (e) => {
         e.preventDefault();
+        // Round 7: the submit click IS a user gesture — unlock audio here
+        // so the login-success sound below (after the round-trip) can play.
+        unlockAudio();
+        unlockMp3Audio();
         const res = await form.submit("/api/auth/login", { email, password });
-        if (res.ok) router.push(next.startsWith("/") ? next : "/dashboard");
+        // Round 7: MP3 login-success sound only when the login succeeded
+        // (falls back to the synth chime). Register/confirm forms: no sound.
+        if (res.ok) { playLoginSuccessMp3(); router.push(next.startsWith("/") ? next : "/dashboard"); }
       }}
       className="space-y-5"
     >
@@ -31,9 +90,9 @@ export function LoginForm() {
         <FieldError errors={form.errors} name="email" />
       </div>
       <div>
-        <label htmlFor="f-password" className="label">Password</label>
-        <input id="f-password" type="password" required autoComplete="current-password" placeholder="••••••••"
-          className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <PasswordField id="f-password" label="Password" value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password" placeholder="••••••••" />
         <FieldError errors={form.errors} name="password" />
       </div>
       <button className="btn btn-primary w-full py-2.5" disabled={form.pending}>
@@ -83,13 +142,13 @@ export function RegisterForm() {
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="r-password" className="label">Password</label>
-          <input id="r-password" type="password" required autoComplete="new-password" placeholder="Min 10 chars" className="input" value={v.password} onChange={set("password")} />
+          <PasswordField id="r-password" label="Password" value={v.password}
+            onChange={set("password")} autoComplete="new-password" placeholder="Min 10 chars" />
           <FieldError errors={form.errors} name="password" />
         </div>
         <div>
-          <label htmlFor="r-confirm" className="label">Confirm</label>
-          <input id="r-confirm" type="password" required autoComplete="new-password" className="input" value={v.password_confirmation} onChange={set("password_confirmation")} />
+          <PasswordField id="r-confirm" label="Confirm" value={v.password_confirmation}
+            onChange={set("password_confirmation")} autoComplete="new-password" />
           <FieldError errors={form.errors} name="password_confirmation" />
         </div>
       </div>
@@ -119,9 +178,9 @@ export function ConfirmPasswordForm() {
     >
       <FormMessage message={form.message} ok={false} />
       <div>
-        <label htmlFor="c-password" className="label">Your password</label>
-        <input id="c-password" type="password" required autoFocus autoComplete="current-password" placeholder="••••••••"
-          className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <PasswordField id="c-password" label="Your password" value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password" placeholder="••••••••" autoFocus />
         <FieldError errors={form.errors} name="password" />
       </div>
       <button className="btn btn-primary w-full py-2.5" disabled={form.pending}>

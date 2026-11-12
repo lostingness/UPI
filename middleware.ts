@@ -15,6 +15,7 @@
 //   "/" and "/login/:path*" — the landing page and login had no CSP either.
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { neon } from "@neondatabase/serverless";
 
 const CSP = [
   "default-src 'self'",
@@ -81,13 +82,49 @@ export async function middleware(req: NextRequest) {
   }
   try {
     const { payload } = await jwtVerify(token, sessionSecret());
-    if (isAdmin && payload.role !== "admin") return withCsp(new Response("Forbidden", { status: 403 }));
+    // Round 7 (L3): re-check role + is_active from the DB after jwtVerify.
+    // The JWT is stateless (120-min lifetime), so a merchant demoted to a
+    // different role — or disabled — after login would otherwise keep
+    // authed access until the token expired. The DB is authoritative; the
+    // JWT claims are only a fallback when the DB is unreachable (fail-open
+    // to the previous behaviour rather than locking everyone out on a DB
+    // blip — the per-route requireSession() in lib/auth.ts re-checks the
+    // same fields from the DB on every API call, so this is defence in
+    // depth for page renders, not the only gate).
+    const fresh = await freshRoleAndActive(payload.sub as string | undefined);
+    const role = fresh?.role ?? payload.role;
+    const isActive = fresh ? fresh.isActive : true;
+    if (!isActive) {
+      const login = new URL("/login", req.url);
+      login.searchParams.set("next", path);
+      login.searchParams.set("disabled", "1");
+      return withCsp(NextResponse.redirect(login));
+    }
+    if (isAdmin && role !== "admin") return withCsp(new Response("Forbidden", { status: 403 }));
   } catch {
     const login = new URL("/login", req.url);
     login.searchParams.set("next", path);
     return withCsp(NextResponse.redirect(login));
   }
   return res;
+}
+
+/** DB re-check for the middleware (L3). Returns null when the DB is not
+ * configured, the user is gone, or the lookup fails — callers fall back to
+ * the JWT claims in that case (see above). */
+async function freshRoleAndActive(sub: string | undefined): Promise<{ role: string; isActive: boolean } | null> {
+  if (!sub) return null;
+  const url = process.env.DATABASE_URL;
+  if (!url) return null;
+  try {
+    const sql = neon(url);
+    const rows = await sql`SELECT role, is_active FROM users WHERE id = ${Number(sub)}`;
+    const row = (rows as { role: string; is_active: boolean }[])[0];
+    if (!row) return null;
+    return { role: String(row.role), isActive: row.is_active === true };
+  } catch {
+    return null;
+  }
 }
 
 export const config = {
@@ -98,5 +135,13 @@ export const config = {
   // (verified live 2026-11-11). Directives unchanged: script-src 'self'
   // 'unsafe-inline' stays — Next.js inlines its RSC/flight bootstrap
   // scripts and hydration breaks without it.
-  matcher: ["/", "/login/:path*", "/register/:path*", "/dashboard/:path*", "/admin/:path*", "/orders/:path*", "/accounts/:path*", "/settings/:path*", "/pay/:path*"],
+  // Round 7 (L3): bare paths added — a matcher entry "/dashboard/:path*"
+  // does NOT match the bare "/dashboard" URL, so the bare dashboard, admin,
+  // orders, accounts and settings pages had NO auth gate in middleware at
+  // all (the pages' own requireUser checks still applied, but the
+  // middleware redirect + CSP were missing). "/sandbox/:path*" added too.
+  // Round 7 (G8): CSP matcher extended to /setup, /sandbox, /docs,
+  // /confirm-password and /logout (bare + subpaths). API routes keep no
+  // CSP — JSON responses need none.
+  matcher: ["/", "/login", "/login/:path*", "/register", "/register/:path*", "/dashboard", "/dashboard/:path*", "/admin", "/admin/:path*", "/orders", "/orders/:path*", "/accounts", "/accounts/:path*", "/settings", "/settings/:path*", "/pay/:path*", "/setup", "/setup/:path*", "/sandbox", "/sandbox/:path*", "/docs", "/docs/:path*", "/confirm-password", "/confirm-password/:path*", "/logout", "/logout/:path*"],
 };

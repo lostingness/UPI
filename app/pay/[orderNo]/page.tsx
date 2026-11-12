@@ -86,6 +86,7 @@ export default async function PayPage({ params }: { params: Promise<{ orderNo: s
             canRecover={data.canRecover}
             lateRecoveryUntil={data.lateRecoveryUntil}
             redirectUrl={data.redirectUrl}
+            payToken={data.payToken}
           />
         </div>
       </div>

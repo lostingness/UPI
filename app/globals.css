@@ -291,24 +291,6 @@ html.dark {
     animation: shimmer 1.6s linear infinite;
   }
 
-  /* ---------- Shader hero fallback (mandatory: never a blank hero) ---------- */
-  .hero-fallback {
-    background:
-      radial-gradient(120% 90% at 78% 8%, rgb(242 101 34 / 0.14), transparent 55%),
-      radial-gradient(90% 70% at 12% 88%, rgb(17 17 17 / 0.10), transparent 60%),
-      linear-gradient(180deg, #f4f4f2 0%, #e9e9e6 55%, #e2e2df 100%);
-  }
-  html.dark .hero-fallback {
-    background:
-      radial-gradient(120% 90% at 78% 8%, rgb(242 101 34 / 0.22), transparent 55%),
-      radial-gradient(90% 70% at 12% 88%, rgb(99 102 241 / 0.16), transparent 60%),
-      linear-gradient(180deg, #0a1030 0%, #020816 55%, #01040f 100%);
-  }
-  .hero-fallback::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.5;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
-  }
-
   /* ---------- Blur-on-click overlay ---------- */
   .blur-overlay {
     position: fixed; inset: 0; z-index: 20; pointer-events: none;

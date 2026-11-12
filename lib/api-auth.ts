@@ -41,6 +41,12 @@ export async function authenticateApiKey(req: Request): Promise<ApiMerchant> {
     throw new ApiError(401, "Invalid API credentials");
   }
   if (row.is_active !== true) throw new ApiError(403, "Merchant account is disabled");
+  // Round 7 (L4): API keys are merchant-scoped. An admin's key must not
+  // authenticate the merchant v1 API — admin access is session-only
+  // (requireAdmin / requireAdminConfirmed). Without this, an admin key
+  // could create orders and read merchant-scoped data as if it were a
+  // merchant account.
+  if (String(row.role) !== "merchant") throw new ApiError(403, "API keys are merchant-scoped");
   // Per-IP limit (best-effort in-memory + DB when configured).
   const ipCheck = checkMemoryRateLimit(`api:ip:${ip}`, apiIpLimit());
   if (!ipCheck.allowed) throw new ApiError(429, "Too many requests");

@@ -7,8 +7,25 @@
 // JSON.stringify matches); signature = PaytmChecksum.generate(bodyJson, key);
 // POST body is the literal string {"body":<bodyJson>,"head":{"signature":<sig>}}.
 // HTTP timeout 15 s. Provider errors → pending, never a throw for not-paid.
+//
+// G6 (Round 7) — RESPONSE SIGNATURE: Paytm signs the v3 order-status
+// response: `head.signature` is a Paytm checksum over JSON.stringify(body),
+// verifiable with the merchant key (verifyPaytmChecksum). checkPaytmPg
+// verifies it whenever present: a BAD signature is a hard pending
+// (code "bad_signature" — a tampered / spoofed response can never mark
+// paid). When the signature is ABSENT the response is still accepted on its
+// other bindings (orderId/amount/currency/reference/timestamp) — Paytm's
+// status API does not guarantee the header in every environment — but the
+// paid result records `_signatureVerified: false` in its raw payload so the
+// debugger shows the response was unsigned. Request signing (outbound) was
+// already in place; this closes the inbound side.
+// Caveat: verification re-serializes the parsed body with JSON.stringify.
+// Paytm's amounts are strings, so this round-trips; if Paytm ever returns a
+// bare number whose formatting changes (100.00 → 100), verification fails
+// closed (pending, never paid) and the payment is still recoverable via the
+// UTR review flow.
 import { gatewayConfig } from "../config/gateway";
-import { generatePaytmChecksum } from "./paytm-checksum";
+import { generatePaytmChecksum, verifyPaytmChecksum } from "./paytm-checksum";
 import { VerificationResult, amountMatches, extractRawTimestamp, expectedAmount, type OrderLike, type VerificationResult as VR } from "./verification-result";
 import type { AccountLike, FetchFn } from "./paytm-business";
 import type { HostedCheckoutResult } from "./hosted-checkout";
@@ -63,6 +80,19 @@ export async function checkPaytmPg(order: OrderLike, account: AccountLike | null
     return VerificationResult.pending({ error: (e as Error).message });
   }
   const body = (resp.body ?? {}) as Record<string, unknown>;
+  // G6: verify the response signature when Paytm sent one. The signature
+  // covers JSON.stringify(body) with the merchant key — the same checksum
+  // scheme as the outbound request.
+  const head = (resp.head ?? {}) as Record<string, unknown>;
+  const respSignature = typeof head.signature === "string" ? head.signature : null;
+  let signatureVerified = false;
+  if (respSignature) {
+    const key = account.credentials.merchant_key;
+    if (!key || !verifyPaytmChecksum(JSON.stringify(body), key, respSignature)) {
+      return VerificationResult.pending({ error: "Paytm response signature verification failed", code: "bad_signature" });
+    }
+    signatureVerified = true;
+  }
   if ((body.resultInfo as Record<string, unknown> | undefined)?.resultStatus !== "TXN_SUCCESS") return VerificationResult.pending(body);
   if (body.orderId !== order.order_no) return VerificationResult.pending({ error: "Order ID mismatch" });
   const amt = body.txnAmount;
@@ -77,5 +107,7 @@ export async function checkPaytmPg(order: OrderLike, account: AccountLike | null
   if (!occurredAt && gatewayConfig.evidenceRequireTimestamp) {
     return VerificationResult.pending({ error: "Missing or invalid provider transaction timestamp" });
   }
-  return VerificationResult.fromPaytmPg(order, amt as string, (body.bankTxnId as string) ?? null, (body.txnId as string) ?? null, body, (body.currency as string) ?? "INR", occurredAt, account.id, account.environment);
+  // G6: the paid result carries whether the response signature verified,
+  // so the debugger / audit can tell a signed response from an unsigned one.
+  return VerificationResult.fromPaytmPg(order, amt as string, (body.bankTxnId as string) ?? null, (body.txnId as string) ?? null, { ...body, _signatureVerified: signatureVerified }, (body.currency as string) ?? "INR", occurredAt, account.id, account.environment);
 }

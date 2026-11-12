@@ -24,6 +24,8 @@ import { loadOrderByNo, loadAccount } from "@/lib/orders/check";
 import { getLogsForOrder, type WebhookLogRow } from "@/lib/webhooks/history";
 import { toApiArray } from "@/lib/orders/serialize";
 import { acceptsCustomerUtr, canRecoverLatePayment, type OrderRow } from "@/lib/orders/types";
+import { maskUtr } from "@/lib/orders/utr";
+import { issuePayTokens } from "@/lib/pay-token";
 import { gatewayConfig } from "@/lib/config/gateway";
 import { isInstalled } from "@/lib/install";
 import { auditLog } from "@/lib/audit";
@@ -231,6 +233,15 @@ export interface PayData {
    * allowlisted URL.
    */
   redirectUrl: string | null;
+  /**
+   * Round 7 (H1/H2/M1) payer-binding tokens, minted on this render
+   * (lib/pay-token.ts): `{ utr, start }`, or null when the order cannot
+   * accept a payer action (paid / failed / review) or the token table is
+   * unavailable. The client sends `utr` with the UTR submit, `start` with
+   * a hosted-checkout start, and either as the bearer for status polls.
+   * Single-use for the mutating calls; read-only for polls.
+   */
+  payToken: { utr: string; start: string } | null;
 }
 
 export async function getPayData(orderNo: string): Promise<PayData | null> {
@@ -256,8 +267,20 @@ export async function getPayData(orderNo: string): Promise<PayData | null> {
   const lateUntil = order.original_expires_at
     ? new Date(new Date(order.original_expires_at).getTime() + gatewayConfig.latePaymentGraceHours * 3600 * 1000).toISOString()
     : null;
+  // Round 7 (M2): the bank UTR is masked at the source — the raw value
+  // never reaches the client (RSC payload included). The payer already
+  // knows their own UTR; a link holder sees only the last 4 digits.
+  // customer_utr is the payer's own submission, shown back to them.
+  const maskedOrder: OrderRow = { ...order, utr: maskUtr(order.utr) };
+  // Round 7 (H1/H2/M1): mint payer-binding tokens for orders that can
+  // still accept a payer action (pending, or expired inside the UTR grace
+  // window). Paid / failed / review orders get no token.
+  let payToken: { utr: string; start: string } | null = null;
+  if (order.status === "pending" || order.status === "expired") {
+    payToken = await issuePayTokens(sql, order);
+  }
   return {
-    order, merchantName, api, hosted, acceptsUtr, canRecover, lateRecoveryUntil: lateUntil, redirectUrl,
+    order: maskedOrder, merchantName, api, hosted, acceptsUtr, canRecover, lateRecoveryUntil: lateUntil, redirectUrl, payToken,
     account: account ? { provider: account.provider, upi_id: account.upi_id, payee_name: account.payee_name, label: account.label } : null,
   };
 }

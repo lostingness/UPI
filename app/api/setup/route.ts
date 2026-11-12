@@ -11,7 +11,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const installed = await isInstalled();
-    return ok({ installed, database_configured: Boolean(process.env.DATABASE_URL) });
+    // Round 7 (L8): the public GET used to leak `database_configured`
+    // (whether DATABASE_URL is set) — infrastructure detail with no
+    // legitimate public use. Only the install state is returned.
+    return ok({ installed });
   } catch (e) { return handleError(e); }
 }
 export async function POST(req: Request) {

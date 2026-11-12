@@ -2,7 +2,37 @@
 // Provider-bound success factories only — no generic success factory, by design.
 // A paid result REQUIRES a UTR or txnId. `pending()` is returned for every
 // not-paid-yet outcome; verifiers must never throw for "not paid yet".
+//
+// G12 (Round 7): provider responses are SCRUBBED before they are persisted
+// or surfaced — scrubProviderResponse() strips credential / session-token
+// keys (merchant keys, API secrets, checksums, signatures, tokens, MIDs)
+// from any raw payload, recursively. It is applied centrally here, in both
+// successful() and pending(), so every verifier's raw output is scrubbed
+// before markPaid / checkOrder persist it to orders.provider_response
+// (which the admin debugger reads back). Scrubbing never removes the
+// payment evidence itself (status, order id, amount, UTR, txn id,
+// timestamps) — only secret-bearing fields.
 export type Provider = "paytm_business" | "paytm_pg" | "phonepe_pg";
+
+/** Keys whose VALUES must never be persisted or surfaced (case-insensitive,
+ * matched on the full key and on common provider spellings). */
+const SCRUB_KEY = /^(mid|merchant_?key|api_?key|api_?secret|client_?secret|secret|password|checksum|signature|salt|access_?token|txn_?token|auth_?token|session_?token)$/i;
+
+export function scrubProviderResponse(raw: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(raw ?? {})) {
+    if (SCRUB_KEY.test(k)) { out[k] = "[redacted]"; continue; }
+    if (Array.isArray(v)) {
+      out[k] = v.map((item) =>
+        item && typeof item === "object" ? scrubProviderResponse(item as Record<string, unknown>) : item);
+    } else if (v && typeof v === "object") {
+      out[k] = scrubProviderResponse(v as Record<string, unknown>);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
 
 export interface VerificationResult {
   paid: boolean;
@@ -93,7 +123,7 @@ function successful(order: OrderLike, provider: Provider, amount: string | numbe
   // supposed to be checked against.
   const occurred = occurredAt ?? (Object.keys(raw).length ? extractRawTimestamp(provider, raw) : null);
   return {
-    paid: true, utr: utr ?? null, txnId: txnId ?? null, raw, provider,
+    paid: true, utr: utr ?? null, txnId: txnId ?? null, raw: scrubProviderResponse(raw), provider,
     orderId: order.id, orderNumber: order.order_no,
     amount: Number(amount).toFixed(2), currency,
     verifiedAt: new Date(), paymentAccountId: paymentAccountId ?? order.payment_account_id ?? null,
@@ -110,7 +140,7 @@ export const VerificationResult = {
   fromPhonePePg: (o: OrderLike, a: string | number, u: string | null, t: string | null, raw: Record<string, unknown> = {}, c = "INR", occ?: Date | null, acc?: number | null, env?: string | null) =>
     successful(o, "phonepe_pg", a, u, t, raw, c, occ, acc, env),
   pending: (raw: Record<string, unknown> = {}): VerificationResult => ({
-    paid: false, utr: null, txnId: null, raw, provider: null, orderId: null, orderNumber: null,
+    paid: false, utr: null, txnId: null, raw: scrubProviderResponse(raw), provider: null, orderId: null, orderNumber: null,
     amount: null, currency: null, verifiedAt: null, paymentAccountId: null, environment: null,
     originalExpiresAt: null, occurredAt: null, code: typeof raw.code === "string" ? raw.code : undefined,
   }),

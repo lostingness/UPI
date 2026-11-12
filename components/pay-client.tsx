@@ -16,7 +16,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FieldError, FormMessage, useApiForm } from "./forms";
 import { apiFetch, postApi } from "./api";
-import { installGestureUnlock, playSuccessChime } from "@/lib/sounds";
+import { installGestureUnlock } from "@/lib/sounds";
+import { installMp3GestureUnlock, playTimerWarningMp3, playTxnSuccessMp3 } from "@/lib/mp3-sounds";
 
 export interface PayClientProps {
   orderNo: string;
@@ -51,6 +52,22 @@ export interface PayClientProps {
   // ONLY when the order is paid AND its host is in the merchant's
   // redirect_domains, else null. The client never sees a raw redirect_url.
   redirectUrl: string | null;
+  // Round 7 (H1/H2/M1) payer-binding tokens minted on this render
+  // (lib/pay-token.ts). `utr` is sent with the UTR submit (single-use),
+  // `start` with a hosted-checkout start (single-use on fresh creation),
+  // and either authorises status polls to trigger the throttled provider
+  // check. Null when the order cannot accept a payer action. The paid-flip
+  // chime and countdown chip are untouched by the token wiring.
+  payToken?: { utr: string; start: string } | null;
+}
+
+/** M2 (defence-in-depth): the server already masks order.utr in getPayData,
+ * so props.utr normally arrives masked; mask again here so a raw value can
+ * never render if another path passes one through. */
+function maskUtrDisplay(utr: string | null): string | null {
+  if (!utr) return null;
+  if (utr.includes("•")) return utr; // already masked
+  return utr.length <= 4 ? "••••" : "•".repeat(utr.length - 4) + utr.slice(-4);
 }
 
 const APPS: { name: string; scheme: string; logo: string }[] = [
@@ -60,15 +77,35 @@ const APPS: { name: string; scheme: string; logo: string }[] = [
   { name: "BHIM", scheme: "upi://pay", logo: "/images/upi/bhim.svg" },
 ];
 
-function useCountdown(expiresAt: string | null, createdAt: string) {
+function useCountdown(expiresAt: string | null, createdAt: string, onExpire?: () => void) {
   const total = useMemo(() => {
     if (!expiresAt) return 900;
     return Math.max(1, Math.floor((new Date(expiresAt).getTime() - new Date(createdAt).getTime()) / 1000));
   }, [expiresAt, createdAt]);
   const [left, setLeft] = useState(total);
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
+  const lastLeftRef = useRef(total);
+  const expireFiredRef = useRef(false);
+  useEffect(() => {
+    lastLeftRef.current = total;
+    expireFiredRef.current = false;
+  }, [expiresAt, total]);
   useEffect(() => {
     if (!expiresAt) return;
-    const tick = () => setLeft(Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)));
+    const tick = () => {
+      const next = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+      // Round 7: the 1 s tick and the 4 s status poll drift — the chip
+      // would show 00:00 for up to 4 s while the order still reads
+      // pending. Fire onExpire exactly once when the countdown first
+      // hits 0 so the caller can refresh the status immediately.
+      if (next === 0 && lastLeftRef.current > 0 && !expireFiredRef.current) {
+        expireFiredRef.current = true;
+        onExpireRef.current?.();
+      }
+      lastLeftRef.current = next;
+      setLeft(next);
+    };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
@@ -147,7 +184,11 @@ export default function PayClient(props: PayClientProps) {
   const pollDelay = status === "expired" ? 30000 : 4000;
   const statusRef = useRef(status);
   statusRef.current = status;
-  const { display, left } = useCountdown(props.expiresAt, props.createdAt);
+  // Round 7: bumped when the countdown first hits 0 — the poll effect
+  // below re-runs and refreshes the status immediately instead of
+  // waiting up to 4 s for the next scheduled poll.
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const { display, left } = useCountdown(props.expiresAt, props.createdAt, () => setRefreshNonce((n) => n + 1));
   const utrForm = useApiForm();
   const [utr, setUtr] = useState("");
 
@@ -156,25 +197,41 @@ export default function PayClient(props: PayClientProps) {
   // play — browsers block audio until the payer's first tap/keypress on
   // this page, and the chime fires from polling (no gesture at that
   // moment), so the unlock must be armed on mount.
-  useEffect(() => { installGestureUnlock(); }, []);
+  useEffect(() => { installGestureUnlock(); installMp3GestureUnlock(); }, []);
+  // Round 7: timer-warning MP3 — at most once when crossing into the
+  // last 60 s and once at expiry (lib/mp3-sounds dedupes per order, so
+  // re-renders never replay it). The ~7 s file plays once, never loops.
+  useEffect(() => {
+    if (status !== "pending" || !props.expiresAt) return;
+    if (left <= 60 && left > 0) playTimerWarningMp3(props.orderNo, "warning");
+    if (left === 0) playTimerWarningMp3(props.orderNo, "expiry");
+  }, [left, status, props.orderNo, props.expiresAt]);
   useEffect(() => {
     if (status === "paid" || status === "failed") return;
     if (status === "expired" && props.lateRecoveryUntil && Date.now() > new Date(props.lateRecoveryUntil).getTime()) return;
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
+    // Round 7 (H2): the poll presents the pay token (either purpose) so
+    // the server may run its throttled provider check. Without a token the
+    // server answers with the stored status only — the poll still works.
+    const pollToken = props.payToken?.utr ?? props.payToken?.start ?? null;
+    const statusUrl = pollToken
+      ? `/api/pay/${props.orderNo}/status?pay_token=${encodeURIComponent(pollToken)}`
+      : `/api/pay/${props.orderNo}/status`;
     const poll = async () => {
       try {
-        const res = await apiFetch<{ status: string; redirect: string | null }>(`/api/pay/${props.orderNo}/status`);
+        const res = await apiFetch<{ status: string; redirect: string | null }>(statusUrl);
         if (!alive || !res.ok || !res.data) { timer = setTimeout(poll, pollDelay); return; }
         if (res.data.status !== statusRef.current) {
           if (res.data.status === "paid") {
             setStatusText("Payment received — redirecting…");
             setStatus("paid");
-            // Round 5: chime ONLY on the server-confirmed flip to paid
-            // (never on load — the initial paid render has no poll flip).
-            // Silent no-op before the payer's first gesture or when
-            // sounds are off.
-            playSuccessChime();
+            // Round 7: MP3 success sound ONLY on the server-confirmed
+            // flip to paid (never on load — the initial paid render has
+            // no poll flip). Falls back to the synth chime when the file
+            // cannot play. Silent no-op before the payer's first gesture
+            // or when sounds are off.
+            playTxnSuccessMp3();
             setTimeout(() => {
               if (res.data?.redirect) window.location.href = res.data.redirect;
               else router.refresh(); // re-render from the server props (paid panel, UTR, paid_at) without a full reload
@@ -191,9 +248,11 @@ export default function PayClient(props: PayClientProps) {
       } catch { /* transient — keep polling */ }
       timer = setTimeout(poll, pollDelay);
     };
-    timer = setTimeout(poll, pollDelay);
+    // Round 7: poll immediately on (re-)mount — the countdown-expiry
+    // refresh (refreshNonce) must not wait out the 4 s poll delay.
+    void poll();
     return () => { alive = false; clearTimeout(timer); };
-  }, [props.orderNo, props.lateRecoveryUntil, pollDelay, status, router]);
+  }, [props.orderNo, props.lateRecoveryUntil, pollDelay, status, router, props.payToken, refreshNonce]);
 
   const query = props.upiIntent ? props.upiIntent.split("?")[1] ?? "" : "";
   const appLinks = APPS.map((a) => ({ ...a, href: `${a.scheme}?${query}` }));
@@ -207,8 +266,10 @@ export default function PayClient(props: PayClientProps) {
 
   const startHosted = async () => {
     setStarting(true); setStartError(null);
+    // Round 7 (M1): the start token travels in the POST body; the server
+    // consumes it only when creating a fresh checkout.
     const res = await postApi<{ checkout: { type: string; url?: string; fields?: Record<string, string>; expires_at?: number } }>(
-      `/api/pay/${props.orderNo}/start`, {},
+      `/api/pay/${props.orderNo}/start`, { pay_token: props.payToken?.start ?? null },
     );
     setStarting(false);
     if (!res.ok || !res.data?.checkout) { setStartError(res.message ?? "Could not start checkout"); return; }
@@ -271,7 +332,7 @@ export default function PayClient(props: PayClientProps) {
             <h1 className="mt-3 text-xl font-semibold">Payment successful</h1>
             <p className="mt-1 text-sm text-[var(--muted)]">₹{fmt(payAmount)} paid to {props.merchantName}</p>
             <dl className="mt-4 w-full max-w-xs rounded-xl bg-[var(--surface-2)] text-left text-sm ring-1 ring-[var(--border)]">
-              {props.utr && <div className="flex justify-between px-3 py-2"><dt className="text-[var(--faint)]">UTR</dt><dd className="font-mono font-medium">{props.utr}</dd></div>}
+              {props.utr && <div className="flex justify-between px-3 py-2"><dt className="text-[var(--faint)]">UTR</dt><dd className="font-mono font-medium">{maskUtrDisplay(props.utr)}</dd></div>}
               <div className={`flex justify-between px-3 py-2${props.utr ? " border-t border-[var(--border)]" : ""}`}><dt className="text-[var(--faint)]">Paid at</dt><dd className="font-medium">{props.paidAt ? new Date(props.paidAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST" : "—"}</dd></div>
             </dl>
             {props.redirectUrl && <a href={props.redirectUrl} className="btn btn-accent mt-4">Continue to merchant site →</a>}
@@ -310,7 +371,7 @@ export default function PayClient(props: PayClientProps) {
             {props.acceptsUtr ? (
               <>
                 <p className="mt-1 max-w-sm text-sm text-[var(--muted)]">If you already paid, don&apos;t pay again — submit your UTR below so {props.merchantName} can confirm it.</p>
-                <div className="mt-3 w-full max-w-sm"><UtrForm orderNo={props.orderNo} attemptsLeft={attemptsLeft} reviewNote={props.reviewNote} /></div>
+                <div className="mt-3 w-full max-w-sm"><UtrForm orderNo={props.orderNo} attemptsLeft={attemptsLeft} reviewNote={props.reviewNote} payToken={props.payToken?.utr ?? null} /></div>
               </>
             ) : (
               <>
@@ -397,7 +458,7 @@ export default function PayClient(props: PayClientProps) {
               </div>
             )}
             {props.acceptsUtr && (
-              <div className="mt-2.5"><UtrForm orderNo={props.orderNo} attemptsLeft={attemptsLeft} reviewNote={props.reviewNote} /></div>
+              <div className="mt-2.5"><UtrForm orderNo={props.orderNo} attemptsLeft={attemptsLeft} reviewNote={props.reviewNote} payToken={props.payToken?.utr ?? null} /></div>
             )}
             <div className="mt-2.5">
               <WaitingStrip text={statusText ?? (props.acceptsUtr ? "After paying, submit your UTR above" : "Waiting for payment…")} />
@@ -409,7 +470,7 @@ export default function PayClient(props: PayClientProps) {
   );
 }
 
-export function UtrForm({ orderNo, attemptsLeft, reviewNote }: { orderNo: string; attemptsLeft: number; reviewNote: string | null }) {
+export function UtrForm({ orderNo, attemptsLeft, reviewNote, payToken }: { orderNo: string; attemptsLeft: number; reviewNote: string | null; payToken?: string | null }) {
   const form = useApiForm();
   const [utr, setUtr] = useState("");
   return (
@@ -417,7 +478,10 @@ export function UtrForm({ orderNo, attemptsLeft, reviewNote }: { orderNo: string
       className="rounded-xl bg-[var(--surface-2)] p-3 text-left ring-1 ring-[var(--border)]"
       onSubmit={async (e) => {
         e.preventDefault();
-        await form.submit(`/api/pay/${orderNo}/utr`, { utr });
+        // Round 7 (H1): the single-use UTR token travels with the submit.
+        // A stale token (page re-rendered since) fails 401 with "reload"
+        // guidance — the form message surfaces the server's message.
+        await form.submit(`/api/pay/${orderNo}/utr`, { utr, pay_token: payToken ?? null });
       }}
     >
       {reviewNote && (
@@ -434,7 +498,7 @@ export function UtrForm({ orderNo, attemptsLeft, reviewNote }: { orderNo: string
       <FormMessage message={form.message} ok={false} />
       <label htmlFor={`utr-${orderNo}`} className="text-[13px] font-medium">Already paid? Enter your UTR</label>
       <div className="mt-1.5 flex gap-2">
-        <input id={`utr-${orderNo}`} inputMode="numeric" autoComplete="off" maxLength={14} required
+        <input id={`utr-${orderNo}`} inputMode="numeric" autoComplete="off" maxLength={12} required
           placeholder="e.g. 412345678901" className="input font-mono"
           value={utr} onChange={(e) => setUtr(e.target.value)} />
         <button className="btn btn-dark shrink-0" disabled={form.pending || form.ok}>

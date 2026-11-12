@@ -1,13 +1,14 @@
-// Landing page — Halden rebuild (Round 6, Worker A).
-// Scene order: bowl-glow hero → pinned statement → dark split (ship) →
-// logo marquee (sample marks) → how it works → QR methods → features →
-// sample testimonials → vs-aggregator → security → developer/API →
-// pricing → FAQ → footer.
+// Landing page — Halden rebuild (Round 6, Worker A), Round 7 UI track.
+// Scene order: bowl-glow hero (animated 4-line headline + example-order
+// preview) → pinned statement → dark split (ship) →
+// "Pay via" / "Built with" marquee → how it works → QR methods →
+// features → vs-aggregator → security → developer/API → pricing →
+// FAQ → footer.
 // Every claim below is real: real amounts (₹500.00 → ₹500.01/₹500.02),
 // the real order-number format (ORD…/TST…), the real API example from
 // /docs, real rate limits (1,000/min per key, 600/min per IP). No fake
-// stats anywhere. The 8 logo wordmarks and the testimonial cards are
-// labelled SAMPLE — fictional, never real partners or customers.
+// stats, no fictional partners or testimonials anywhere. The hero
+// preview card is labelled an illustration, not a live order.
 // Halden CSS lives in the <style> below (globals.css is off-limits);
 // fonts are Inter Tight via app/fonts.css + app/layout.tsx.
 import Link from "next/link";
@@ -17,9 +18,8 @@ import { FaqItem, Reveal } from "@/components/layout-client";
 import { getInstallState, getSessionSafe } from "@/components/server-data";
 import { BowlGlow } from "@/components/bowl-glow";
 import { HaldenCta } from "@/components/halden-cta";
-import { HaldenReveals } from "@/components/letter-reveal";
-import { HALDEN_MARKS, LogoMarquee, Wordmark } from "@/components/logo-marquee";
-import { Testimonials } from "@/components/testimonials";
+import { HaldenReveals, LetterReveal, ShipImage } from "@/components/letter-reveal";
+import { LogoMarquee } from "@/components/logo-marquee";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +40,15 @@ const HALDEN_CSS = `
 @keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
 @media (prefers-reduced-motion:reduce){body.ready .fade-up{animation:none;opacity:1;transform:none}}
+/* --- LetterReveal (Round 7): chars/words start hidden only once JS has
+   split them (.lr-armed*); .lr-done (IntersectionObserver) brings them
+   in with a per-element stagger set inline. No-JS text is never hidden. */
+.lr-text .hl-char,.lr-text .hl-word{transition:opacity .55s var(--ease),transform .55s var(--ease)}
+.lr-armed .hl-char{opacity:0;transform:translateY(.35em)}
+.lr-armed.lr-done .hl-char{opacity:1;transform:none}
+.lr-armed-word .hl-word{opacity:0;transform:translateY(.25em)}
+.lr-armed-word.lr-done .hl-word{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.lr-armed .hl-char,.lr-armed-word .hl-word{opacity:1!important;transform:none!important;transition:none}}
 /* --- dot-arrow button --- */
 .hbtn{position:relative;display:inline-flex;align-items:center;height:42px;padding:0 46px 0 18px;border-radius:999px;background:var(--ink);color:#fff;font-size:13.5px;font-weight:500;letter-spacing:-.01em;white-space:nowrap;text-decoration:none;touch-action:manipulation}
 .hbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -51,6 +60,10 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
 .hbtn.lg .hdot{width:14px;height:14px;right:24px}
 .hbtn.lg .hdot svg{width:16px;height:16px}
 .hbtn.lg:hover .hdot{width:48px;height:48px;right:7px}
+/* --- secondary ghost CTA (Round 7, "View docs") --- */
+.hbtn-ghost{display:inline-flex;align-items:center;height:62px;padding:0 28px;border-radius:999px;background:transparent;color:var(--ink);font-size:17px;font-weight:500;letter-spacing:-.01em;text-decoration:none;box-shadow:inset 0 0 0 1px rgba(11,29,58,.25);transition:background .3s var(--ease),box-shadow .3s var(--ease);touch-action:manipulation;white-space:nowrap}
+.hbtn-ghost:hover{background:rgba(11,29,58,.06);box-shadow:inset 0 0 0 1px rgba(11,29,58,.45)}
+.hbtn-ghost:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* --- scene 1: hero --- */
 /* Round 6 integration fix: the hero is 100vh tall BUT sits below the
    nav's in-flow spacer (80px desktop / 66px mobile), so the old
@@ -60,17 +73,41 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
    Subtract the spacer so the hero bottom lands exactly on the fold and
    the CTA is fully visible. min-height 560px (was 640px) keeps the CTA
    visible even on short viewports: at 600px height the hero is 560px,
-   its bottom is 640px, and the CTA bottom is 595px — still on screen. */
+   its bottom is 640px, and the CTA bottom is 595px — still on screen.
+   Round 7: headline is now the 4-line brief copy (was 2 lines); the
+   trust line is a real supporting description (was tautological); the
+   hero logo grid is gone (it duplicated the marquee) and the freed
+   bottom-right corner holds the example-order preview card. */
 .halden-hero{position:relative;z-index:1;height:calc(100vh - 80px);height:calc(100svh - 80px);min-height:560px}
-#h1{position:absolute;top:21.5vh;left:var(--gut);right:var(--gut);margin:0;font-weight:400;font-size:clamp(34px,4.65vw,70px);line-height:1.03;letter-spacing:-.035em;color:var(--ink);white-space:nowrap}
-.trust{position:absolute;top:58vh;left:var(--gut);margin:0;font-size:clamp(15px,1.28vw,19px);letter-spacing:-.015em;color:var(--ink-2)}
-.halden-hero .hbtn.lg{position:absolute;left:var(--gut);bottom:7.5vh}
-.logos{position:absolute;right:0;width:50%;top:55vh;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr}
-.logos .cell{position:relative;display:flex;align-items:center;justify-content:center;color:#3e4d68;min-width:0;padding:0 6px}
-.logos .cell:nth-child(4n+2)::before,.logos .cell:nth-child(4n+3)::before,.logos .cell:nth-child(4n+4)::before{content:"";position:absolute;left:0;top:0;bottom:0;width:1px;background:linear-gradient(rgba(11,29,58,.08),rgba(11,29,58,.05))}
-.logos .cell:nth-child(n+5)::after{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:rgba(11,29,58,.06)}
+#h1{position:absolute;top:20vh;left:var(--gut);right:var(--gut);margin:0;font-weight:400;font-size:clamp(34px,4.4vw,64px);line-height:1.03;letter-spacing:-.035em;color:var(--ink);white-space:nowrap}
+/* Round 7 integration: the 380px reserve is the preview card, but the
+   % in max-width resolves against the FULL hero width while the text
+   starts at left:var(--gut) — so the old calc(100% - 380px) let the
+   line run ~106px under the card at 1280px. Subtract both gutters too. */
+.trust{position:absolute;top:58vh;left:var(--gut);right:var(--gut);margin:0;font-size:clamp(15px,1.28vw,19px);letter-spacing:-.015em;color:var(--ink-2);max-width:calc(100% - 380px - 2 * var(--gut))}
+.hero-ctas{position:absolute;left:var(--gut);bottom:7.5vh;display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:calc(100% - 2*var(--gut))}
+/* --- hero preview card: an EXAMPLE order, labelled illustration --- */
+.hero-preview{position:absolute;right:var(--gut);bottom:6vh;width:min(340px,36vw);background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border-radius:20px;padding:14px 16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 16px 40px -18px rgba(11,29,58,.35);color:var(--ink)}
+.hp-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hp-title{margin:0;font-size:12.5px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.hp-tag{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#3b5bdb;background:rgba(91,124,240,.12);border-radius:999px;padding:3px 9px}
+.hp-body{display:flex;gap:14px;margin-top:12px;align-items:flex-start}
+.hp-qr{flex:none;width:88px;height:88px;border-radius:10px;background:#fff;padding:7px;box-shadow:inset 0 0 0 1px rgba(11,29,58,.1)}
+.hp-qr svg{display:block;width:100%;height:100%}
+.hp-rows{margin:0;display:grid;gap:7px;font-size:12.5px;line-height:1.35}
+.hp-rows dt{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#5a6b8a}
+.hp-rows dd{margin:1px 0 0;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.hp-rows .mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;word-break:break-all}
+.hp-foot{margin:12px 0 0;padding-top:10px;border-top:1px solid rgba(11,29,58,.08);display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2)}
+.hp-dot{width:8px;height:8px;border-radius:999px;background:#16a34a;flex:none}
+.hp-note{margin:10px 0 0;font-size:11px;line-height:1.45;color:#5a6b8a}
 /* --- scene 2: pinned statement --- */
-.statement{position:relative;z-index:1;height:306vh;margin-top:-31vh;pointer-events:none}
+/* Round 7: 200vh (was 306vh) — the 4-line reveal no longer needs three
+   viewports of scrolling to complete; the letter-reveal divisor in
+   letter-reveal.tsx (1.13) is tuned to this height, so the reveal still
+   completes exactly at the pin end. The bowl-flood choreography is
+   untouched: the bowl is near-full flood by the time the split arrives. */
+.statement{position:relative;z-index:1;height:200vh;margin-top:-31vh;pointer-events:none}
 .stmt-pin{position:sticky;top:0;height:100vh}
 #stmt{position:absolute;top:41.5vh;left:0;right:0;margin:0;text-align:center;font-weight:400;font-size:clamp(20px,2.8vw,42px);line-height:1.16;letter-spacing:-.03em;color:var(--ink);white-space:nowrap;will-change:transform}
 /* --- scene 3: dark split --- */
@@ -86,21 +123,48 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
 #row .row-facts strong{color:#fff;font-weight:500}
 .split-r{position:relative;overflow:hidden;min-height:100%}
 #ship{display:block;width:100%;height:100%;object-fit:cover;transform-origin:50% 60%}
+/* Round 7: local fallback when the remote ship image fails (see
+   ShipImage in letter-reveal.tsx) — a deep-navy fjord gradient panel,
+   same box as the photo, so the split never shows a broken image. */
+.ship-fallback{width:100%;height:100%;min-height:70vh;background:radial-gradient(90% 60% at 70% 20%,rgba(143,213,241,.28),transparent 60%),radial-gradient(70% 50% at 20% 85%,rgba(91,124,240,.22),transparent 60%),linear-gradient(160deg,#16324f 0%,#0e1f3d 45%,#0a1830 100%)}
 /* --- after the scenes: keep the fixed white atmo covered --- */
 .halden-rest{position:relative;z-index:2;background:var(--surface)}
 @media (max-width:820px){
   #h1{top:17vh;font-size:7.4vw;white-space:normal}
-  .trust{top:44vh}
-  .logos{width:100%;top:50vh;bottom:18vh}
-  .logos .hl-mark-text{display:none}
-  .halden-hero{height:calc(100vh - 66px);height:calc(100svh - 66px);min-height:560px}
-  .halden-hero .hbtn.lg{bottom:6vh}
+  .trust{top:42vh;max-width:none}
+  .hero-ctas{bottom:6vh}
+  .hbtn.lg{height:52px;padding:0 52px 0 22px;font-size:15px}
+  .hbtn.lg .hdot{width:12px;height:12px;right:20px}
+  .hbtn.lg .hdot svg{width:14px;height:14px}
+  .hbtn.lg:hover .hdot{width:40px;height:40px;right:6px}
+  .hbtn-ghost{height:52px;padding:0 22px;font-size:15px}
+  /* Preview card sits in the freed slot between the trust line and the
+     CTAs (portrait phones only — hidden on short/landscape screens). */
+  .hero-preview{left:var(--gut);right:var(--gut);top:52vh;bottom:auto;width:auto;padding:13px 15px}
+  .hp-qr{width:84px;height:84px}
+  .hp-note{display:none}
   #stmt{white-space:normal;font-size:23px;max-width:15em;margin-inline:auto}
   #stmt br{display:none}
   .split{grid-template-columns:1fr;grid-template-rows:auto 70vh}
   #h2{padding:16vh 0 0 6vw}
   #row{grid-template-columns:1fr;padding:3vh 6vw 6vh}
   .split-r{min-height:70vh}
+}
+/* Round 7 (bug 4): landscape / short viewports. The 560px min-height
+   plus the 66px nav spacer put the CTA ~230px below the fold on a
+   ~360px-high landscape phone. Shrink the hero to 300px, pull the
+   headline/trust up, use the compact 48px CTA, and hide the preview
+   card — measured fit at 360px height: CTA occupies page y 304–352,
+   inside the 360px fold. */
+@media (max-height:540px){
+  .halden-hero{min-height:300px}
+  #h1{top:7vh;font-size:clamp(24px,4vw,36px)}
+  .trust{top:47vh;font-size:14px;max-width:52vw}
+  .hero-ctas{bottom:4vh}
+  .hbtn.lg{height:48px;padding:0 48px 0 20px;font-size:15px}
+  .hbtn.lg .hdot{right:18px}
+  .hbtn-ghost{height:48px;padding:0 20px;font-size:15px}
+  .hero-preview{display:none}
 }
 `;
 
@@ -140,8 +204,49 @@ const FAQS: [string, string][] = [
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <p className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--accent-text)]">{children}</p>;
 }
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="mt-2 max-w-2xl text-2xl font-medium tracking-[-0.02em] text-[var(--text)] sm:text-3xl">{children}</h2>;
+function SectionTitle({ children, animated = false }: { children: React.ReactNode; animated?: boolean }) {
+  return (
+    <h2 className="mt-2 max-w-2xl text-2xl font-medium tracking-[-0.02em] text-[var(--text)] sm:text-3xl">
+      {animated ? <LetterReveal>{children}</LetterReveal> : children}
+    </h2>
+  );
+}
+
+/**
+ * Decorative QR-style motif for the hero preview card (Round 7). It is
+ * NOT a scannable QR code — a fixed 15×15 pattern with finder squares
+ * at three corners and deterministic filler. The card is labelled an
+ * illustration; nothing here should ever be scanned or paid against.
+ */
+function QrMotif() {
+  const N = 15;
+  const cells: { x: number; y: number }[] = [];
+  const finder = (ox: number, oy: number) => {
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x < 7; x++) {
+        const edge = x === 0 || x === 6 || y === 0 || y === 6;
+        const core = x >= 2 && x <= 4 && y >= 2 && y <= 4;
+        if (edge || core) cells.push({ x: ox + x, y: oy + y });
+      }
+    }
+  };
+  finder(0, 0);
+  finder(N - 7, 0);
+  finder(0, N - 7);
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const inFinder = (x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8);
+      if (inFinder) continue;
+      if ((x * 7 + y * 13 + 3) % 5 < 2) cells.push({ x, y });
+    }
+  }
+  return (
+    <svg viewBox={`0 0 ${N} ${N}`} aria-hidden="true" focusable="false">
+      {cells.map((c, i) => (
+        <rect key={i} x={c.x} y={c.y} width="1" height="1" fill="#0b1d3a" />
+      ))}
+    </svg>
+  );
 }
 
 const CREATE_ORDER_EXAMPLE = `curl -X POST $APP_URL/api/v1/orders \\
@@ -164,9 +269,6 @@ const CREATE_ORDER_RESPONSE = `201 Created
   "upi_intent": "upi://pay?pa=merchant@okhdfcbank&pn=Your%20Store&am=499.00&cu=INR&tn=INV-1001"
 }`;
 
-// Hero logo-grid fade-up delays, row by row (spec order).
-const CELL_DELAYS = ["1.25s", "1.32s", "1.39s", "1.46s", "1.42s", "1.49s", "1.56s", "1.63s"];
-
 export default async function Home() {
   const [user, state] = await Promise.all([getSessionSafe(), getInstallState()]);
   const ctaHref = user ? "/orders/new" : state.installed ? "/login" : "/setup";
@@ -178,37 +280,66 @@ export default async function Home() {
         <BowlGlow />
         <HaldenReveals />
 
-        {/* Scene 1 — hero: white page, bowl glow from the top. */}
+        {/* Scene 1 — hero: white page, bowl glow from the top. The
+            headline is the exact 4-line brief copy, animated
+            character-by-character by HaldenReveals (#h1). */}
         <section className="halden-hero" aria-label="UPI Gateway">
           <h1 id="h1">
-            Accept UPI payments,
+            Track every payment.
             <br />
-            minus the <span className="hl">busywork</span>.
+            Create orders in one call.
+            <br />
+            Verify UTRs against the <span className="hl">bank</span>.
+            <br />
+            Signed webhooks keep <span className="hl">money</span> moving.
           </h1>
           <p className="trust fade-up" style={{ "--d": "1.15s" } as React.CSSProperties}>
-            Merchants accept UPI with UPI Gateway
+            Self-hosted UPI gateway — payments go straight to your bank account. No wallet in between, no per-transaction cut.
           </p>
-          <HaldenCta href={ctaHref} label="Get started" large className="fade-up" style={{ "--d": "1.3s" } as React.CSSProperties} />
-          <div className="logos" aria-hidden="true">
-            {HALDEN_MARKS.map((m, i) => (
-              <div key={m.label} className="cell fade-up" style={{ "--d": CELL_DELAYS[i] } as React.CSSProperties}>
-                <Wordmark mark={m} />
-              </div>
-            ))}
+          <div className="hero-ctas fade-up" style={{ "--d": "1.3s" } as React.CSSProperties}>
+            <HaldenCta href={ctaHref} label="Get started" large />
+            <Link href="/docs" className="hbtn-ghost">View docs</Link>
           </div>
+          <aside className="hero-preview fade-up" style={{ "--d": "1.45s" } as React.CSSProperties} aria-label="Example order — illustration, not a live payment">
+            <div className="hp-head">
+              <p className="hp-title">Example order</p>
+              <span className="hp-tag">Illustration</span>
+            </div>
+            <div className="hp-body">
+              <div className="hp-qr" aria-hidden="true"><QrMotif /></div>
+              <dl className="hp-rows">
+                <div>
+                  <dt>Order</dt>
+                  <dd className="mono">ORD20261111A1B2C3</dd>
+                </div>
+                <div>
+                  <dt>Amount</dt>
+                  <dd>₹500.00</dd>
+                </div>
+                <div>
+                  <dt>Unique QR payable</dt>
+                  <dd>₹500.01</dd>
+                </div>
+              </dl>
+            </div>
+            <p className="hp-foot"><span className="hp-dot" aria-hidden="true" /> Paid — provider-verified</p>
+            <p className="hp-note">Example only — decorative motif, not a scannable QR.</p>
+          </aside>
         </section>
 
-        {/* Scene 2 — pinned statement, letter-by-letter on scroll. */}
+        {/* Scene 2 — pinned statement, letter-by-letter on scroll.
+            Round 7 copy: new gateway statement, no overlap with the
+            hero lines above. */}
         <section className="statement" aria-label="What the gateway does">
           <div className="stmt-pin">
             <p id="stmt">
-              Track every payment.
+              Money lands in your own bank.
               <br />
-              Create orders in one call.
+              No wallet in between. No cut taken.
               <br />
-              Verify UTRs against the bank.
+              Verified by the provider, or not paid.
               <br />
-              Signed webhooks keep money moving.
+              Open source. Yours to run.
             </p>
           </div>
         </section>
@@ -235,7 +366,7 @@ export default async function Home() {
             </div>
           </div>
           <div className="split-r">
-            <img id="ship" src={SHIP_URL} alt="Aerial view of a container ship sailing up a misty fjord" loading="lazy" />
+            <ShipImage src={SHIP_URL} alt="Aerial view of a container ship sailing up a misty fjord" />
           </div>
         </section>
 
@@ -285,9 +416,9 @@ export default async function Home() {
           {/* QR methods — Unique vs Same, with the real ₹500 example. */}
           <section id="qr" className="border-y border-[var(--border)] bg-[var(--surface)] py-12 sm:py-16">
             <div className="mx-auto max-w-6xl px-4 sm:px-6">
-              <Reveal><SectionLabel>QR methods</SectionLabel><SectionTitle>One QR per order, or one QR for every order</SectionTitle></Reveal>
+              <Reveal><SectionLabel>QR methods</SectionLabel><SectionTitle animated>One QR per order, or one QR for every order</SectionTitle></Reveal>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--muted)] sm:text-base">
-                Every order gets its own QR with the exact amount encoded. For a counter or a printed sign, use one shared QR instead.
+                <LetterReveal variant="word">Every order gets its own QR with the exact amount encoded. For a counter or a printed sign, use one shared QR instead.</LetterReveal>
               </p>
               <div className="mt-10 grid gap-4 lg:grid-cols-2">
                 <div className="card p-6">
@@ -324,7 +455,7 @@ export default async function Home() {
 
           {/* Features — real only. */}
           <section id="features" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16">
-            <Reveal><SectionLabel>Features</SectionLabel><SectionTitle>Everything a merchant needs, nothing held back</SectionTitle></Reveal>
+            <Reveal><SectionLabel>Features</SectionLabel><SectionTitle animated>Everything a merchant needs, nothing held back</SectionTitle></Reveal>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {FEATURES.map(([title, body], i) => (
                 <Reveal key={title} delay={i * 40} className="h-full">
@@ -337,8 +468,6 @@ export default async function Home() {
               ))}
             </div>
           </section>
-
-          <Testimonials />
 
           {/* Gateway vs aggregator — honest comparison, no invented numbers. */}
           <section id="compare" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16">
@@ -377,7 +506,7 @@ export default async function Home() {
           {/* Security — real mechanisms only. */}
           <section id="security" className="border-y border-[var(--border)] bg-[var(--surface)] py-12 sm:py-16">
             <div className="mx-auto max-w-6xl px-4 sm:px-6">
-              <Reveal><SectionLabel>Security</SectionLabel><SectionTitle>Verified by the provider, or it is not paid</SectionTitle></Reveal>
+              <Reveal><SectionLabel>Security</SectionLabel><SectionTitle animated>Verified by the provider, or it is not paid</SectionTitle></Reveal>
               <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {[
                   ["Exact-match verification", "Amount, order ID, currency and a fresh timestamp must all match the provider response."],
@@ -398,11 +527,11 @@ export default async function Home() {
 
           {/* Developer — the real API example, verbatim from /docs. */}
           <section id="developer" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16">
-            <Reveal><SectionLabel>Developer</SectionLabel><SectionTitle>One API call creates an order</SectionTitle></Reveal>
+            <Reveal><SectionLabel>Developer</SectionLabel><SectionTitle animated>One API call creates an order</SectionTitle></Reveal>
             <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_1.3fr]">
               <div>
                 <p className="max-w-lg text-sm leading-relaxed text-[var(--muted)] sm:text-base">
-                  Send <code className="kbd">POST /api/v1/orders</code> with your API key and secret. The response carries the payment URL, the UPI intent and the order number — share the link or render the QR from it.
+                  <LetterReveal variant="word">Send <code className="kbd">POST /api/v1/orders</code> with your API key and secret. The response carries the payment URL, the UPI intent and the order number — share the link or render the QR from it.</LetterReveal>
                 </p>
                 <ul className="mt-6 space-y-2 text-sm text-[var(--text)]">
                   <li>✓ Idempotent — send an Idempotency-Key and retries are safe</li>
@@ -428,9 +557,9 @@ export default async function Home() {
           <section id="pricing" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16">
             <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
               <div>
-                <Reveal><SectionLabel>Pricing</SectionLabel><SectionTitle>Simple and transparent</SectionTitle></Reveal>
+                <Reveal><SectionLabel>Pricing</SectionLabel><SectionTitle animated>Simple and transparent</SectionTitle></Reveal>
                 <p className="mt-3 max-w-sm text-sm leading-relaxed text-[var(--muted)]">
-                  There is no plan, no tier and no per-transaction cut. The costs that exist are the ones you can already see: your hosting, and whatever your bank or PG charges you directly.
+                  <LetterReveal variant="word">There is no plan, no tier and no per-transaction cut. The costs that exist are the ones you can already see: your hosting, and whatever your bank or PG charges you directly.</LetterReveal>
                 </p>
               </div>
               <div className="card p-6 sm:p-8">
@@ -455,7 +584,7 @@ export default async function Home() {
           {/* FAQ */}
           <section id="faq" className="border-t border-[var(--border)] py-12 sm:py-16">
             <div className="mx-auto max-w-6xl px-4 sm:px-6">
-              <Reveal><SectionLabel>FAQ</SectionLabel><SectionTitle>Questions, answered</SectionTitle></Reveal>
+              <Reveal><SectionLabel>FAQ</SectionLabel><SectionTitle animated>Questions, answered</SectionTitle></Reveal>
               <div className="mt-8 grid gap-4 md:grid-cols-2">
                 {FAQS.map(([q, a]) => <FaqItem key={q} q={q} a={a} />)}
               </div>

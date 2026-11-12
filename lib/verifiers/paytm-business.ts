@@ -5,8 +5,18 @@
 // present when evidence_require_timestamp. Every failure is pending, never a
 // throw. Credentials (MID) are never logged. Feature-flagged by
 // GATEWAY_ENABLE_PAYTM_BUSINESS (default true).
+//
+// G6 (Round 7) — RESPONSE SIGNATURE: this unofficial endpoint returns NO
+// signature or checksum of any kind, so its responses CANNOT be
+// signature-verified — authenticity rests on TLS to Paytm's host plus the
+// response bindings enforced here (ORDERID, exact amount, currency,
+// reference, timestamp) and the flag gate. That is why the verifier stays
+// flag-gated and documented unofficial: prefer Paytm PG (signed) or
+// PhonePe PG (OAuth) for new accounts.
+// G12: the raw payload is scrubbed (scrubProviderResponse, applied
+// centrally in VerificationResult) — MID / secrets never persist.
 import { gatewayConfig } from "../config/gateway";
-import { VerificationResult, amountMatches, extractRawTimestamp, expectedAmount, type OrderLike, type VerificationResult as VR } from "./verification-result";
+import { VerificationResult, amountMatches, extractRawTimestamp, expectedAmount, scrubProviderResponse, type OrderLike, type VerificationResult as VR } from "./verification-result";
 
 export interface AccountLike { id: number; credentials: Record<string, string>; environment: string | null; }
 export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
@@ -49,5 +59,7 @@ export async function checkPaytmBusiness(order: OrderLike, account: AccountLike 
   return VerificationResult.fromPaytmBusiness(order, amt as string, (data.BANKTXNID as string) ?? null, (data.TXNID as string) ?? null, sanitize(data), (data.CURRENCY as string) ?? "INR", occurredAt, account.id, account.environment);
 }
 function sanitize(data: Record<string, unknown>): Record<string, unknown> {
-  const { MID, mid, ...rest } = data; void MID; void mid; return rest;
+  // G12: full scrub (MID, keys, secrets, tokens, checksums) — the old code
+  // only stripped MID. Central scrubbing in VerificationResult also applies.
+  return scrubProviderResponse(data);
 }

@@ -50,13 +50,13 @@ See [`.env.example`](.env.example) — placeholders only, never real values.
 | `ENCRYPTION_KEY` | 32-byte key for stored secrets (AES-256-GCM). `openssl rand -base64 32`. |
 | `CRON_SECRET` | Protects `/api/cron/*`. `openssl rand -hex 32`. |
 | `APP_URL` | The public URL of your deployment. |
-| `ALLOW_REGISTRATION` | `false` (default). Set `true` only to open merchant signups. See [Merchant signups](#merchant-signups) below. |
+| `ALLOW_REGISTRATION` | `false` (default). Set `true` only to open merchant signups. |
 
-Other useful settings: `GATEWAY_ORDER_EXPIRY_MINUTES` (15), `GATEWAY_QR_METHOD` (`same` / `unique`), `GATEWAY_QR_INCREMENT_PAISE` (1–99, default `1`), `GATEWAY_LATE_PAYMENT_GRACE_HOURS` (24). Full list in `.env.example`.
+Other useful settings: `GATEWAY_ORDER_EXPIRY_MINUTES` (15), `GATEWAY_QR_METHOD` (`unique` / `same`, default `unique`), `GATEWAY_QR_INCREMENT_PAISE` (1–99, default `1`), `GATEWAY_LATE_PAYMENT_GRACE_HOURS` (24). Full list in `.env.example`.
 
 ### Database
 
-Create a Neon Postgres project and set its **pooled** connection string as `DATABASE_URL`. Then run the migrations (001–015, plain SQL, safe to re-run):
+Create a Neon Postgres project and set its **pooled** connection string as `DATABASE_URL`. Then run the migrations (001–016, plain SQL, safe to re-run):
 
 ```bash
 npm run migrate
@@ -68,17 +68,17 @@ See [`db/README.md`](db/README.md) for the full table map. Money is `NUMERIC(12,
 
 ## QR payments: two ways
 
-Every order gets its own QR code with the exact amount in it. The merchant picks a method in Settings → QR.
+Every order gets its own QR code with the exact amount in it. The merchant picks a method when creating an order (Unique Amount is preselected) or in Settings → QR.
 
-### Same Amount QR (default)
+### Unique Amount QR (default)
 
-Every QR shows the order amount — ₹499.00 for one customer, ₹499.00 for the next. Good for a shop counter, a printed sign, or a fixed price (a ₹99 item, a ₹299 ticket, a ₹101 donation). Two orders for the same amount can only be told apart by the order reference or by UTR review.
-
-### Unique Amount QR
-
-Each live order gets a **slightly different amount, a few paise above the order amount**. Example: a ₹500.00 order becomes **₹500.01** for one customer, **₹500.02** for the next. The customer must pay that exact amount — the QR code and the UPI link both carry it, and the pay screen says **"Pay exactly ₹500.02"** in big letters.
+Each live order gets a **slightly different amount, a few paise above the order amount**. Example: a ₹500.00 order becomes **₹500.01** for one customer, **₹500.02** for the next. The customer must pay that exact amount — the QR code and the UPI link both carry it, and the pay screen says **"Pay exactly ₹500.01"** in big letters.
 
 Why? The small difference in amount is the only link between a bank-statement entry and an order. It lets the merchant match a payment by amount alone. It is **not** proof by itself — see [How a payment is verified](#how-a-payment-is-verified).
+
+### Normal Amount QR
+
+The exact amount you enter, no extra paise — ₹500.00 for one customer, ₹500.00 for the next. Good for a shop counter, a printed sign, or a fixed price (a ₹99 item, a ₹299 ticket, a ₹101 donation). Two orders for the same amount can only be told apart by the order reference or by UTR review.
 
 Rules that keep it honest:
 
@@ -102,57 +102,30 @@ Other facts:
 - Orders expire after 15 minutes by default. A late payment can still be caught for 24 hours (grace window) — the pay page says so and keeps checking.
 - Live orders are `ORD…`, sandbox orders are `TST…`. Sandbox orders never touch a provider. The sandbox can pretend to be six outcomes: success, failure, pending, expiry, timeout, invalid reference.
 - Amounts: ₹1 to ₹1,00,000, up to 2 decimals.
-- The dashboard has a notification bell: new payments, new orders, UTR submissions, and expiries show up there. Payment sounds are optional — a short chime when a payment lands, a tick when an order is created. Sounds stay silent until you tap anything on the page (a browser rule), and the speaker button next to the bell mutes them.
+- The dashboard has a notification bell: new payments, new orders, UTR submissions, and expiries show up there, with a browser notification for new payments.
+
+## Sounds
+
+Payment sounds are real MP3 files in [`public/sounds/`](public/sounds/) (all under 90 KB). They play only after a user gesture (a browser rule) and only on a real, server-confirmed event — never on page load, never on a UTR submit. The speaker button next to the bell mutes them; when a file cannot play, the built-in synthesised sound plays instead.
+
+| File | When it plays |
+|---|---|
+| `payment order created.mp3` | An order is created (confirmed 201). |
+| `txnsuccessful effect.mp3` | A payment flips to paid, or a new `payment_received` notification arrives. |
+| `login successful.mp3` | Login succeeds. |
+| `timer in order.mp3` | The pay-page countdown enters its last 60 seconds, and once at expiry. About 7 seconds long — plays once per moment, never loops. |
 
 ## Screenshots
 
-Captured 12 November 2026 from a real production build — desktop 1280 px and a true phone width of 390 px. The landing, login, docs, and setup shots below are fresh Round 6 captures (12 Nov 2026) of the Halden rebuild. The merchant screens (pay, dashboard, QR settings, order detail) are still the Round 4 captures against the real Neon database with a disposable demo merchant ("Demo Store", deleted after the capture). The numbers there are real database rows, not made up.
+Fresh Round 7 captures (12 November 2026) from a real production build against the real Neon database, with a disposable test merchant (deleted after the capture). Desktop 1280 px, phone 390 px. Taken in this machine's Chromium, so the Inter Tight font (loaded from Google Fonts) shows as a system fallback here; on a real browser the font loads.
 
-> Note: these Round 6 shots were taken in this machine's Chromium, which cannot reach Google Fonts or the ship-photo host — so they show system fallback fonts and an empty ship-photo area. On a real phone or browser the Inter Tight font loads and the fjord ship photo shows (both URLs return 200). The layout, colours, and spacing in the shots are exact.
+| Landing, desktop | Landing, phone | Pay screen, phone |
+|---|---|---|
+| <img src="docs/screenshots/r7-landing-1280-light.jpg" width="360" alt="Landing page hero, desktop 1280 px"> | <img src="docs/screenshots/r7-landing-390-light.jpg" width="180" alt="Landing page hero, phone 390 px"> | <img src="docs/screenshots/r7-pay-390.jpg" width="180" alt="Pay screen for a real ₹500.01 Unique Amount order, phone 390 px"> |
 
-> Note: the pay screen changed after these shots were taken. Round 4 (11 Nov 2026) made the whole pay screen fit on one phone screen — smaller QR, countdown as a small chip, one row of UPI-app buttons. New pay screenshots will replace `pay-mobile.jpg` / `pay-desktop.jpg` after the next database-backed capture.
-
-### Landing page
-
-![Landing page hero, desktop 1280 px](docs/screenshots/r6-final-landing-light-1280.jpg)
-
-![Landing page, mobile 390 px](docs/screenshots/r6-final-landing-light-390.jpg)
-
-![Pinned statement, desktop 1280 px](docs/screenshots/r6-statement-1280-light.jpg)
-
-![Dark split section, desktop 1280 px](docs/screenshots/r6-split-1280-light.jpg)
-
-![Nav with the Get started CTA morphed in after scrolling, desktop 1280 px](docs/screenshots/r6-nav-landing-1280-light-scrolled.jpg)
-
-### Pay screen (before the Round 4 compact redesign)
-
-![Pay screen with a real QR, desktop 1440 px](docs/screenshots/pay-desktop.jpg)
-
-*Pay screen for a real ₹500.00 order (desktop): "Order amount ₹500.00 / **Pay exactly ₹500.02**" — the payable amount (base + 2 paise) is what the QR and the UPI link carry.*
-
-![Pay screen with a real QR, mobile 390 px](docs/screenshots/r4-final-pay-390.jpg)
-
-### Merchant dashboard
-
-![Merchant dashboard, desktop 1440 px](docs/screenshots/r4-verify-dashboard-desktop-light.jpg)
-
-*Today ₹500.00, Total received ₹500.00, Pending / Review 2 / 1, success rate 100%, and the real recent-orders table.*
-
-![Merchant dashboard, mobile 390 px](docs/screenshots/r4-verify-dashboard-mobile-light.jpg)
-
-### QR settings, login, docs, setup, order detail
-
-![QR settings, desktop 1440 px](docs/screenshots/qr-settings-desktop.jpg)
-
-*Settings → QR: method "Unique amount", increment 1 paise, and the Amount allocations table — four released allocations (₹500.01, ₹500.02, ₹250.01, ₹750.01). The API keys in this shot belonged to the deleted demo merchant.*
-
-![Login page, mobile 390 px](docs/screenshots/r6-final-login-light-390.jpg)
-
-![API docs, desktop 1440 px](docs/screenshots/r6-final-docs-light-1280.jpg)
-
-![First-run setup, desktop](docs/screenshots/r6-final-setup-light-1280.jpg)
-
-![Order detail, mobile 390 px](docs/screenshots/order-detail-mobile.jpg)
+| New order, phone | Dashboard, desktop | Dark split, phone |
+|---|---|---|
+| <img src="docs/screenshots/r7-order-new-390.jpg" width="180" alt="New payment link form with Unique Amount preselected, phone 390 px"> | <img src="docs/screenshots/r7-dashboard-1280.jpg" width="360" alt="Merchant dashboard, desktop 1280 px"> | <img src="docs/screenshots/r7-split-390.jpg" width="180" alt="Dark split section, phone 390 px"> |
 
 ## Deploy on Vercel
 
@@ -168,13 +141,7 @@ Crons are declared in [`vercel.json`](vercel.json) — 01:00 order checks, 02:00
 
 ### Merchant signups
 
-Signups are **off** by default. To open them, set this env var in Vercel (Production, plain — not sensitive):
-
-| Setting | Value |
-|---|---|
-| `ALLOW_REGISTRATION` | `true` |
-
-Then redeploy. `/register` shows the signup form, and `POST /api/auth/register` creates a new account. New accounts are always **merchants** — this form can never create an admin. The first admin is created only at `/setup`, once. Set the var back to `false` (and redeploy) to close signups again.
+Signups are **off** by default. To open them, set `ALLOW_REGISTRATION` to `true` in Vercel (Production, plain — not sensitive) and redeploy. `/register` shows the signup form, and `POST /api/auth/register` creates a new account. New accounts are always **merchants** — this form can never create an admin. The first admin is created only at `/setup`, once. Set the var back to `false` (and redeploy) to close signups again.
 
 ## API
 
@@ -203,6 +170,7 @@ curl -X POST $APP_URL/api/v1/orders \
 | `amount` | Required. ₹1–₹1,00,000, up to 2 decimals. |
 | `client_order_id` | Required. Your unique reference (letters, digits, `_`, `-`, up to 64 chars). Reusing one returns **409**. |
 | `payment_account_id` | Optional. Pay into this account; otherwise rotation picks one. Not allowed in sandbox. |
+| `qr_method` | Optional. `unique` (default) or `normal` — per-order, overrides Settings → QR. |
 | `customer_name` / `customer_email` / `customer_mobile` | Optional. |
 | `note` | Optional, up to 50 chars. Shown on the pay screen and in the UPI link. |
 | `redirect_url` | Optional. The domain must be allowlisted in Settings first. |
@@ -215,8 +183,7 @@ Response — `201 {success: true, data: …}` with `order_id`, `payment_url` (`h
 - `GET /api/v1/orders/[orderNo]` — by `order_no` or your `client_order_id`. Re-checks the provider first, so the status is fresh. Statuses: `pending`, `paid`, `review`, `expired`, `failed`.
 - `GET /api/v1/accounts` — your UPI accounts with `used_today` / `remaining_today` against each daily limit.
 - Merchant reads (session login, your data only): `GET /api/orders`, `GET /api/orders/[orderNo]`, `GET /api/dashboard/stats`, `GET /api/settings`.
-- Checkout (public): `GET /api/pay/[orderNo]/status`, `POST /api/pay/[orderNo]/utr`, `POST /api/pay/[orderNo]/start`, `GET /api/pay/[orderNo]/qr` (PNG).
-- Sandbox: `POST /api/sandbox/pay/[orderNo]/simulate`.
+- Checkout (public): `GET /api/pay/[orderNo]/status`, `POST /api/pay/[orderNo]/utr`, `POST /api/pay/[orderNo]/start`, `GET /api/pay/[orderNo]/qr` (PNG). Sandbox: `POST /api/sandbox/pay/[orderNo]/simulate`.
 - Auth: `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/register` (flag-gated), `POST /api/auth/confirm-password`.
 - Admin (session + role=admin + password confirmed in the last 15 minutes): orders, merchants, accounts, webhooks, audit logs, transaction debugger, manual payment override.
 
@@ -232,6 +199,28 @@ Every paid, expired, under-review, failed, pending, and timeout change is sent t
 
 > **Deadline: 31 March 2027.** Timestamped signatures (`t=…,v1=…`) are the only supported scheme after this date. The old `X-Signature-Legacy` header is retired — check the timestamped signature now.
 
+## Security
+
+- **Never paid on UTR alone.** Only a provider response (amount + order ID + currency + fresh timestamp), a merchant UTR approval, or an audited admin override marks an order paid.
+- **Payer tokens (Round 7).** Loading a pay page mints two short-lived, single-use tokens bound to that order. A UTR submit or a fresh hosted-checkout start needs its token; without one the request is refused (401) and the order is untouched. Status polls without a token get the stored status only — they cannot force a provider check. Only the token hash is stored, never the token itself.
+- **Cross-merchant isolation.** Every order, account, and UTR check is scoped to the logged-in merchant in SQL. Another merchant's order reads as 404 — the same 404 as a nonexistent order, so nothing can be enumerated. The database backs this up with partial unique indexes (one admin; one `customer_utr` per merchant).
+- **UTR masking.** A real UTR is never shown in full on the pay page — only its last 4 digits.
+- **Webhook signing.** HMAC-SHA256 over `timestamp + "." + raw_body`, 5-minute tolerance, constant-time compare, ignore duplicate `event_id`.
+- **SSRF hardening + redirect allowlist.** Webhook and redirect URLs are re-checked right before sending — fresh DNS lookup, all answers must be public IPs (no private / loopback / link-local ranges). A customer returns only to a domain the merchant allowlisted in Settings.
+- **Rate limits.** Order creation: 1000/min per API key, 600/min per IP; general API: 120/min per key; hosted-checkout starts: 3 fresh starts per order; failed logins: 30/min per IP. Idempotency keys are kept 24 h.
+- **Sessions.** Stateless signed JWT (HS256) in an `httpOnly`, `Secure`-in-production, `SameSite=lax` cookie, **120-minute** lifetime. The token holds part of the password hash, so changing the password logs out all sessions. Admin pages also need a password confirmation within the last 15 minutes.
+- **Secrets at rest.** Provider credentials and API secrets are stored AES-256-GCM encrypted in the merchant's own database (`ENCRYPTION_KEY`). Never logged, never returned by any API.
+- **What this is not.** There is no password-reset flow (the source never had one, and none was invented). The Paytm Business status API is unofficial and may change without notice. With no provider credentials set up, verification returns "provider not configured" and orders stay pending — no fake payments, ever.
+
+## Tests
+
+```bash
+npm test            # vitest run
+```
+
+- **Unit tests (mocked):** 237 tests in 17 files — Paytm checksum, webhook HMAC signature (valid / tampered / stale), SafeUrl SSRF rules, UTR-alone-does-not-mark-paid, order-creation idempotency, authz boundary, the three verifiers (paid only when all checks match), the payer-token and pay-surface policies, order methods, and the MP3 sound wiring.
+- **Live tests against the real Neon database (Round 7):** 13/13 checks passed with two throwaway merchants — cross-order reads 404, foreign account 422, UTR without token 401 with the order unchanged, UTR with token → review, consumed-token replay 401, tokenless status is report-only, hosted start without token 401, start budget exhausted → 429, foreign approve/reject 404, admin gating 403, and identical 404s for foreign vs nonexistent orders. Demo merchants were deleted afterwards; the merchant's own rows were verified untouched.
+
 ## Troubleshooting
 
 | Problem | What to do |
@@ -246,25 +235,7 @@ Every paid, expired, under-review, failed, pending, and timeout change is sent t
 | Orders stay pending after a manual UPI payment | Expected without a provider API: the gateway cannot see a manual payment by itself. The customer submits their UTR, and the merchant approves it in the dashboard. |
 | Tables missing after deploy | Run `npm run migrate`. Most tables are also created on first use, but the migration files are the source of truth — run them once per fresh database. |
 | `mark-paid` always errors | Deliberate. That route is a disabled stub. There is no API that marks an order paid without proof. Use UTR approval or the audited admin override. |
-
-## Tests
-
-```bash
-npm test            # vitest run
-```
-
-All tests in `tests/` are **mocked** (pure crypto/validation, injected fetch, in-memory idempotency store). They cover: Paytm checksum, webhook HMAC signature (valid / tampered / stale), SafeUrl SSRF rules, UTR-alone-does-not-mark-paid, order-creation idempotency, authz boundary, and the three verifiers (paid only when all checks match). **Live tests against the real Neon database are still owed**: create order → sandbox simulate success → webhook delivered + signed → order paid; provider verify rejects wrong amount; UTR approve/reject; admin override; rate limits; installer blocked after install; outbox retry after failure.
-
-## Security
-
-- **Never paid on UTR alone.** Only a provider response (amount + order ID + currency + fresh timestamp), a merchant UTR approval, or an audited admin override marks an order paid.
-- **Webhook signing.** HMAC-SHA256 over `timestamp + "." + raw_body`, 5-minute tolerance, constant-time compare, ignore duplicate `event_id`.
-- **SSRF hardening.** Webhook and redirect URLs are re-checked right before sending — fresh DNS lookup, all answers must be public IPs (no private / loopback / link-local ranges).
-- **Redirect allowlist.** A customer returns only to a domain the merchant allowlisted in Settings. Anything else is refused.
-- **Rate limits.** Order creation: 1000/min per API key, 600/min per IP; general API: 120/min per key; failed logins: 30/min per IP. Idempotency keys are kept 24 h.
-- **Sessions.** Stateless signed JWT (HS256) in an `httpOnly`, `Secure`-in-production, `SameSite=lax` cookie, **120-minute** lifetime. The token holds part of the password hash, so changing the password logs out all sessions. Admin pages also need a password confirmation within the last 15 minutes.
-- **Secrets at rest.** Provider credentials and API secrets are stored AES-256-GCM encrypted in the merchant's own database (`ENCRYPTION_KEY`). Never logged, never returned by any API.
-- **What this is not.** There is no password-reset flow (the source never had one, and none was invented). The Paytm Business status API is unofficial and may change without notice. With no provider credentials set up, verification returns "provider not configured" and orders stay pending — no fake payments, ever.
+| `422` "Payment account is not a live account" for a Paytm PG / PhonePe PG account | Known gap: hosted-gateway accounts cannot be used for order creation yet. Manual UPI and Paytm Business accounts work. |
 
 ## License
 

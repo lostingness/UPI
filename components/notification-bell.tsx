@@ -23,7 +23,8 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { apiFetch, postApi } from "./api";
-import { installGestureUnlock, playOrderCreatedTick, playSuccessChime } from "@/lib/sounds";
+import { installGestureUnlock, playOrderCreatedTick } from "@/lib/sounds";
+import { installMp3GestureUnlock, playTxnSuccessMp3 } from "@/lib/mp3-sounds";
 import type { NotificationType } from "@/lib/notifications";
 
 // Local INR formatter (the server copy lives in lib/notifications.ts —
@@ -173,7 +174,8 @@ export function NotificationBell() {
       if (seen.has(n.id)) continue;
       seen.add(n.id);
       if (n.type === "payment_received") {
-        playSuccessChime();
+        // Round 7: MP3 success sound (falls back to the synth chime).
+        playTxnSuccessMp3();
         showBrowserNotification(
           `Payment received ${n.amount ? formatInr(n.amount) : ""}`.trim(),
           n.title,
@@ -198,6 +200,7 @@ export function NotificationBell() {
     // Gesture-gate audio for the whole page, and ask for browser
     // notification permission once, on the merchant's first interaction.
     installGestureUnlock();
+    installMp3GestureUnlock();
     const askOnce = () => {
       void requestNotificationPermissionOnce();
       window.removeEventListener("pointerdown", askOnce);

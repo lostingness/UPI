@@ -86,7 +86,7 @@ export async function handleCreateOrder(req: Request) {
       clientOrderId: data.client_order_id, paymentAccountId: data.payment_account_id ?? null,
       customerName: data.customer_name ?? null, customerEmail: data.customer_email ?? null,
       customerMobile: data.customer_mobile ?? null, note: data.note ?? null,
-      redirectUrl: data.redirect_url ?? null,
+      redirectUrl: data.redirect_url ?? null, qrMethod: data.qr_method ?? undefined,
     }, idemKey, body, store, createOrder);
   } catch (e) { return handleError(e); }
 }
@@ -132,7 +132,7 @@ export async function handleCreateOrderSession(req: Request, deps: CreateOrderDe
       clientOrderId: undefined, paymentAccountId: data.payment_account_id ?? null,
       customerName: data.customer_name ?? null, customerEmail: null,
       customerMobile: data.customer_mobile ?? null, note: data.note ?? null,
-      redirectUrl: null,
+      redirectUrl: null, qrMethod: data.qr_method ?? undefined,
     }, idemKey, body, store, createOrderFn);
   } catch (e) { return handleError(e); }
 }

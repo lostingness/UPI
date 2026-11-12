@@ -12,6 +12,7 @@ import { gatewayConfig } from "../config/gateway";
 import type { OrderRow } from "./types";
 import { isPastExpiry, canRecoverLatePayment, isWithinLatePaymentGrace } from "./types";
 import { verifyOrder } from "../verifiers";
+import { scrubProviderResponse } from "../verifiers/verification-result";
 import { decryptAccountCredentials, type AccountRow } from "./create";
 import { markPaidInDb } from "./mark-paid";
 import { expireOrderInDb } from "./expire";
@@ -128,8 +129,12 @@ export async function checkOrder(order: OrderRow, force = false, opts: CheckOrde
     }
   }
   // Not paid: persist provider response for the debugger, clear the lease.
+  // G12: scrub before persisting — the raw provider payload must never
+  // carry credentials / session tokens into orders.provider_response.
+  // G4: the duplicate-UTR race inside markPaidInDb is caught there and
+  // mapped to a clean 409 (see lib/orders/mark-paid.ts).
   const sql = getSql();
-  await sql`UPDATE orders SET provider_response = ${JSON.stringify(result.raw)}::jsonb,
+  await sql`UPDATE orders SET provider_response = ${JSON.stringify(scrubProviderResponse(result.raw))}::jsonb,
     verification_token = NULL, verification_expires_at = NULL, updated_at = NOW()
     WHERE id = ${order.id} AND verification_token = ${lease.token}`;
   if (isPastExpiry(order, now)) {

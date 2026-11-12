@@ -18,7 +18,7 @@
 // Reduced motion: everything jumps to its final state, no loops.
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export function clamp(v: number, lo = 0, hi = 1): number {
   return v < lo ? lo : v > hi ? hi : v;
@@ -187,8 +187,10 @@ export function HaldenReveals() {
         // Rise: s = clamp((q-.69)/.74), translateY(.205*(1-s)^2*innerHeight).
         const s = clamp((q - 0.69) / 0.74);
         stmt.style.transform = `translateY(${(0.205 * Math.pow(1 - s, 2) * vh).toFixed(1)}px)`;
-        // Reveal: p = clamp((q-.56)/2.03), spread .16.
-        const p = clamp((q - 0.56) / 2.03);
+        // Reveal: p = clamp((q-.56)/1.13), spread .16. The statement
+        // section is 200vh (Round 7, was 306vh): the sticky pin runs
+        // q .69 -> 1.69, so p completes exactly at the pin end.
+        const p = clamp((q - 0.56) / 1.13);
         if (Math.abs(p - lastStmtP) > 0.0005) {
           lastStmtP = p;
           paintChars(stmtChars, p, 0.16, "#0b1d3a", "#3f7cff", "#ffffff");
@@ -247,4 +249,78 @@ export function HaldenReveals() {
   }, []);
 
   return null;
+}
+
+/**
+ * LetterReveal (Round 7) — the char/word variant of the Halden letter
+ * system for section headings, intros and marketing text. Reuses
+ * splitElement; colours inherit currentColor, so it stays correct in
+ * both themes (no hex paint like the hero scenes).
+ *
+ * Behaviour: text renders normally with no JS. After mount the text is
+ * split and the chars/words start hidden (CSS .lr-armed*); an
+ * IntersectionObserver adds .lr-done when the element scrolls into view
+ * and each char/word transitions in with a small stagger. One observer
+ * per element, no rAF loop. Reduced motion: never split — the text is
+ * simply there (plus a CSS guard in the page <style>).
+ */
+export function LetterReveal({
+  children,
+  variant = "char",
+  className = "",
+}: {
+  children: ReactNode;
+  variant?: "char" | "word";
+  className?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const chars = splitElement(el);
+    const targets =
+      variant === "word"
+        ? Array.from(el.querySelectorAll<HTMLElement>(".hl-word"))
+        : chars;
+    // Stagger, capped so a long heading never takes more than ~1s to land.
+    const step = variant === "word" ? 55 : 14;
+    targets.forEach((t, i) => {
+      t.style.transitionDelay = `${Math.min(i * step, 900)}ms`;
+    });
+    el.classList.add(variant === "word" ? "lr-armed-word" : "lr-armed");
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          el.classList.add("lr-done");
+          io.disconnect();
+        }
+      },
+      { threshold: 0.2 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [variant]);
+
+  return (
+    <span ref={ref} className={`lr-text${className ? ` ${className}` : ""}`}>
+      {children}
+    </span>
+  );
+}
+
+/**
+ * ShipImage (Round 7) — the dark-split ship photo with a local fallback.
+ * The remote higgs.ai image has no fallback; on error this swaps in a
+ * gradient panel (same id="ship", so HaldenReveals' scale effect keeps
+ * working) instead of a broken image. The panel is a plain CSS gradient
+ * — no invented photo, no second remote fetch.
+ */
+export function ShipImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <div id="ship" role="img" aria-label={alt} className="ship-fallback" />;
+  }
+  return <img id="ship" src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} />;
 }

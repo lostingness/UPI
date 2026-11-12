@@ -22,6 +22,12 @@ export const createOrderApiSchema = z.object({
   customer_mobile: z.string().max(20).optional().nullable(),
   note: z.string().max(50).optional().nullable(),
   redirect_url: z.string().url().max(500).refine((u) => u.startsWith("https://"), "redirect_url must be https").optional().nullable(),
+  // Per-order QR method (Round 7): "unique" (default platform behaviour —
+  // a distinct payable amount a few paise above the order amount) or
+  // "normal" (the exact amount, no extra paise). Absent = the merchant's
+  // Settings → QR method. "same" is the internal/DB spelling of normal and
+  // is NOT accepted here — the API vocabulary is unique|normal only.
+  qr_method: z.enum(["unique", "normal"]).optional(),
 });
 
 export const createOrderDashboardSchema = z.object({
@@ -30,6 +36,8 @@ export const createOrderDashboardSchema = z.object({
   customer_name: z.string().max(100).optional().nullable(),
   customer_mobile: z.string().max(20).optional().nullable(),
   note: z.string().max(50).optional().nullable(),
+  // Per-order QR method — same vocabulary as the API schema above.
+  qr_method: z.enum(["unique", "normal"]).optional(),
 });
 
 export const utrSchema = z.object({ utr: z.string().regex(/^\s*\d{12}\s*$/, "UTR must be 12 digits") });

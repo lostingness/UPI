@@ -8,11 +8,12 @@
 // NOTE on atomicity: see lib/db.ts — the insert is guarded by the unique
 // (user_id, environment, client_order_id) constraint; a race returns 409.
 //
-// QR amounts (migration 013, lib/orders/allocations.ts): the merchant's
-// qr_method decides the payable amount. 'same' → payable = amount, no
-// allocation row. 'unique' → a distinct amount a few paise above the base.
-// Sandbox orders never use unique allocation: sandbox payments are
-// simulated, and amount matching there is by order, not by money.
+// QR amounts (migration 013, lib/orders/allocations.ts): the QR method
+// decides the payable amount. 'same' (Normal Amount in the UI) → payable =
+// amount, no allocation row. 'unique' → a distinct amount a few paise above
+// the base. Precedence for live orders (Round 7): per-order qr_method on
+// the create call wins, else the merchant's users-table setting, else the
+// platform env default (unique). Sandbox always pays the plain amount.
 // ORDERING NOTE: the allocation row has a NOT NULL order_id FK, so the
 // order row must exist before allocating. The order is therefore inserted
 // first (payable_amount NULL), then allocated, then updated. If allocation
@@ -109,6 +110,11 @@ export interface CreateOrderInput {
   clientOrderId?: string; paymentAccountId?: number | null;
   customerName?: string | null; customerEmail?: string | null; customerMobile?: string | null;
   note?: string | null; redirectUrl?: string | null;
+  // Per-order QR method (Round 7, API vocabulary: "unique" | "normal").
+  // Overrides the merchant's Settings → QR method for this order only.
+  // Absent = merchant setting (which itself falls back to the env default,
+  // unique). Ignored for sandbox orders, which always pay the plain amount.
+  qrMethod?: "unique" | "normal";
 }
 
 export async function createOrder(input: CreateOrderInput) {
@@ -123,14 +129,19 @@ export async function createOrder(input: CreateOrderInput) {
     throw new ApiError(422, "payment_account_id is not allowed for sandbox orders.");
   }
   const expiresAt = new Date(Date.now() + gatewayConfig.orderExpiryMinutes * 60 * 1000).toISOString();
-  // QR method for live orders (merchant setting, env defaults before
-  // migration 013). Sandbox always pays the plain amount.
+  // QR method for live orders: merchant setting first, then the per-order
+  // override (Round 7). Sandbox always pays the plain amount.
   let qrMethod: QrMethod = gatewayConfig.qrMethod;
   let qrIncrementPaise = gatewayConfig.qrIncrementPaise;
   if (input.environment === "live") {
     const settings = await getMerchantQrSettings(sql, input.userId);
     qrMethod = settings.method;
     qrIncrementPaise = settings.incrementPaise;
+    // Per-order override wins over the merchant setting; absent = keep the
+    // setting (API compatibility — old clients never send qr_method).
+    // "normal" is the API spelling of the internal/DB "same".
+    if (input.qrMethod === "unique") qrMethod = "unique";
+    else if (input.qrMethod === "normal") qrMethod = "same";
   }
   const basePaise = toPaiseStrict(input.amount);
   const useUnique = input.environment === "live" && qrMethod === "unique";
@@ -143,19 +154,57 @@ export async function createOrder(input: CreateOrderInput) {
         ${input.note ?? null}, ${input.redirectUrl ?? null}, ${expiresAt}, ${expiresAt})
       RETURNING *`;
     const order = (rows as import("./types").OrderRow[])[0];
-    // DAILY-LIMIT RACE (best-effort guard): resolveAccount checked the
-    // limit before the insert, but two concurrent creates can both pass
-    // that check. Re-check after the insert — usedToday now includes this
-    // just-inserted pending order — and delete the order again when the
-    // account is over its limit. This is best-effort on the Neon HTTP
-    // driver: a true serializable guard is not available (no multi-
-    // statement FOR UPDATE transaction across awaits — see lib/db.ts),
-    // so a narrow race window remains; the check still closes the common
-    // case where the limit was already exceeded before this request.
+    // DAILY-LIMIT RACE (best-effort guard, hardened Round 7 — G10):
+    // resolveAccount checked the limit before the insert, but two
+    // concurrent creates can both pass that check. The re-check and the
+    // delete are therefore ONE conditional DELETE statement: the limit test
+    // lives inside the statement's WHERE clause, so no concurrent insert
+    // or expiry can slip between the check and the delete (the old two-step
+    // SELECT-then-DELETE had that window — the SELECT could pass while a
+    // concurrent insert pushed the account over the limit before the DELETE
+    // ran, and a DELETE that ran after an expiry dropped the total back
+    // under the limit would remove an order that was now within limit).
+    // The DELETE only fires while this order is still 'pending' and the
+    // account total (paid-today + pending + review, the same definition as
+    // usedToday, and including this just-inserted order) is over the limit;
+    // the affected-row count is the verdict — 1 row means this order pushed
+    // the account over and was removed, 0 rows means the account is within
+    // limit and the order stays. Every creation path funnels through
+    // createOrder, so a concurrent create that lands after this statement's
+    // snapshot runs its own guard, which then sees this order.
+    //
+    // RESIDUAL WINDOW (cannot be closed on the Neon HTTP driver — no
+    // multi-statement FOR UPDATE transaction across awaits, see lib/db.ts):
+    // (1) the process crashes, or the guard statement errors, between the
+    // INSERT and the guard — the over-limit order survives; on a guard
+    // error the 422 below is still returned, so the caller is told the
+    // order failed while the row may remain (there is no reconciliation
+    // pass over over-limit pending orders yet); (2) the limit is only
+    // enforced at creation time — a later daily_limit *lowering* does not
+    // retroactively cancel already-created pending orders.
     if (account && account.daily_limit !== null) {
-      const usedAfter = await usedToday(sql, account.id);
-      if (usedAfter > Number(account.daily_limit)) {
-        try { await sql`DELETE FROM orders WHERE id = ${order.id} AND status = 'pending'`; } catch { /* best-effort */ }
+      const limit = Number(account.daily_limit);
+      let deleted = 0;
+      try {
+        const rows = await sql`
+          DELETE FROM orders WHERE id = ${order.id} AND status = 'pending'
+            AND (SELECT COALESCE(SUM(amount), 0) FROM orders
+              WHERE payment_account_id = ${account.id}
+                AND ((status = 'paid' AND paid_at >= (NOW() AT TIME ZONE 'Asia/Kolkata')::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+                  OR status IN ('pending', 'review'))) > ${limit}
+          RETURNING id`;
+        deleted = (rows as unknown[]).length;
+      } catch {
+        // Guard statement failed (network/DB error): fall back to a plain
+        // status-guarded delete so a possibly-over-limit order does not
+        // silently survive as a payable link the caller was told failed.
+        // Still reports 422 below.
+        try {
+          const retry = await sql`DELETE FROM orders WHERE id = ${order.id} AND status = 'pending' RETURNING id`;
+          deleted = (retry as unknown[]).length;
+        } catch { /* best-effort */ }
+      }
+      if (deleted > 0) {
         throw new ApiError(422, "This payment account has reached its daily limit.");
       }
     }

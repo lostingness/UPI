@@ -42,8 +42,12 @@ export const gatewayConfig = {
   retentionDays: Math.max(1, num(process.env.WEBHOOK_RETENTION_DAYS, 30)),
   // QR amounts (§13): per-merchant method + allocation tuning. Env values
   // are the platform defaults; a merchant's users-table columns
-  // (qr_method / qr_increment_paise, migration 013) override them.
-  qrMethod: (process.env.GATEWAY_QR_METHOD === "unique" ? "unique" : "same") as "unique" | "same",
+  // (qr_method / qr_increment_paise, migration 013) override them, and a
+  // per-order qr_method on the create call overrides the merchant setting.
+  // DEFAULT IS UNIQUE (Round 7): unique amounts let payments be matched by
+  // amount automatically. Env value "same" opts the platform back to
+  // Normal; anything else (including unset) means unique.
+  qrMethod: (process.env.GATEWAY_QR_METHOD === "same" ? "same" : "unique") as "unique" | "same",
   qrIncrementPaise: clamp(num(process.env.GATEWAY_QR_INCREMENT_PAISE, 1), 1, 99),
   qrMaxAllocationAttempts: Math.max(1, num(process.env.GATEWAY_QR_MAX_ALLOCATION_ATTEMPTS, 100)),
   bcryptRounds: num(process.env.BCRYPT_ROUNDS, 12),

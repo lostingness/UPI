@@ -40,7 +40,7 @@ function inr(amount: string): string {
 
 export function QrSettings() {
   const [settings, setSettings] = useState<QrSettingsData | null>(null);
-  const [method, setMethod] = useState<QrMethod>("same");
+  const [method, setMethod] = useState<QrMethod>("unique");
   const [increment, setIncrement] = useState(1);
   const [allocations, setAllocations] = useState<AllocationItem[]>([]);
   const [allocPage, setAllocPage] = useState(1);
@@ -128,13 +128,13 @@ export function QrSettings() {
         <div>
           <label htmlFor="qr-method" className="label">QR method</label>
           <select id="qr-method" className="input w-auto" value={method} onChange={(e) => setMethod(e.target.value as QrMethod)}>
-            <option value="same">Same amount</option>
-            <option value="unique">Unique amount</option>
+            <option value="same">Normal Amount</option>
+            <option value="unique">Unique Amount</option>
           </select>
           <p className="help">
             {method === "unique"
               ? "Each order gets a distinct payable amount a few paise above the order amount, so payments can be matched by amount"
-              : "Every QR code shows the order amount. Payments are matched by the order reference or UTR review"}
+              : "Normal Amount — every QR code shows the order amount. Payments are matched by the order reference or UTR review"}
           </p>
         </div>
         {method === "unique" && (

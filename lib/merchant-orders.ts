@@ -128,13 +128,17 @@ export async function getMerchantDashboard(userId: number, environment: "live" |
 
 /**
  * Session order-creation ownership check (GAP 1): a payment_account_id that
- * exists but belongs to another merchant is a 403. A nonexistent id is left
+ * exists but belongs to another merchant is a 422. A nonexistent id is left
  * for createOrder/resolveAccount, which rejects it with 422.
+ * Round 7 (L1): was 403 — a 403 vs 422 difference let an attacker
+ * distinguish "account exists, belongs to someone else" (403) from
+ * "account does not exist" (422). Both cases are now 422 with the same
+ * generic message, so existence/ownership cannot be probed.
  */
 export async function assertAccountOwnedBy(userId: number, accountId: number): Promise<void> {
   const sql = getSql();
   const row = first<Row>(await sql`SELECT id, user_id FROM payment_accounts WHERE id = ${accountId}`);
   if (row && Number(row.user_id) !== userId) {
-    throw new ApiError(403, "Payment account does not belong to this merchant.");
+    throw new ApiError(422, "Payment account does not belong to this merchant.");
   }
 }

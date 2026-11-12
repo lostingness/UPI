@@ -1,7 +1,8 @@
 // MOCKED (no DB, no network, no DATABASE_URL).
 // GAP 1 — session-authenticated order creation: works for the owning
-// merchant, 401 without a session, 403 when the payment account belongs to
-// another merchant; same createOrder/idempotency/rate-limit path as the
+// merchant, 401 without a session, 422 when the payment account belongs to
+// another merchant (Round 7 L1: was 403 — the 403-vs-422 difference was an
+// account-existence oracle); same createOrder/idempotency/rate-limit path as the
 // API-key route (idempotency replay tested here).
 // GAP 2 — merchant order list returns only the merchant's own orders;
 // merchant detail is null for another merchant's order; dashboard stats
@@ -93,7 +94,7 @@ describe("GAP 1 — session order creation", () => {
     expect(res.status).toBe(403);
   });
 
-  it("403s when the payment account belongs to another merchant (create never runs)", async () => {
+  it("422s when the payment account belongs to another merchant (create never runs)", async () => {
     const { fn } = fakeSql((sqlText) => {
       if (sqlText.includes("FROM payment_accounts WHERE id")) return [{ id: 5, user_id: 8 }];
       return [];
@@ -104,7 +105,7 @@ describe("GAP 1 — session order creation", () => {
       postReq({ amount: 100, payment_account_id: 5 }),
       { sessionUser: merchant7, createOrderFn: async (input) => { created = true; return baseOrder({ user_id: input.userId }); } },
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(422);
     expect(created).toBe(false);
   });
 

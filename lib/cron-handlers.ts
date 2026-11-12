@@ -8,6 +8,21 @@ import { getSql } from "./db";
 import { dispatchDue } from "./webhooks/dispatcher";
 import { offloadDeliveredPayloads, pruneEligibleLogs } from "./webhooks/retention";
 import { pruneIdempotencyKeys } from "./idempotency";
+import { timingSafeEqual } from "./crypto";
+
+/**
+ * Round 7 (L8): shared cron authorisation. The four /api/cron/* routes used
+ * `===` to compare the Authorization header with `Bearer ${CRON_SECRET}` —
+ * a non-constant-time comparison on a secret. timingSafeEqual is constant
+ * time (and false on length mismatch). Unset secret still fails closed in
+ * production; local dev is the only allowance (same rule as before).
+ */
+export function isCronAuthorized(req: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return process.env.NODE_ENV !== "production";
+  const auth = req.headers.get("authorization") ?? "";
+  return timingSafeEqual(auth, `Bearer ${secret}`);
+}
 
 export async function runOrdersCheckPending() {
   const result = await checkPendingBatch();

@@ -14,6 +14,7 @@ import { LogoutButton } from "./layout-client";
 import { SoundToggle } from "./sound-toggle";
 import { LiquidNav, type LiquidNavLink } from "./liquid-nav";
 import {
+  ArrowUpRight,
   BookOpen,
   Bug,
   CreditCard,
@@ -44,27 +45,70 @@ export function Logo() {
 }
 
 export function SiteFooter() {
+  // Round 7: four columns — brand, Explore (landing anchors), Product
+  // (real app routes) and Developers (real /docs anchors). Every href
+  // resolves to a real route or anchor on this site, except the GitHub
+  // repository link. No contact/support email: none genuine exists, so
+  // none is invented — support goes through the GitHub repo.
+  const linkCls =
+    "touch-manipulation transition-colors duration-150 hover:text-[var(--text)] hover:underline hover:underline-offset-4";
+  const headingCls =
+    "text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]";
   return (
-    <footer className="border-t border-[var(--border)] py-8">
+    <footer className="border-t border-[var(--border)] py-10">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-          <div className="max-w-sm">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div>
             <Logo />
-            <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-[var(--muted)]">
               Self-hosted UPI payments for Indian merchants. Money goes directly to the merchant&apos;s bank account — the gateway never holds funds.
             </p>
+            <p className="mt-4">
+              <a
+                href="https://github.com/lostingness/UPI"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex touch-manipulation items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-[var(--text)] ring-1 ring-[var(--border)] transition-colors duration-150 hover:bg-[var(--surface-2)]"
+              >
+                GitHub repository
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-[var(--faint)]">
+              Open source under the MIT License. Issues and contributions welcome on GitHub.
+            </p>
           </div>
-          <nav className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm text-[var(--muted)]">
-            <Link href="/#features" className="touch-manipulation hover:text-[var(--text)]">Features</Link>
-            <Link href="/#how" className="touch-manipulation hover:text-[var(--text)]">How it works</Link>
-            <Link href="/#qr" className="touch-manipulation hover:text-[var(--text)]">QR methods</Link>
-            <Link href="/#security" className="touch-manipulation hover:text-[var(--text)]">Security</Link>
-            <Link href="/docs" className="touch-manipulation hover:text-[var(--text)]">API docs</Link>
-            <Link href="/login" className="touch-manipulation hover:text-[var(--text)]">Log in</Link>
-            <Link href="/setup" className="touch-manipulation hover:text-[var(--text)]">Setup</Link>
+          <nav aria-label="Explore">
+            <p className={headingCls}>Explore</p>
+            <ul className="mt-4 space-y-2.5 text-sm text-[var(--muted)]">
+              <li><Link href="/#how" className={linkCls}>How it works</Link></li>
+              <li><Link href="/#qr" className={linkCls}>QR methods</Link></li>
+              <li><Link href="/#features" className={linkCls}>Features</Link></li>
+              <li><Link href="/#pricing" className={linkCls}>Pricing</Link></li>
+              <li><Link href="/#faq" className={linkCls}>FAQ</Link></li>
+            </ul>
+          </nav>
+          <nav aria-label="Product">
+            <p className={headingCls}>Product</p>
+            <ul className="mt-4 space-y-2.5 text-sm text-[var(--muted)]">
+              <li><Link href="/setup" className={linkCls}>Get started</Link></li>
+              <li><Link href="/login" className={linkCls}>Log in</Link></li>
+              <li><Link href="/dashboard" className={linkCls}>Dashboard</Link></li>
+              <li><Link href="/orders/new" className={linkCls}>New payment link</Link></li>
+              <li><Link href="/sandbox" className={linkCls}>Sandbox</Link></li>
+            </ul>
+          </nav>
+          <nav aria-label="Developers">
+            <p className={headingCls}>Developers</p>
+            <ul className="mt-4 space-y-2.5 text-sm text-[var(--muted)]">
+              <li><Link href="/docs" className={linkCls}>API docs</Link></li>
+              <li><Link href="/docs#create-an-order" className={linkCls}>Create an order</Link></li>
+              <li><Link href="/docs#webhooks" className={linkCls}>Webhooks</Link></li>
+              <li><Link href="/docs#errors" className={linkCls}>Errors</Link></li>
+            </ul>
           </nav>
         </div>
-        <div className="mt-8 flex flex-col gap-2 border-t border-[var(--border)] pt-6 text-xs text-[var(--faint)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-2 border-t border-[var(--border)] pt-6 text-xs text-[var(--faint)] sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 UPI Gateway · MIT License</p>
           <p>Developed by Mohit 🩷</p>
         </div>

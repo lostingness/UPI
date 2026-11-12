@@ -25,9 +25,10 @@ import { gatewayConfig } from "../config/gateway";
 import type { OrderRow } from "./types";
 import { originalExpiryDeadline, payableAmountFor } from "./types";
 import type { VerificationResult } from "../verifiers/verification-result";
+import { scrubProviderResponse } from "../verifiers/verification-result";
 import { recordOutboxEvent } from "../webhooks/outbox";
 import { getSql } from "../db";
-import { ApiError } from "../errors";
+import { ApiError, isUniqueViolation } from "../errors";
 import { releaseAllocation } from "./allocations";
 import { notifyOrderEvent } from "../notifications";
 
@@ -78,15 +79,29 @@ export async function markPaidInDb(order: OrderRow, v: VerificationResult, ctx: 
   }
   const sql = getSql();
   const paidAt = (v.occurredAt ?? new Date()).toISOString();
-  const updated = await sql`
+  // G12: scrub the provider response before persisting — credentials and
+  // session tokens must never land in orders.provider_response (the admin
+  // debugger reads it back). The scrub is also applied centrally in
+  // VerificationResult, so this is defence-in-depth for raw values that
+  // arrive here from any other path.
+  const raw = scrubProviderResponse(v.raw);
+  let updated;
+  try {
+    updated = await sql`
     UPDATE orders SET status = 'paid', utr = ${utr}, provider_txn_id = ${v.txnId ?? null},
-      provider_response = ${JSON.stringify(v.raw)}::jsonb, verified_by = 'provider',
+      provider_response = ${JSON.stringify(raw)}::jsonb, verified_by = 'provider',
       paid_at = ${paidAt}, review_note = NULL,
       verification_token = NULL, verification_generation = 0, verification_expires_at = NULL,
       verification_started_at = NULL, verification_node_id = NULL,
       verification_node_instance_id = NULL, verification_process_identity = NULL,
       updated_at = NOW()
     WHERE id = ${order.id} AND status IN ('pending', 'expired') RETURNING id`;
+  } catch (e) {
+    // G4: the orders.utr unique index is the backstop for the clash check
+    // above (existingUtrUsed) — a lost race surfaces as 23505.
+    if (isUniqueViolation(e)) throw new ApiError(409, "This UTR is already used for another order.");
+    throw e;
+  }
   if ((updated as unknown[]).length === 0) {
     // Lost a race: re-read — paid means idempotent no-op, anything else is a conflict.
     const cur = await sql`SELECT status FROM orders WHERE id = ${order.id}`;

@@ -8,6 +8,19 @@
 //   internal id) + amount paise (ctype_digit int) + currency INR + first
 //   COMPLETED paymentDetails entry's rail.utr or transactionId/orderId.
 // HTTP timeout 15 s. Errors → pending, never a throw for not-paid.
+//
+// G6 (Round 7) — RESPONSE SIGNATURE: PhonePe PG v2 status responses are
+// NOT signed. There is no response signature or checksum to verify on the
+// status API: authenticity rests on (a) the OAuth Bearer token (per-merchant
+// client credentials, short-lived), (b) TLS to api.phonepe.com, and (c) the
+// response bindings enforced here (merchantOrderId, exact paise amount,
+// currency, COMPLETED paymentDetails reference). PhonePe DOES sign its
+// server-to-server webhook callbacks (X-VERIFY header, SHA256 of
+// base64(payload) + saltKey + saltIndex) — but this gateway has no webhook
+// receiver for PhonePe; verification is poll-based only. If a PhonePe
+// callback receiver is ever added, it MUST verify X-VERIFY before trusting
+// the payload. Nothing here can (or should) invent a status-response
+// signature check that the API does not provide.
 import { gatewayConfig } from "../config/gateway";
 import { VerificationResult, toPaise, extractRawTimestamp, expectedAmount, type OrderLike, type VerificationResult as VR } from "./verification-result";
 import type { AccountLike, FetchFn } from "./paytm-business";

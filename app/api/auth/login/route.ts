@@ -29,9 +29,17 @@ export async function POST(req: Request) {
         ON CONFLICT (lock_key) DO UPDATE SET fails = EXCLUDED.fails, locked_until = EXCLUDED.locked_until, updated_at = NOW()`;
       throw new ApiError(401, "These credentials do not match our records.");
     };
-    if (!user) return fail();
-    if (!(await verifyPassword(data.password, String(user.password)))) return fail();
-    if (user.is_active !== true) throw new ApiError(403, "Your account has been disabled");
+    if (!user) return await fail();
+    if (!(await verifyPassword(data.password, String(user.password)))) return await fail();
+    // Round 7 (L6): a disabled account with the RIGHT password used to get
+    // a distinct 403 ("Your account has been disabled") — an oracle that
+    // confirms the password is correct. Disabled accounts now fail exactly
+    // like a wrong password: generic 401, same lockout counting.
+    // Also fixed here: fail() was `return`ed without await, so its throw
+    // rejected the handler promise (500 in production) instead of reaching
+    // the try/catch that renders the 401. `return await fail()` keeps the
+    // rejection inside the try block.
+    if (user.is_active !== true) return await fail();
     await sql`DELETE FROM upi_login_attempts WHERE lock_key = ${lockKey}`;
     const token = await createSessionToken({ id: Number(user.id), role: String(user.role), password: String(user.password) });
     await setSessionCookie(token);
