@@ -581,8 +581,10 @@ export default async function Home() {
             </div>
           </section>
 
-          {/* FAQ */}
-          <section id="faq" className="border-t border-[var(--border)] py-12 sm:py-16">
+          {/* FAQ — scroll-mt-24 like every sibling section, so an anchor
+              jump (#faq, linked from the footer + mobile menu) clears the
+              fixed nav instead of landing the section label under it. */}
+          <section id="faq" className="scroll-mt-24 border-t border-[var(--border)] py-12 sm:py-16">
             <div className="mx-auto max-w-6xl px-4 sm:px-6">
               <Reveal><SectionLabel>FAQ</SectionLabel><SectionTitle animated>Questions, answered</SectionTitle></Reveal>
               <div className="mt-8 grid gap-4 md:grid-cols-2">

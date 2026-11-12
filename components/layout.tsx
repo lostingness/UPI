@@ -55,7 +55,12 @@ export function SiteFooter() {
   const headingCls =
     "text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]";
   return (
-    <footer className="border-t border-[var(--border)] py-10">
+    // Keep the fixed bowl-glow atmo (.atmo, z-index 0, full cyan flood past
+    // the statement) covered: without position + z-index + an opaque
+    // background the fixed canvas paints OVER the footer, leaving a ~1000px
+    // content-free cyan band at the bottom of the page in both themes
+    // (footer text invisible). Mirrors .halden-rest.
+    <footer className="relative z-[2] border-t border-[var(--border)] bg-[var(--surface)] py-10">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
