@@ -187,10 +187,14 @@ export function HaldenReveals() {
         // Rise: s = clamp((q-.69)/.74), translateY(.205*(1-s)^2*innerHeight).
         const s = clamp((q - 0.69) / 0.74);
         stmt.style.transform = `translateY(${(0.205 * Math.pow(1 - s, 2) * vh).toFixed(1)}px)`;
-        // Reveal: p = clamp((q-.56)/1.13), spread .16. The statement
-        // section is 200vh (Round 7, was 306vh): the sticky pin runs
-        // q .69 -> 1.69, so p completes exactly at the pin end.
-        const p = clamp((q - 0.56) / 1.13);
+        // Reveal: p = clamp((q-.30)/1.13), spread .16. The reveal starts
+        // as soon as the pin area enters the viewport (q .30) — starting
+        // at .56 left a 400-700px content-free flood band below the hero
+        // while scrolling (phone bug: "blank show ho raha hai"). It
+        // completes at q 1.43, before the pin end (1.69), so the full
+        // statement is readable for the last stretch of the pin. The
+        // statement section is 200vh (Round 7, was 306vh).
+        const p = clamp((q - 0.3) / 1.13);
         if (Math.abs(p - lastStmtP) > 0.0005) {
           lastStmtP = p;
           paintChars(stmtChars, p, 0.16, "#0b1d3a", "#3f7cff", "#ffffff");
@@ -226,15 +230,44 @@ export function HaldenReveals() {
     };
 
     let raf = 0;
+    let watchdog = 0;
     if (reduced) {
       paintHero(performance.now());
       paintScroll();
       window.addEventListener("scroll", paintScroll, { passive: true });
       window.addEventListener("resize", paintScroll);
     } else {
+      // Round 7 (phone bug): this rAF loop is the ONLY painter for the
+      // hero/statement/split letter reveals and the split #row. Two guards
+      // so a stall can never leave text at opacity 0: (1) a bad frame is
+      // caught and the loop re-scheduled — a throw must not kill it;
+      // (2) a watchdog forces every scene to its final state if no frame
+      // has run for 2.5s (loop dead, tab throttled then foregrounded).
+      let lastTickAt = performance.now();
+      const forceFinal = (): void => {
+        if (h1Chars.length > 0) paintChars(h1Chars, 1, 0.35, "#0b1d3a", "#3f7cff", "#ffffff");
+        if (stmtChars.length > 0) {
+          paintChars(stmtChars, 1, 0.16, "#0b1d3a", "#3f7cff", "#ffffff");
+          if (stmt) stmt.style.transform = "none";
+        }
+        if (h2Chars.length > 0) paintChars(h2Chars, 1, 0.35, "#ffffff", "#8fe6f4", "#5c6f92", "#8fe6f4");
+        if (row) row.classList.add("is-visible");
+        if (ship) ship.style.transform = "scale(1)";
+      };
+      watchdog = window.setInterval(() => {
+        if (performance.now() - lastTickAt > 2500) {
+          forceFinal();
+          window.clearInterval(watchdog);
+        }
+      }, 1000);
       const tick = (now: number): void => {
-        if (!heroDone) paintHero(now);
-        paintScroll();
+        lastTickAt = now;
+        try {
+          if (!heroDone) paintHero(now);
+          paintScroll();
+        } catch (err) {
+          console.warn("[halden] reveal frame failed", err);
+        }
         raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
@@ -242,6 +275,7 @@ export function HaldenReveals() {
 
     return () => {
       cancelAnimationFrame(raf);
+      window.clearInterval(watchdog);
       window.removeEventListener("scroll", paintScroll);
       window.removeEventListener("resize", paintScroll);
       document.body.classList.remove("ready");
@@ -290,17 +324,43 @@ export function LetterReveal({
       t.style.transitionDelay = `${Math.min(i * step, 900)}ms`;
     });
     el.classList.add(variant === "word" ? "lr-armed-word" : "lr-armed");
+    // Round 7 (phone bug): the observer is the primary path, but a missed
+    // or dead IntersectionObserver must never leave text at opacity 0.
+    // Fallback 1 — scroll/resize check: if the element is in view, reveal
+    // it even if the observer never fired. Fallback 2 — hard backstop:
+    // reveal unconditionally 8s after mount. Visibility always wins over
+    // the stagger animation.
+    let done = false;
+    let hardTimer = 0;
+    const forceDone = (): void => {
+      if (done) return;
+      done = true;
+      el.classList.add("lr-done");
+      io.disconnect();
+      window.removeEventListener("scroll", onScrollResize);
+      window.removeEventListener("resize", onScrollResize);
+      window.clearTimeout(hardTimer);
+    };
+    const onScrollResize = (): void => {
+      const r = el.getBoundingClientRect();
+      if (r.top < window.innerHeight && r.bottom > 0) forceDone();
+    };
+    window.addEventListener("scroll", onScrollResize, { passive: true });
+    window.addEventListener("resize", onScrollResize);
+    hardTimer = window.setTimeout(forceDone, 8000);
     const io = new IntersectionObserver(
       ([e]) => {
-        if (e.isIntersecting) {
-          el.classList.add("lr-done");
-          io.disconnect();
-        }
+        if (e.isIntersecting) forceDone();
       },
       { threshold: 0.2 },
     );
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      window.removeEventListener("scroll", onScrollResize);
+      window.removeEventListener("resize", onScrollResize);
+      window.clearTimeout(hardTimer);
+    };
   }, [variant]);
 
   return (

@@ -104,9 +104,11 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
 /* --- scene 2: pinned statement --- */
 /* Round 7: 200vh (was 306vh) — the 4-line reveal no longer needs three
    viewports of scrolling to complete; the letter-reveal divisor in
-   letter-reveal.tsx (1.13) is tuned to this height, so the reveal still
-   completes exactly at the pin end. The bowl-flood choreography is
-   untouched: the bowl is near-full flood by the time the split arrives. */
+   letter-reveal.tsx (1.13) is tuned to this height. The reveal starts at
+   q .30 (not .56) so the statement text is already appearing while the
+   hero scrolls away — otherwise the pin area below the hero renders as a
+   content-free flood band. The bowl-flood choreography is untouched: the
+   bowl is near-full flood by the time the split arrives. */
 .statement{position:relative;z-index:1;height:200vh;margin-top:-31vh;pointer-events:none}
 .stmt-pin{position:sticky;top:0;height:100vh}
 #stmt{position:absolute;top:41.5vh;left:0;right:0;margin:0;text-align:center;font-weight:400;font-size:clamp(20px,2.8vw,42px);line-height:1.16;letter-spacing:-.03em;color:var(--ink);white-space:nowrap;will-change:transform}

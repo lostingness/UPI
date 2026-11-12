@@ -173,34 +173,40 @@ export function BowlGlow() {
     let cur = { tip: -0.3, half: 0.3, soft: 0.1 };
 
     const frame = (now: number): void => {
-      const elapsed = now - start;
-      let tip: number;
-      let half: number;
-      let soft: number;
-      if (elapsed < 250) {
-        // Intro hold: pure white page.
-        tip = -0.3;
-        half = 0.3;
-        soft = 0.1;
-        cur = { tip, half, soft };
-      } else if (elapsed < 1300) {
-        // Intro ease (smoothstep) to the q=0 values; cur set directly.
-        const k = sstep((elapsed - 250) / 1050);
-        tip = lerp(-0.3, TIP[0], k);
-        half = lerp(0.3, HALF[0], k);
-        soft = lerp(0.1, SOFT[0], k);
-        cur = { tip, half, soft };
-      } else {
-        const tgt = target();
-        cur.tip += (tgt.tip - cur.tip) * 0.12;
-        cur.half += (tgt.half - cur.half) * 0.12;
-        cur.soft += (tgt.soft - cur.soft) * 0.12;
-        tip = cur.tip;
-        half = cur.half;
-        soft = cur.soft;
-      }
-      if (!document.hidden) {
-        draw(ctx, img, window.innerWidth, window.innerHeight, tip, half, soft, now);
+      // A throw must never kill the loop: a frozen canvas would leave the
+      // flood stuck at its last frame. Re-schedule unconditionally.
+      try {
+        const elapsed = now - start;
+        let tip: number;
+        let half: number;
+        let soft: number;
+        if (elapsed < 250) {
+          // Intro hold: pure white page.
+          tip = -0.3;
+          half = 0.3;
+          soft = 0.1;
+          cur = { tip, half, soft };
+        } else if (elapsed < 1300) {
+          // Intro ease (smoothstep) to the q=0 values; cur set directly.
+          const k = sstep((elapsed - 250) / 1050);
+          tip = lerp(-0.3, TIP[0], k);
+          half = lerp(0.3, HALF[0], k);
+          soft = lerp(0.1, SOFT[0], k);
+          cur = { tip, half, soft };
+        } else {
+          const tgt = target();
+          cur.tip += (tgt.tip - cur.tip) * 0.12;
+          cur.half += (tgt.half - cur.half) * 0.12;
+          cur.soft += (tgt.soft - cur.soft) * 0.12;
+          tip = cur.tip;
+          half = cur.half;
+          soft = cur.soft;
+        }
+        if (!document.hidden) {
+          draw(ctx, img, window.innerWidth, window.innerHeight, tip, half, soft, now);
+        }
+      } catch (err) {
+        console.warn("[bowl] frame failed", err);
       }
       raf = requestAnimationFrame(frame);
     };

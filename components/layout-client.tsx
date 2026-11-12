@@ -229,11 +229,35 @@ export function Reveal({ children, delay = 0, className = "" }: { children: Reac
     const rect = el.getBoundingClientRect();
     if (rect.top < window.innerHeight && rect.bottom > 0) setVisible(true);
     setEnhanced(true);
+    // Round 7 (phone bug): content is visible by default (.reveal has
+    // opacity 1 in globals.css) — this only gates the entrance animation.
+    // Still, a missed/dead observer must not swallow the animation: a
+    // scroll/resize fallback reveals in-view content, plus an 8s backstop.
+    const onScrollResize = (): void => {
+      const r = el.getBoundingClientRect();
+      if (r.top < window.innerHeight && r.bottom > 0) {
+        setVisible(true);
+        window.removeEventListener("scroll", onScrollResize);
+        window.removeEventListener("resize", onScrollResize);
+      }
+    };
+    window.addEventListener("scroll", onScrollResize, { passive: true });
+    window.addEventListener("resize", onScrollResize);
+    const hardTimer = window.setTimeout(() => {
+      setVisible(true);
+      window.removeEventListener("scroll", onScrollResize);
+      window.removeEventListener("resize", onScrollResize);
+    }, 8000);
     const io = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) { setVisible(true); io.disconnect(); }
     }, { threshold: 0.1 });
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      window.removeEventListener("scroll", onScrollResize);
+      window.removeEventListener("resize", onScrollResize);
+      window.clearTimeout(hardTimer);
+    };
   }, []);
   return (
     <div
