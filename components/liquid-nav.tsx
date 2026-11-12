@@ -2,7 +2,10 @@
 //
 // FIXED pill, never sticky, never shrinking: position:fixed, z-50,
 // top:20px (12px mobile), left/right:var(--gut), height 60px (54px
-// mobile). Height, padding and font size NEVER change on scroll — the
+// mobile). Exception (Round 8): on dashboard pages the pill starts
+// after the 256px sidebar (left:calc(256px + var(--gut)) at >=1024px)
+// so it no longer covers the sidebar logo. Height, padding and font
+// size NEVER change on scroll — the
 // Round 5 "niche krte hi chota hota" rule still holds; scrolling only
 // drives the CTA morph (see below), never the pill's size.
 //
@@ -81,7 +84,6 @@ export type LiquidNavLink = {
 const HALDEN_LINKS: { href: string; label: string }[] = [
   { href: "/#features", label: "Features" },
   { href: "/#qr", label: "QR methods" },
-  { href: "/#pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
   { href: "/dashboard", label: "Dashboard" },
 ];
@@ -167,6 +169,41 @@ html.dark #nav .halden-pill{background:rgba(20,26,46,.85);-webkit-backdrop-filte
   #nav .halden-centre{display:flex;}
   #nav .halden-pill{padding-right:10px;}
   #nav details[data-sheet]{display:none;}
+}
+@media (min-width:1024px){
+  /* Round 8: on dashboard pages the fixed pill spans the full viewport
+     (left/right:var(--gut)) and covers the sidebar logo — at 1280px
+     only "UG UP" peeked out from behind the pill (pre-existing, seen
+     in before/after shots alike). The desktop sidebar is 256px wide
+     (w-64, lg:flex in components/layout.tsx), so start the dashboard
+     pill after it; the pill then spans exactly the content column.
+     Landing pages (variant="landing", no sidebar) are untouched. The
+     mobile sheet/backdrop are fixed viewport-relative, so the shift
+     does not move them; the menu summary stays inside the pill.
+     Narrowing the pill costs ~256px, which at 1280px squeezes the
+     centre links into the right cluster ("Dashboard" hid behind the
+     avatar). The pill brand duplicates the sidebar logo (same mark,
+     same home link), so hide it on dashboard pages once the centre
+     links appear (>=1280px): that frees ~170px. It is still not
+     enough at 1280px (30px overlap remained), so the centre links
+     themselves hide on dashboard pages below 1440px — see the rule
+     below. Below 1280px the centre links are hidden anyway, so the
+     brand stays. */
+  #nav[data-variant="dashboard"]{left:calc(256px + var(--gut));}
+}
+@media (min-width:1280px){
+  #nav[data-variant="dashboard"] .halden-brand{display:none;}
+}
+@media (min-width:1280px) and (max-width:1439px){
+  /* Round 8 (nav fix, third half): even with the brand hidden, the
+     narrowed dashboard pill is too tight at 1280px — the centre links
+     overlapped the right cluster by 30px (measured: centre.right=937,
+     right.left=907). The sidebar already carries Dashboard + Docs, and
+     Features / QR methods are landing-page anchors, so hide the centre
+     links on dashboard pages below 1440px. They return at >=1440px,
+     where the pill is wide enough (measured clearance there). Landing
+     pages keep their centre links at every width >=1280px. */
+  #nav[data-variant="dashboard"] .halden-centre{display:none;}
 }
 @media (max-width:820px){
   #nav{top:12px;}
@@ -292,7 +329,7 @@ export function LiquidNav({
           content would jump up ~80px under it. Matches the pill's
           top offset + height (20+60 desktop, 12+54 mobile). */}
       <div className="halden-nav-spacer" aria-hidden="true" />
-      <div id="nav" data-testid="halden-nav" className={ctaOn ? "on" : undefined}>
+      <div id="nav" data-testid="halden-nav" data-variant={variant} className={ctaOn ? "on" : undefined}>
         <div data-testid="liquid-nav-pill" className="halden-pill">
           <Link href="/" className="halden-brand touch-manipulation" aria-label="UPI Gateway — home">
             <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">

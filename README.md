@@ -100,7 +100,7 @@ What the gateway will **never** do: mark an order paid from a UTR alone, from th
 Other facts:
 
 - Orders expire after 15 minutes by default. A late payment can still be caught for 24 hours (grace window) — the pay page says so and keeps checking.
-- Live orders are `ORD…`, sandbox orders are `TST…`. Sandbox orders never touch a provider. The sandbox can pretend to be six outcomes: success, failure, pending, expiry, timeout, invalid reference.
+- Live orders are `ORD…`, sandbox orders are `TST…`. Sandbox orders never touch a provider. The sandbox can pretend to be six outcomes: success, failure, pending, expiry, timeout, invalid reference. Demo payment links ("Try a demo payment", dashboard or landing) are also `TST…` sandbox orders for a fixed ₹10.00 — the demo pay page is labelled DEMO throughout and never moves real money.
 - Amounts: ₹1 to ₹1,00,000, up to 2 decimals.
 - The dashboard has a notification bell: new payments, new orders, UTR submissions, and expiries show up there, with a browser notification for new payments.
 
@@ -117,15 +117,15 @@ Payment sounds are real MP3 files in [`public/sounds/`](public/sounds/) (all und
 
 ## Screenshots
 
-Fresh Round 7 captures (12 November 2026) from a real production build against the real Neon database, with a disposable test merchant (deleted after the capture). Desktop 1280 px, phone 390 px. Taken in this machine's Chromium, so the Inter Tight font (loaded from Google Fonts) shows as a system fallback here; on a real browser the font loads.
+Fresh Round 8 captures (12 November 2026) from a real production build against a local PostgreSQL (same schema as Neon), with a disposable test merchant. Desktop 1280 px, phone 390 px. Taken in this machine's Chromium, so the Bricolage Grotesque / Inter fonts (loaded from Google Fonts) show as a system fallback here; on a real browser the fonts load. The pay screen is unchanged from Round 7, so its capture is reused.
 
 | Landing, desktop | Landing, phone | Pay screen, phone |
 |---|---|---|
-| <img src="docs/screenshots/r7-landing-1280-light.jpg" width="360" alt="Landing page hero, desktop 1280 px"> | <img src="docs/screenshots/r7-landing-390-light.jpg" width="180" alt="Landing page hero, phone 390 px"> | <img src="docs/screenshots/r7-pay-390.jpg" width="180" alt="Pay screen for a real ₹500.01 Unique Amount order, phone 390 px"> |
+| <img src="docs/screenshots/r8-landing-1280-light.jpg" width="360" alt="Landing page hero, desktop 1280 px"> | <img src="docs/screenshots/r8-landing-390-light.jpg" width="180" alt="Landing page hero, phone 390 px"> | <img src="docs/screenshots/r7-pay-390.jpg" width="180" alt="Pay screen for a real ₹500.01 Unique Amount order, phone 390 px"> |
 
-| New order, phone | Dashboard, desktop | Dark split, phone |
+| New order, phone | Dashboard, desktop | Log in, desktop |
 |---|---|---|
-| <img src="docs/screenshots/r7-order-new-390.jpg" width="180" alt="New payment link form with Unique Amount preselected, phone 390 px"> | <img src="docs/screenshots/r7-dashboard-1280.jpg" width="360" alt="Merchant dashboard, desktop 1280 px"> | <img src="docs/screenshots/r7-split-390.jpg" width="180" alt="Dark split section, phone 390 px"> |
+| <img src="docs/screenshots/r8-after-ordernew-390-light.jpg" width="180" alt="New payment link form with Unique Amount preselected, phone 390 px"> | <img src="docs/screenshots/r8-dashboard-1280-light.jpg" width="360" alt="Merchant dashboard with demo payment link card, desktop 1280 px"> | <img src="docs/screenshots/r8-after-login-1280-light.jpg" width="360" alt="Log in page with payment illustration panel, desktop 1280 px"> |
 
 ## Deploy on Vercel
 

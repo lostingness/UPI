@@ -112,6 +112,11 @@ html.dark {
   @keyframes qr-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
   @keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin-slow { to { transform: rotate(360deg); } }
+  /* Round 8: gentle float for the auth illustration's floating groups
+     (shield, coin, receipt card). 6s ease-in-out, staggered via --d.
+     The global prefers-reduced-motion rule below collapses it. */
+  @keyframes float-soft { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  .auth-float { animation: float-soft 6s ease-in-out infinite; animation-delay: var(--d, 0s); }
   @keyframes sheet-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
   .animate-rise { animation: rise-in 400ms var(--ease-out) both; animation-delay: var(--d, 0ms); }
   .animate-qr { animation: qr-in 300ms var(--ease-out) both; }

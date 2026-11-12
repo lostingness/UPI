@@ -80,7 +80,8 @@ export function LoginForm() {
         // (falls back to the synth chime). Register/confirm forms: no sound.
         if (res.ok) { playLoginSuccessMp3(); router.push(next.startsWith("/") ? next : "/dashboard"); }
       }}
-      className="space-y-5"
+      className="animate-rise space-y-5"
+      style={{ "--d": "80ms" } as React.CSSProperties}
     >
       <FormMessage message={form.message} ok={false} />
       <div>
@@ -95,7 +96,9 @@ export function LoginForm() {
           autoComplete="current-password" placeholder="••••••••" />
         <FieldError errors={form.errors} name="password" />
       </div>
-      <button className="btn btn-primary w-full py-2.5" disabled={form.pending}>
+      {/* Round 8: btn-accent — the landing CTA token (white on
+          --accent-strong is 5.18:1, AA in both themes). */}
+      <button className="btn btn-accent w-full py-2.5" disabled={form.pending}>
         {form.pending ? "Logging in…" : "Log in →"}
       </button>
     </form>
@@ -115,7 +118,8 @@ export function RegisterForm() {
         const res = await form.submit("/api/auth/register", v);
         if (res.ok) router.push("/accounts/new");
       }}
-      className="space-y-4"
+      className="animate-rise space-y-4"
+      style={{ "--d": "80ms" } as React.CSSProperties}
     >
       <FormMessage message={form.message} ok={false} />
       <div className="grid gap-4 sm:grid-cols-2">
@@ -152,7 +156,9 @@ export function RegisterForm() {
           <FieldError errors={form.errors} name="password_confirmation" />
         </div>
       </div>
-      <button className="btn btn-primary w-full py-2.5" disabled={form.pending}>
+      {/* Round 8: btn-accent — the landing CTA token (white on
+          --accent-strong is 5.18:1, AA in both themes). */}
+      <button className="btn btn-accent w-full py-2.5" disabled={form.pending}>
         {form.pending ? "Creating account…" : "Create account →"}
       </button>
       <p className="text-center text-xs text-[var(--muted)]">Payments go directly to your UPI account. We never hold your funds.</p>

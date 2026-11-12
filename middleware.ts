@@ -143,5 +143,7 @@ export const config = {
   // Round 7 (G8): CSP matcher extended to /setup, /sandbox, /docs,
   // /confirm-password and /logout (bare + subpaths). API routes keep no
   // CSP — JSON responses need none.
-  matcher: ["/", "/login", "/login/:path*", "/register", "/register/:path*", "/dashboard", "/dashboard/:path*", "/admin", "/admin/:path*", "/orders", "/orders/:path*", "/accounts", "/accounts/:path*", "/settings", "/settings/:path*", "/pay/:path*", "/setup", "/setup/:path*", "/sandbox", "/sandbox/:path*", "/docs", "/docs/:path*", "/confirm-password", "/confirm-password/:path*", "/logout", "/logout/:path*"],
+  // Round 8: "/demo" + "/demo/:path*" — the demo pay page gets the same
+  // CSP header as /pay and /sandbox (public page, no auth gate).
+  matcher: ["/", "/login", "/login/:path*", "/register", "/register/:path*", "/dashboard", "/dashboard/:path*", "/admin", "/admin/:path*", "/orders", "/orders/:path*", "/accounts", "/accounts/:path*", "/settings", "/settings/:path*", "/pay/:path*", "/demo", "/demo/:path*", "/setup", "/setup/:path*", "/sandbox", "/sandbox/:path*", "/docs", "/docs/:path*", "/confirm-password", "/confirm-password/:path*", "/logout", "/logout/:path*"],
 };

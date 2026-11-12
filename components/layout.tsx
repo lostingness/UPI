@@ -14,12 +14,10 @@ import { LogoutButton } from "./layout-client";
 import { SoundToggle } from "./sound-toggle";
 import { LiquidNav, type LiquidNavLink } from "./liquid-nav";
 import {
-  ArrowUpRight,
   BookOpen,
   Bug,
   CreditCard,
   FlaskConical,
-  IndianRupee,
   Info,
   LayoutDashboard,
   ListOrdered,
@@ -47,9 +45,9 @@ export function Logo() {
 export function SiteFooter() {
   // Round 7: four columns — brand, Explore (landing anchors), Product
   // (real app routes) and Developers (real /docs anchors). Every href
-  // resolves to a real route or anchor on this site, except the GitHub
-  // repository link. No contact/support email: none genuine exists, so
-  // none is invented — support goes through the GitHub repo.
+  // resolves to a real route or anchor on this site. Round 8: no GitHub
+  // repository link anywhere in the UI. No contact/support email: none
+  // genuine exists, so none is invented.
   const linkCls =
     "touch-manipulation transition-colors duration-150 hover:text-[var(--text)] hover:underline hover:underline-offset-4";
   const headingCls =
@@ -68,19 +66,8 @@ export function SiteFooter() {
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-[var(--muted)]">
               Self-hosted UPI payments for Indian merchants. Money goes directly to the merchant&apos;s bank account — the gateway never holds funds.
             </p>
-            <p className="mt-4">
-              <a
-                href="https://github.com/lostingness/UPI"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex touch-manipulation items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-[var(--text)] ring-1 ring-[var(--border)] transition-colors duration-150 hover:bg-[var(--surface-2)]"
-              >
-                GitHub repository
-                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-              </a>
-            </p>
-            <p className="mt-3 text-xs leading-relaxed text-[var(--faint)]">
-              Open source under the MIT License. Issues and contributions welcome on GitHub.
+            <p className="mt-4 text-xs leading-relaxed text-[var(--faint)]">
+              Open source under the MIT License.
             </p>
           </div>
           <nav aria-label="Explore">
@@ -89,7 +76,6 @@ export function SiteFooter() {
               <li><Link href="/#how" className={linkCls}>How it works</Link></li>
               <li><Link href="/#qr" className={linkCls}>QR methods</Link></li>
               <li><Link href="/#features" className={linkCls}>Features</Link></li>
-              <li><Link href="/#pricing" className={linkCls}>Pricing</Link></li>
               <li><Link href="/#faq" className={linkCls}>FAQ</Link></li>
             </ul>
           </nav>
@@ -126,7 +112,6 @@ const PUBLIC_LINKS: LiquidNavLink[] = [
   { href: "/#how", label: "How it works", group: "Explore", icon: <Info className="h-4 w-4" aria-hidden="true" /> },
   { href: "/#qr", label: "QR methods", group: "Explore", icon: <QrCode className="h-4 w-4" aria-hidden="true" /> },
   { href: "/#features", label: "Features", group: "Explore", icon: <Sparkles className="h-4 w-4" aria-hidden="true" /> },
-  { href: "/#pricing", label: "Pricing", group: "Explore", icon: <IndianRupee className="h-4 w-4" aria-hidden="true" /> },
   { href: "/#faq", label: "FAQ", group: "Explore", icon: <MessagesSquare className="h-4 w-4" aria-hidden="true" /> },
   { href: "/docs", label: "Docs", group: "Explore", icon: <BookOpen className="h-4 w-4" aria-hidden="true" /> },
 ];
@@ -313,10 +298,31 @@ export function AppShell({
   );
 }
 
-export function GuestShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+export function GuestShell({
+  title,
+  subtitle,
+  children,
+  illustration,
+  panelTitle,
+  panelBody,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  /** Round 8: optional illustration panel (login/register only). When
+      absent the shell is exactly the old centred single column, so the
+      setup/logout/confirm-password pages are untouched. */
+  illustration?: React.ReactNode;
+  panelTitle?: string;
+  panelBody?: string;
+}) {
   return (
     <div className="flex min-h-screen flex-col">
-      <div className="flex flex-1 items-center justify-center px-4 py-10">
+      <div
+        className={`flex flex-1 items-center justify-center px-4 py-10 ${
+          illustration ? "mx-auto w-full max-w-5xl lg:justify-between lg:gap-12" : ""
+        }`}
+      >
         <div className="animate-rise w-full max-w-md">
           <div className="mb-8 flex flex-col items-center text-center">
             <Logo />
@@ -331,6 +337,20 @@ export function GuestShell({ title, subtitle, children }: { title: string; subti
             UPI Gateway · MIT License · Developed by Mohit 🩷
           </p>
         </div>
+        {illustration && (
+          <div
+            className="animate-rise hidden w-full max-w-md lg:block"
+            style={{ "--d": "120ms" } as React.CSSProperties}
+          >
+            {illustration}
+            {panelTitle && (
+              <h2 className="mt-2 text-2xl font-medium tracking-[-0.02em] text-[var(--text)] sm:text-3xl">
+                {panelTitle}
+              </h2>
+            )}
+            {panelBody && <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--muted)]">{panelBody}</p>}
+          </div>
+        )}
       </div>
     </div>
   );

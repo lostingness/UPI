@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout";
 import { AnimatedCount, AnimatedMoney } from "@/components/layout-client";
 import { DbNotConfigured, StatCard, inr } from "@/components/ui";
+import { DemoLinkButton } from "@/components/demo-link-button";
 import { OrdersTable } from "@/components/orders-table";
 import { dbConfigured, getDashboard, getSessionSafe, requireUser } from "@/components/server-data";
 
@@ -150,6 +151,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
           )}
           <Link href="/orders/new" className="btn btn-primary mt-5 w-full">Create payment link</Link>
+          {/* Round 8: demo payment link — one-click ₹10.00 sandbox order,
+              labelled DEMO throughout. Lives under the real create button
+              in the same card so the two are never confused. */}
+          <div className="mt-3 border-t border-[var(--border)] pt-4">
+            <DemoLinkButton />
+          </div>
         </div>
       </div>
 

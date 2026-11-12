@@ -1,14 +1,15 @@
-// Landing page — Halden rebuild (Round 6, Worker A), Round 7 UI track.
-// Scene order: bowl-glow hero (animated 4-line headline + example-order
-// preview) → pinned statement → dark split (ship) →
-// "Pay via" / "Built with" marquee → how it works → QR methods →
-// features → vs-aggregator → security → developer/API → pricing →
-// FAQ → footer.
+// Landing page — Halden rebuild (Round 6, Worker A), Round 7 UI track,
+// Round 8 landing track.
+// Scene order: bowl-glow hero (animated 4-line headline, in-flow flex —
+// no absolute positioning) → pinned statement → dark
+// split (ship) → "Pay via" / "Built with" rows → how it works → QR
+// methods → features → security → developer/API → FAQ → footer.
 // Every claim below is real: real amounts (₹500.00 → ₹500.01/₹500.02),
 // the real order-number format (ORD…/TST…), the real API example from
 // /docs, real rate limits (1,000/min per key, 600/min per IP). No fake
-// stats, no fictional partners or testimonials anywhere. The hero
-// preview card is labelled an illustration, not a live order.
+// stats, no fictional partners or testimonials anywhere, and no fake
+// order data on the landing at all (the developer example uses the
+// ORD… format placeholder, not a concrete order number).
 // Halden CSS lives in the <style> below (globals.css is off-limits);
 // fonts are Bricolage Grotesque + Inter via app/fonts.css + app/layout.tsx.
 import Link from "next/link";
@@ -17,6 +18,7 @@ import { PublicNav, SiteFooter } from "@/components/layout";
 import { FaqItem, Reveal } from "@/components/layout-client";
 import { getInstallState, getSessionSafe } from "@/components/server-data";
 import { BowlGlow } from "@/components/bowl-glow";
+import { DemoCta } from "@/components/demo-cta";
 import { HaldenCta } from "@/components/halden-cta";
 import { HaldenReveals, LetterReveal, ShipImage } from "@/components/letter-reveal";
 import { LogoMarquee } from "@/components/logo-marquee";
@@ -65,42 +67,26 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
 .hbtn-ghost:hover{background:rgba(11,29,58,.06);box-shadow:inset 0 0 0 1px rgba(11,29,58,.45)}
 .hbtn-ghost:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* --- scene 1: hero --- */
-/* Round 6 integration fix: the hero is 100vh tall BUT sits below the
-   nav's in-flow spacer (80px desktop / 66px mobile), so the old
-   height:100vh pushed the hero bottom 80px past the fold and the CTA
-   (bottom:7.5vh) sat ~20px below the fold at 800px viewport height
-   (measured: CTA bottom 820 vs fold 800; 859 vs 844 at 390px).
-   Subtract the spacer so the hero bottom lands exactly on the fold and
-   the CTA is fully visible. min-height 560px (was 640px) keeps the CTA
-   visible even on short viewports: at 600px height the hero is 560px,
-   its bottom is 640px, and the CTA bottom is 595px — still on screen.
-   Round 7: headline is now the 4-line brief copy (was 2 lines); the
-   trust line is a real supporting description (was tautological); the
-   hero logo grid is gone (it duplicated the marquee) and the freed
-   bottom-right corner holds the example-order preview card. */
-.halden-hero{position:relative;z-index:1;height:calc(100vh - 80px);height:calc(100svh - 80px);min-height:560px}
-#h1{position:absolute;top:20vh;left:var(--gut);right:var(--gut);margin:0;font-family:var(--font-display);font-weight:400;font-size:clamp(34px,4.4vw,64px);line-height:1.03;letter-spacing:-.035em;color:var(--ink);white-space:nowrap}
-/* Round 7 integration: the 380px reserve is the preview card, but the
-   % in max-width resolves against the FULL hero width while the text
-   starts at left:var(--gut) — so the old calc(100% - 380px) let the
-   line run ~106px under the card at 1280px. Subtract both gutters too. */
-.trust{position:absolute;top:58vh;left:var(--gut);right:var(--gut);margin:0;font-size:clamp(15px,1.28vw,19px);letter-spacing:-.015em;color:var(--ink-2);max-width:calc(100% - 380px - 2 * var(--gut))}
-.hero-ctas{position:absolute;left:var(--gut);bottom:7.5vh;display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:calc(100% - 2*var(--gut))}
-/* --- hero preview card: an EXAMPLE order, labelled illustration.
-   Round 7 UI: the QR motif is GONE from the hero (the QR belongs on the
-   pay page, not the landing hero). The card is now a compact order-status
-   strip — order no, amount, unique-QR payable, paid badge — same 340px
-   footprint, so the .trust 380px reserve below stays correct. --- */
-.hero-preview{position:absolute;right:var(--gut);bottom:6vh;width:min(340px,36vw);background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border-radius:20px;padding:14px 16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 16px 40px -18px rgba(11,29,58,.35);color:var(--ink)}
-.hp-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.hp-title{margin:0;font-size:12.5px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
-.hp-tag{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#3b5bdb;background:rgba(91,124,240,.12);border-radius:999px;padding:3px 9px}
-.hp-rows{margin:12px 0 0;display:grid;gap:7px;font-size:12.5px;line-height:1.35}
-.hp-rows dt{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#5a6b8a}
-.hp-rows dd{margin:1px 0 0;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
-.hp-rows .mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;word-break:break-all}
-.hp-foot{margin:12px 0 0;padding-top:10px;border-top:1px solid rgba(11,29,58,.08);display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2)}
-.hp-dot{width:8px;height:8px;border-radius:999px;background:#16a34a;flex:none}
+/* Round 8: the hero is IN-FLOW flex (was absolute-positioned #h1 /
+   .trust / .hero-ctas). Absolute vh positions collided
+   on short viewports — at 1280x600 the trust line sat 4px INTO the
+   headline and the removed card covered "moving." (user's desktop
+   photo, 2026-11-12). In-flow layout makes overlap impossible at any
+   width or height: headline, sub-headline and CTAs stack with a fixed
+   gap, the hero grows (min-height) if the content needs more room, and
+   the headline wraps between words instead of clipping (no
+   white-space:nowrap anywhere on #h1). The card is gone
+   entirely (Round 8, item 2), so no element can collide with the text.
+   The 100svh min-height + the statement's -31vh pull-up are kept, so
+   the bowl-flood choreography below is unchanged. */
+.halden-hero{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center;gap:clamp(18px,3.2vh,30px);min-height:calc(100vh - 80px);min-height:calc(100svh - 80px);padding:clamp(20px,5vh,56px) var(--gut)}
+#h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:clamp(34px,4.4vw,64px);line-height:1.05;letter-spacing:-.035em;color:var(--ink);max-width:100%}
+/* Longest line ("Signed webhooks keep money moving.") measures 962px at
+   1280px / 56px font against 1134px available — 15% spare; at 1440px
+   (64px cap) 1093px vs 1276px available. Wrapping is the backstop, not
+   the plan: a too-long line wraps between words, never clips. */
+.trust{margin:0;font-size:clamp(15px,1.28vw,19px);line-height:1.5;letter-spacing:-.015em;color:var(--ink-2);max-width:36em}
+.hero-ctas{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 /* --- scene 2: pinned statement --- */
 /* Round 7: 200vh (was 306vh) — the 4-line reveal no longer needs three
    viewports of scrolling to complete; the letter-reveal divisor in
@@ -132,17 +118,12 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
 /* --- after the scenes: keep the fixed white atmo covered --- */
 .halden-rest{position:relative;z-index:2;background:var(--surface)}
 @media (max-width:820px){
-  #h1{top:17vh;font-size:7.4vw;white-space:normal}
-  .trust{top:42vh;max-width:none}
-  .hero-ctas{bottom:6vh}
+  #h1{font-size:7.4vw}
   .hbtn.lg{height:52px;padding:0 52px 0 22px;font-size:15px}
   .hbtn.lg .hdot{width:12px;height:12px;right:20px}
   .hbtn.lg .hdot svg{width:14px;height:14px}
   .hbtn.lg:hover .hdot{width:40px;height:40px;right:6px}
   .hbtn-ghost{height:52px;padding:0 22px;font-size:15px}
-  /* Preview card sits in the freed slot between the trust line and the
-     CTAs (portrait phones only — hidden on short/landscape screens). */
-  .hero-preview{left:var(--gut);right:var(--gut);top:52vh;bottom:auto;width:auto;padding:13px 15px}
   #stmt{white-space:normal;font-size:23px;max-width:15em;margin-inline:auto}
   #stmt br{display:none}
   .split{grid-template-columns:1fr;grid-template-rows:auto 70vh}
@@ -150,21 +131,17 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
   #row{grid-template-columns:1fr;padding:3vh 6vw 6vh}
   .split-r{min-height:70vh}
 }
-/* Round 7 (bug 4): landscape / short viewports. The 560px min-height
-   plus the 66px nav spacer put the CTA ~230px below the fold on a
-   ~360px-high landscape phone. Shrink the hero to 300px, pull the
-   headline/trust up, use the compact 48px CTA, and hide the preview
-   card — measured fit at 360px height: CTA occupies page y 304–352,
-   inside the 360px fold. */
+/* Round 7 (bug 4), Round 8: landscape / short viewports. The in-flow
+   hero grows if it must, so the old 560px min-height + 66px spacer
+   squeeze is gone; keep the compact headline and 48px CTA so a ~360px
+   landscape phone still fits the hero in one viewport. */
 @media (max-height:540px){
-  .halden-hero{min-height:300px}
-  #h1{top:7vh;font-size:clamp(24px,4vw,36px)}
-  .trust{top:47vh;font-size:14px;max-width:52vw}
-  .hero-ctas{bottom:4vh}
+  .halden-hero{min-height:300px;gap:14px;padding:12px var(--gut)}
+  #h1{font-size:clamp(24px,4vw,36px)}
+  .trust{font-size:14px}
   .hbtn.lg{height:48px;padding:0 48px 0 20px;font-size:15px}
   .hbtn.lg .hdot{right:18px}
   .hbtn-ghost{height:48px;padding:0 20px;font-size:15px}
-  .hero-preview{display:none}
 }
 `;
 
@@ -225,10 +202,10 @@ const CREATE_ORDER_EXAMPLE = `curl -X POST $APP_URL/api/v1/orders \\
 
 const CREATE_ORDER_RESPONSE = `201 Created
 {
-  "order_id": "ORD20261111A1B2C3",
+  "order_id": "ORD…",
   "amount": "499.00", "currency": "INR",
   "status": "pending",
-  "payment_url": "https://your-gateway.example/pay/ORD20261111A1B2C3",
+  "payment_url": "https://your-gateway.example/pay/ORD…",
   "upi_intent": "upi://pay?pa=merchant@okhdfcbank&pn=Your%20Store&am=499.00&cu=INR&tn=INV-1001"
 }`;
 
@@ -262,28 +239,12 @@ export default async function Home() {
           <div className="hero-ctas fade-up" style={{ "--d": "1.3s" } as React.CSSProperties}>
             <HaldenCta href={ctaHref} label="Get started" large />
             <Link href="/docs" className="hbtn-ghost">View docs</Link>
+            {/* Round 8: demo payment link CTA — same hero CTA row, third
+                button. Logged-in merchants create a ₹10.00 demo link in one
+                click; logged-out visitors go to /login (a demo order needs
+                a merchant to own it). */}
+            <DemoCta loggedIn={!!user} />
           </div>
-          <aside className="hero-preview fade-up" style={{ "--d": "1.45s" } as React.CSSProperties} aria-label="Example order — illustration, not a live payment">
-            <div className="hp-head">
-              <p className="hp-title">Example order</p>
-              <span className="hp-tag">Illustration</span>
-            </div>
-            <dl className="hp-rows">
-              <div>
-                <dt>Order</dt>
-                <dd className="mono">ORD20261111A1B2C3</dd>
-              </div>
-              <div>
-                <dt>Amount</dt>
-                <dd>₹500.00</dd>
-              </div>
-              <div>
-                <dt>Unique QR payable</dt>
-                <dd>₹500.01</dd>
-              </div>
-            </dl>
-            <p className="hp-foot"><span className="hp-dot" aria-hidden="true" /> Paid — provider-verified</p>
-          </aside>
         </section>
 
         {/* Scene 2 — pinned statement, letter-by-letter on scroll.
@@ -407,7 +368,7 @@ export default async function Home() {
                 </div>
               </div>
               <p className="mt-6 text-xs text-[var(--faint)]">
-                Order numbers look like <code className="kbd">ORD20261111A1B2C3</code> for live orders and <code className="kbd">TST…</code> for sandbox orders.
+                Live order numbers start with <code className="kbd">ORD…</code>; sandbox orders start with <code className="kbd">TST…</code>.
               </p>
             </div>
           </section>
@@ -425,40 +386,6 @@ export default async function Home() {
                   </div>
                 </Reveal>
               ))}
-            </div>
-          </section>
-
-          {/* Gateway vs aggregator — honest comparison, no invented numbers. */}
-          <section id="compare" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16">
-            <Reveal><SectionLabel>Why self-hosted</SectionLabel><SectionTitle>Gateway, not aggregator</SectionTitle></Reveal>
-            <p className="mt-3 max-w-2xl text-sm text-[var(--muted)] sm:text-base">
-              Aggregators pool your money and settle later. UPI Gateway routes every payment straight to your own account.
-            </p>
-            <div className="card mt-8 overflow-x-auto">
-              <table className="w-full min-w-[560px] border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--border)]">
-                    <th className="th"> </th>
-                    <th className="th text-[var(--accent-text)]">UPI Gateway</th>
-                    <th className="th">Typical aggregator</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border)]">
-                  {[
-                    ["Where the money goes", "Directly to your bank account", "Aggregator wallet, settled later"],
-                    ["Fees", "None from the gateway", "Per-transaction commission"],
-                    ["Payment confirmation", "Provider status API + UTR review", "Webhook only"],
-                    ["Your data", "On your own database", "On their servers"],
-                    ["Sandbox testing", "Built in, six simulated outcomes", "Often paid or limited"],
-                  ].map(([f, ours, theirs]) => (
-                    <tr key={f} className="transition-colors duration-150 hover:bg-[var(--surface-2)]">
-                      <td className="td font-medium">{f}</td>
-                      <td className="td">{ours}</td>
-                      <td className="td text-[var(--muted)]">{theirs}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </section>
 
@@ -508,34 +435,6 @@ export default async function Home() {
                 <pre className="mt-3 overflow-x-auto font-mono text-xs leading-relaxed text-slate-200">{CREATE_ORDER_EXAMPLE}</pre>
                 <p className="mt-4 font-mono text-xs text-slate-400">Response — 201, payment_url + upi_intent + order_no</p>
                 <pre className="mt-2 overflow-x-auto font-mono text-xs leading-relaxed text-slate-200">{CREATE_ORDER_RESPONSE}</pre>
-              </div>
-            </div>
-          </section>
-
-          {/* Pricing — honest: the gateway itself is free. */}
-          <section id="pricing" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16">
-            <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
-              <div>
-                <Reveal><SectionLabel>Pricing</SectionLabel><SectionTitle animated>Simple and transparent</SectionTitle></Reveal>
-                <p className="mt-3 max-w-sm text-sm leading-relaxed text-[var(--muted)]">
-                  <LetterReveal variant="word">There is no plan, no tier and no per-transaction cut. The costs that exist are the ones you can already see: your hosting, and whatever your bank or PG charges you directly.</LetterReveal>
-                </p>
-              </div>
-              <div className="card p-6 sm:p-8">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-4xl font-medium text-[var(--text)]">₹0.00</span>
-                  <span className="text-sm text-[var(--muted)]">self-hosted · MIT licensed</span>
-                </div>
-                <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-                  UPI Gateway is open source. You host it, you keep your data, and you pay nothing to the gateway.
-                  The only costs are your own hosting and whatever your bank or PG charges you directly.
-                </p>
-                <ul className="mt-5 space-y-2 text-sm text-[var(--text)]">
-                  <li>✓ Unlimited merchants, accounts and orders</li>
-                  <li>✓ Unlimited API calls and webhooks</li>
-                  <li>✓ Sandbox with simulated outcomes</li>
-                  <li>✓ No per-transaction fee, ever</li>
-                </ul>
               </div>
             </div>
           </section>
