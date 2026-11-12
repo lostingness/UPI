@@ -13,7 +13,7 @@ import { encryptText } from "../lib/crypto";
 import {
   issuePayTokens, consumePayToken, verifyPayToken, MemoryPayTokenStore,
   newPayToken, isPayTokenFormat, payTokenExpiryFor, checkoutStartAllowed,
-  hasPgReturnSignal, START_BUDGET_PER_ORDER,
+  START_BUDGET_PER_ORDER,
 } from "../lib/pay-token";
 import { maskUtr, submitCustomerUtr } from "../lib/orders/utr";
 import { scrubProviderResponse } from "../lib/verifiers/verification-result";
@@ -272,6 +272,50 @@ function clearUser() {
   (globalThis as unknown as { __mockSessionCookie?: string }).__mockSessionCookie = undefined;
 }
 
+function formPostReq(url: string, body: string): Request {
+  return new Request(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+}
+
+// Round 10 — forced-check counter, re-based off the verification-lease
+// acquisition. The old counter counted loadAccount queries ("FROM
+// payment_accounts WHERE id"), but the return route now loads the order's
+// account itself to verify a Paytm CHECKSUMHASH, which would inflate that
+// count even when NO provider check runs. A forced check is instead
+// counted by checkOrder's acquireLease attempt ("UPDATE orders SET
+// verification_token = ..."): one per checkOrder(force:true) call. In
+// this fake seam acquireLease always returns [] (no row), so checkOrder
+// returns before calling the provider — the lease attempt is the proxy
+// for "a forced provider check was attempted". (The not-paid clear-lease
+// update starts with "UPDATE orders SET provider_response", so it does
+// not match this prefix; the markPaid-failure clear is never reached
+// here because the fake lease never grants.)
+function countForcedChecks(db: FakeDb): number {
+  return db.queries.filter((q) => q.includes("UPDATE orders SET verification_token")).length;
+}
+
+// Round 10 — genuine Paytm return fixture. The fake Paytm PG account
+// (id 4) carries merchant_key "1234567890123456" (see buildDb). The
+// checksum covers the "|" -joined values of the params sorted by key,
+// excluding CHECKSUMHASH — the same construction the return route
+// verifies (Paytm getChecksumFromArray).
+const PAYTM_TEST_KEY = "1234567890123456";
+function paytmReturnParams(orderNo: string): Record<string, string> {
+  return {
+    MID: "MID123", ORDERID: orderNo, TXNID: "TXN123456", TXNAMOUNT: "100.00",
+    STATUS: "TXN_SUCCESS", RESPCODE: "01", BANKTXNID: "123456789012",
+  };
+}
+function paytmReturnBody(params: Record<string, string>, key: string): string {
+  const keys = Object.keys(params).sort();
+  const payload = keys.map((k) => params[k]).join("|");
+  const checksum = generatePaytmChecksum(payload, key);
+  return new URLSearchParams({ ...params, CHECKSUMHASH: checksum }).toString();
+}
+
 afterEach(() => { __setSqlForTests(null); clearUser(); vi.unstubAllEnvs(); });
 beforeEach(() => { clearUser(); });
 
@@ -378,31 +422,100 @@ describe("Group 12 (cont.) — status is report-only without a token (H2)", () =
   });
   it("return without a PG signal is rate-limited per order (H2): 3 forced checks, then none", async () => {
     const db = installFake(buildDb(PW));
-    const countChecks = () => db.queries.filter((q) => q.includes("FROM payment_accounts WHERE id")).length;
     for (let i = 0; i < 3; i++) {
       const res = await payReturn(getReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return"), paramsFor("ORDAAAAAAAAAAAAAAA"));
       expect(res.status).toBe(307);
     }
-    expect(countChecks()).toBe(3);
+    expect(countForcedChecks(db)).toBe(3);
     const fourth = await payReturn(getReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return"), paramsFor("ORDAAAAAAAAAAAAAAA"));
     expect(fourth.status).toBe(307);
-    expect(countChecks()).toBe(3); // budget spent: no 4th provider check
+    expect(countForcedChecks(db)).toBe(3); // budget spent: no 4th provider check
     expect(db.orders.find((o) => o.id === 1)?.status).toBe("pending");
   });
-  it("return WITH a PG signal forces a check even after the budget is spent", async () => {
+  it("Round 10: a FORGED ?CHECKSUMHASH= after the budget is spent forces NO check", async () => {
+    // The old hasPgReturnSignal() treated the mere presence of this key
+    // as proof of a gateway return and skipped the budget. Now the
+    // durable budget always applies to GET returns.
     const db = installFake(buildDb(PW));
     for (let i = 0; i < 3; i++) {
       await payReturn(getReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return"), paramsFor("ORDAAAAAAAAAAAAAAA"));
     }
+    expect(countForcedChecks(db)).toBe(3);
     const res = await payReturn(getReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return?CHECKSUMHASH=abc123"), paramsFor("ORDAAAAAAAAAAAAAAA"));
     expect(res.status).toBe(307);
-    expect(db.queries.filter((q) => q.includes("FROM payment_accounts WHERE id")).length).toBe(4);
+    expect(countForcedChecks(db)).toBe(3);
+    expect(db.orders.find((o) => o.id === 1)?.status).toBe("pending");
   });
-  it("hasPgReturnSignal detects Paytm / PhonePe return parameters", () => {
-    expect(hasPgReturnSignal(new Request("http://localhost:3000/api/pay/ORDX/return?CHECKSUMHASH=abc"))).toBe(true);
-    expect(hasPgReturnSignal(new Request("http://localhost:3000/api/pay/ORDX/return?transactionId=abc"))).toBe(true);
-    expect(hasPgReturnSignal(new Request("http://localhost:3000/api/pay/ORDX/return"), "TXNID=123")).toBe(true);
-    expect(hasPgReturnSignal(new Request("http://localhost:3000/api/pay/ORDX/return"))).toBe(false);
+  it("Round 10: a FORGED PhonePe-style ?transactionId= after the budget is spent forces NO check", async () => {
+    // PhonePe returns carry no signature to verify, so they ALWAYS go
+    // through the durable budget — no exception.
+    const db = installFake(buildDb(PW));
+    for (let i = 0; i < 3; i++) {
+      await payReturn(getReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return"), paramsFor("ORDAAAAAAAAAAAAAAA"));
+    }
+    expect(countForcedChecks(db)).toBe(3);
+    const res = await payReturn(getReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return?transactionId=abc123"), paramsFor("ORDAAAAAAAAAAAAAAA"));
+    expect(res.status).toBe(307);
+    expect(countForcedChecks(db)).toBe(3);
+    expect(db.orders.find((o) => o.id === 1)?.status).toBe("pending");
+  });
+  it("Round 10: a FORGED POST body CHECKSUMHASH=forged after the budget is spent forces NO check", async () => {
+    const db = installFake(buildDb(PW));
+    db.orders.find((o) => o.id === 1)!.payment_account_id = 4; // Paytm PG
+    for (let i = 0; i < 3; i++) {
+      await payReturn(getReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return"), paramsFor("ORDAAAAAAAAAAAAAAA"));
+    }
+    expect(countForcedChecks(db)).toBe(3);
+    const body = new URLSearchParams({ ...paytmReturnParams("ORDAAAAAAAAAAAAAAA"), CHECKSUMHASH: "forged" }).toString();
+    const res = await payReturnPost(formPostReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return", body), paramsFor("ORDAAAAAAAAAAAAAAA"));
+    expect(res.status).toBe(307);
+    expect(countForcedChecks(db)).toBe(3);
+    // The route DID load the account to attempt verification (4th account
+    // load) — which is exactly why the counter is lease-based, not
+    // loadAccount-based: verification loads must not count as checks.
+    expect(db.queries.filter((q) => q.includes("FROM payment_accounts WHERE id")).length).toBe(4);
+    expect(db.orders.find((o) => o.id === 1)?.status).toBe("pending");
+  });
+  it("Round 10: a GENUINE verified Paytm POST return IS allowed after the budget is spent", async () => {
+    const db = installFake(buildDb(PW));
+    db.orders.find((o) => o.id === 1)!.payment_account_id = 4; // Paytm PG
+    for (let i = 0; i < 3; i++) {
+      await payReturn(getReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return"), paramsFor("ORDAAAAAAAAAAAAAAA"));
+    }
+    expect(countForcedChecks(db)).toBe(3);
+    const body = paytmReturnBody(paytmReturnParams("ORDAAAAAAAAAAAAAAA"), PAYTM_TEST_KEY);
+    const res = await payReturnPost(formPostReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return", body), paramsFor("ORDAAAAAAAAAAAAAAA"));
+    expect(res.status).toBe(307);
+    expect(countForcedChecks(db)).toBe(4); // verified gateway return: allowed outside the budget
+    expect(db.orders.find((o) => o.id === 1)?.status).toBe("pending"); // fake lease never grants, so no provider call runs here
+  });
+  it("Round 10: a Paytm POST with a WRONG checksum falls back to the budget (no 4th check)", async () => {
+    const db = installFake(buildDb(PW));
+    db.orders.find((o) => o.id === 1)!.payment_account_id = 4; // Paytm PG
+    for (let i = 0; i < 3; i++) {
+      await payReturn(getReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return"), paramsFor("ORDAAAAAAAAAAAAAAA"));
+    }
+    expect(countForcedChecks(db)).toBe(3);
+    // Signed with the wrong merchant key: verification fails closed.
+    const body = paytmReturnBody(paytmReturnParams("ORDAAAAAAAAAAAAAAA"), "0000000000000000");
+    const res = await payReturnPost(formPostReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return", body), paramsFor("ORDAAAAAAAAAAAAAAA"));
+    expect(res.status).toBe(307);
+    expect(countForcedChecks(db)).toBe(3);
+    expect(db.orders.find((o) => o.id === 1)?.status).toBe("pending");
+  });
+  it("Round 10: a genuine Paytm checksum for ANOTHER order does not verify for this one", async () => {
+    const db = installFake(buildDb(PW));
+    db.orders.find((o) => o.id === 1)!.payment_account_id = 4; // Paytm PG
+    for (let i = 0; i < 3; i++) {
+      await payReturn(getReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return"), paramsFor("ORDAAAAAAAAAAAAAAA"));
+    }
+    expect(countForcedChecks(db)).toBe(3);
+    // Correctly signed, but ORDERID names a different order: replay fails closed.
+    const body = paytmReturnBody(paytmReturnParams("ORDOTHERORDERXXXXX"), PAYTM_TEST_KEY);
+    const res = await payReturnPost(formPostReq("http://localhost:3000/api/pay/ORDAAAAAAAAAAAAAAA/return", body), paramsFor("ORDAAAAAAAAAAAAAAA"));
+    expect(res.status).toBe(307);
+    expect(countForcedChecks(db)).toBe(3);
+    expect(db.orders.find((o) => o.id === 1)?.status).toBe("pending");
   });
   it("POST return consumes the body for signal detection without breaking the redirect", async () => {
     const db = installFake(buildDb(PW));

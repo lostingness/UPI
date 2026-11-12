@@ -26,6 +26,7 @@ import { toApiArray } from "@/lib/orders/serialize";
 import { acceptsCustomerUtr, canRecoverLatePayment, type OrderRow } from "@/lib/orders/types";
 import { maskUtr } from "@/lib/orders/utr";
 import { issuePayTokens } from "@/lib/pay-token";
+import { isValidPayerSecret } from "@/lib/orders/payer-secret";
 import { gatewayConfig } from "@/lib/config/gateway";
 import { isInstalled } from "@/lib/install";
 import { auditLog } from "@/lib/audit";
@@ -244,7 +245,7 @@ export interface PayData {
   payToken: { utr: string; start: string } | null;
 }
 
-export async function getPayData(orderNo: string): Promise<PayData | null> {
+export async function getPayData(orderNo: string, payerKey?: string | null): Promise<PayData | null> {
   const order = await loadOrderByNo(orderNo);
   if (!order) return null;
   const account = await loadAccount(order.payment_account_id);
@@ -272,12 +273,29 @@ export async function getPayData(orderNo: string): Promise<PayData | null> {
   // knows their own UTR; a link holder sees only the last 4 digits.
   // customer_utr is the payer's own submission, shown back to them.
   const maskedOrder: OrderRow = { ...order, utr: maskUtr(order.utr) };
-  // Round 7 (H1/H2/M1): mint payer-binding tokens for orders that can
-  // still accept a payer action (pending, or expired inside the UTR grace
-  // window). Paid / failed / review orders get no token.
+  // Round 7 (H1/H2/M1) + Round 10 (M1 pay-token:unauthenticated-mint):
+  // mint payer-binding tokens for orders that can still accept a payer
+  // action (pending, or expired inside the UTR grace window). Paid /
+  // failed / review orders get no token. Minting is now gated on the
+  // payer secret (?k= on the merchant-issued payment link): an anonymous
+  // visitor who knows only the order_no gets payToken null, so UTR
+  // submit / hosted-checkout start / forced provider checks stay refused.
+  // Mint when ANY of these holds:
+  //   - sandbox order: exempt (test-only, no real money);
+  //   - legacy live order: payer_secret is NULL (created before this fix
+  //     minted secrets). Bounded migration window — live orders expire
+  //     within ~48h of creation (expiry + late-payment grace), so every
+  //     NULL-secret order ages out on its own; no backfill is needed.
+  //   - the render presented the secret matching the stored one.
+  // The secret itself is never passed to the client (no client prop
+  // carries it; the pay page reads `k` server-side only).
   let payToken: { utr: string; start: string } | null = null;
   if (order.status === "pending" || order.status === "expired") {
-    payToken = await issuePayTokens(sql, order);
+    const mayMint =
+      order.environment === "sandbox" ||
+      order.payer_secret == null ||
+      isValidPayerSecret(payerKey, order.payer_secret);
+    if (mayMint) payToken = await issuePayTokens(sql, order);
   }
   return {
     order: maskedOrder, merchantName, api, hosted, acceptsUtr, canRecover, lateRecoveryUntil: lateUntil, redirectUrl, payToken,

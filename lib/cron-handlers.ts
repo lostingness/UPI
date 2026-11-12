@@ -6,6 +6,7 @@ import { checkPendingBatch } from "./orders/check";
 import { releaseExpiredAllocations } from "./orders/allocations";
 import { getSql } from "./db";
 import { dispatchDue } from "./webhooks/dispatcher";
+import { reconcileMissingPaidEvents } from "./webhooks/outbox";
 import { offloadDeliveredPayloads, pruneEligibleLogs } from "./webhooks/retention";
 import { pruneIdempotencyKeys } from "./idempotency";
 import { timingSafeEqual } from "./crypto";
@@ -33,7 +34,16 @@ export async function runOrdersCheckPending() {
   try { releasedAllocations = await releaseExpiredAllocations(getSql()); } catch { /* best-effort */ }
   return { ...result, released_allocations: releasedAllocations };
 }
-export async function runWebhooksDispatch() { return dispatchDue(); }
+export async function runWebhooksDispatch() {
+  // Round 10 (M3): recover any order.paid event lost after its paid commit
+  // BEFORE dispatch, so a recovered event (available_at = NOW()) can be
+  // dispatched in this same run. Best-effort — a reconciler failure must
+  // never break dispatch; the next run retries.
+  let reconciledPaidEvents = 0;
+  try { reconciledPaidEvents = await reconcileMissingPaidEvents(getSql()); } catch { /* best-effort */ }
+  const dispatchResult = await dispatchDue();
+  return { ...dispatchResult, reconciled_paid_events: reconciledPaidEvents };
+}
 export async function runWebhooksOffload() { return { offloaded: await offloadDeliveredPayloads(100) }; }
 export async function runWebhooksPrune() {
   const logs = await pruneEligibleLogs(100);

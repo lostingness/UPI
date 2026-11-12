@@ -26,6 +26,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ orderNo:
     const account = order.payment_account_id
       ? first<Row>(await sql`SELECT provider, upi_id, payee_name FROM payment_accounts WHERE id = ${order.payment_account_id}`)
       : null;
-    return ok(toApiArray(order, account as never, gatewayConfig.appUrl));
+    return ok(toApiArray(order, account as never, gatewayConfig.appUrl, { includePayerSecret: true }));
   } catch (e) { return handleError(e); }
 }

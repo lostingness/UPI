@@ -66,6 +66,27 @@ export function validateVerificationEvidence(order: OrderRow, v: VerificationRes
   return null;
 }
 
+/** Round 10 (M3) — outbox retry after the paid commit. 3 attempts total
+ * (initial + 2 retries, ~100 ms then ~250 ms backoff). Never throws: on
+ * exhaustion the failure is logged and the caller still returns "paid" —
+ * the payment is real, and reconcileMissingPaidEvents() recovers the event.
+ * Safe to retry: recordOutboxEvent dedupes on transition_key 'paid:{id}'. */
+const OUTBOX_RETRY_DELAYS_MS = [100, 250];
+async function recordPaidOutboxWithRetry(sql: ReturnType<typeof getSql>, paidOrder: OrderRow): Promise<void> {
+  for (let attempt = 0; attempt <= OUTBOX_RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      await recordOutboxEvent(sql, paidOrder, "order.paid");
+      return;
+    } catch (e) {
+      if (attempt === OUTBOX_RETRY_DELAYS_MS.length) {
+        console.error(`[markPaid] order.paid outbox event not recorded after ${attempt + 1} attempts for order ${paidOrder.id}; reconciler will recover it`, e);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, OUTBOX_RETRY_DELAYS_MS[attempt]));
+    }
+  }
+}
+
 /** DB transition: conditional UPDATE (only pending/expired → paid) + outbox insert.
  * Returns "paid" | "already-paid" (idempotent no-op) | throws ApiError on conflict. */
 export async function markPaidInDb(order: OrderRow, v: VerificationResult, ctx: EvidenceContext): Promise<"paid" | "already-paid"> {
@@ -113,7 +134,14 @@ export async function markPaidInDb(order: OrderRow, v: VerificationResult, ctx: 
   // allocation row is kept for audit. A release failure must never undo a
   // confirmed payment — the expiry sweep reclaims it instead.
   try { await releaseAllocation(sql, order.id, "paid"); } catch { /* best-effort */ }
-  await recordOutboxEvent(sql, paidOrder, "order.paid");
+  // Round 10 (M3): the paid commit above is already durable, so a transient
+  // outbox failure must never throw after it — that would surface an error
+  // to the payer for a payment that is already paid, and would not save the
+  // webhook. Retry briefly (the INSERT is idempotent via transition_key
+  // 'paid:{id}'), then log and continue; the daily reconciler
+  // (reconcileMissingPaidEvents, run before dispatch) is the backstop for
+  // any event still missing.
+  await recordPaidOutboxWithRetry(sql, paidOrder);
   // Merchant notification (Round 5, best-effort — never blocks a payment).
   // Only on a real transition: "already-paid" returns before this point,
   // so a re-verified order never chimes twice.

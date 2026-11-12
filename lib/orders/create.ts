@@ -25,6 +25,7 @@ import { ApiError } from "../errors";
 import { gatewayConfig } from "../config/gateway";
 import { decryptText } from "../crypto";
 import { allocatePayableAmount, getMerchantQrSettings, releaseAllocation, toPaiseStrict, paiseToAmount, type QrMethod } from "./allocations";
+import { ensurePayerSecretColumn, newPayerSecret } from "./payer-secret";
 import { notifyOrderEvent } from "../notifications";
 import crypto from "node:crypto";
 
@@ -154,6 +155,20 @@ export async function createOrder(input: CreateOrderInput) {
         ${input.note ?? null}, ${input.redirectUrl ?? null}, ${expiresAt}, ${expiresAt})
       RETURNING *`;
     const order = (rows as import("./types").OrderRow[])[0];
+    // Round 10 (M1): mint the payer secret right after the INSERT, before
+    // the daily-limit guard. Best-effort — if the column is unavailable the
+    // secret stays null and creation MUST still succeed (legacy behaviour:
+    // getPayData mints tokens for NULL-secret orders). Attached to the
+    // in-memory order so both return paths carry it; the unique-QR path's
+    // later UPDATE ... RETURNING * also carries the column, since it was
+    // set before that update ran.
+    try {
+      if (await ensurePayerSecretColumn(sql)) {
+        const secret = newPayerSecret();
+        await sql`UPDATE orders SET payer_secret = ${secret} WHERE id = ${order.id} AND payer_secret IS NULL`;
+        order.payer_secret = secret;
+      }
+    } catch { /* best-effort: secret stays null, creation continues */ }
     // DAILY-LIMIT RACE (best-effort guard, hardened Round 7 — G10):
     // resolveAccount checked the limit before the insert, but two
     // concurrent creates can both pass that check. The re-check and the

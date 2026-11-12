@@ -1,0 +1,1126 @@
+[
+  {
+    "width": 360,
+    "theme": "light",
+    "vw": 360,
+    "vh": 800,
+    "docScrollW": 360,
+    "h1": {
+      "top": 225,
+      "bottom": 393,
+      "left": 21,
+      "right": 339,
+      "w": 319,
+      "h": 168
+    },
+    "trust": {
+      "top": 418,
+      "bottom": 486,
+      "left": 21,
+      "right": 339,
+      "w": 319,
+      "h": 68
+    },
+    "ctas": {
+      "top": 511,
+      "bottom": 627,
+      "left": 21,
+      "right": 339,
+      "w": 319,
+      "h": 116
+    },
+    "hero": {
+      "top": 66,
+      "bottom": 786,
+      "left": 0,
+      "right": 360,
+      "w": 360,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 225,
+        "right": 271,
+        "left": 21
+      },
+      {
+        "top": 253,
+        "right": 306,
+        "left": 21
+      },
+      {
+        "top": 281,
+        "right": 292,
+        "left": 21
+      },
+      {
+        "top": 309,
+        "right": 82,
+        "left": 21
+      },
+      {
+        "top": 337,
+        "right": 292,
+        "left": 21
+      },
+      {
+        "top": 365,
+        "right": 198,
+        "left": 21
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 306,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 360,
+    "theme": "dark",
+    "vw": 360,
+    "vh": 800,
+    "docScrollW": 360,
+    "h1": {
+      "top": 225,
+      "bottom": 393,
+      "left": 21,
+      "right": 339,
+      "w": 319,
+      "h": 168
+    },
+    "trust": {
+      "top": 418,
+      "bottom": 486,
+      "left": 21,
+      "right": 339,
+      "w": 319,
+      "h": 68
+    },
+    "ctas": {
+      "top": 511,
+      "bottom": 627,
+      "left": 21,
+      "right": 339,
+      "w": 319,
+      "h": 116
+    },
+    "hero": {
+      "top": 66,
+      "bottom": 786,
+      "left": 0,
+      "right": 360,
+      "w": 360,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 225,
+        "right": 271,
+        "left": 21
+      },
+      {
+        "top": 253,
+        "right": 306,
+        "left": 21
+      },
+      {
+        "top": 281,
+        "right": 292,
+        "left": 21
+      },
+      {
+        "top": 309,
+        "right": 82,
+        "left": 21
+      },
+      {
+        "top": 337,
+        "right": 292,
+        "left": 21
+      },
+      {
+        "top": 365,
+        "right": 198,
+        "left": 21
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 306,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 390,
+    "theme": "light",
+    "vw": 390,
+    "vh": 800,
+    "docScrollW": 390,
+    "h1": {
+      "top": 218,
+      "bottom": 400,
+      "left": 22,
+      "right": 368,
+      "w": 346,
+      "h": 182
+    },
+    "trust": {
+      "top": 425,
+      "bottom": 493,
+      "left": 22,
+      "right": 368,
+      "w": 346,
+      "h": 68
+    },
+    "ctas": {
+      "top": 518,
+      "bottom": 634,
+      "left": 22,
+      "right": 368,
+      "w": 346,
+      "h": 116
+    },
+    "hero": {
+      "top": 66,
+      "bottom": 786,
+      "left": 0,
+      "right": 390,
+      "w": 390,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 218,
+        "right": 294,
+        "left": 22
+      },
+      {
+        "top": 248,
+        "right": 332,
+        "left": 22
+      },
+      {
+        "top": 278,
+        "right": 316,
+        "left": 22
+      },
+      {
+        "top": 309,
+        "right": 89,
+        "left": 22
+      },
+      {
+        "top": 339,
+        "right": 316,
+        "left": 22
+      },
+      {
+        "top": 369,
+        "right": 215,
+        "left": 22
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 332,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "vw": 390,
+    "vh": 800,
+    "docScrollW": 390,
+    "h1": {
+      "top": 218,
+      "bottom": 400,
+      "left": 22,
+      "right": 368,
+      "w": 346,
+      "h": 182
+    },
+    "trust": {
+      "top": 425,
+      "bottom": 493,
+      "left": 22,
+      "right": 368,
+      "w": 346,
+      "h": 68
+    },
+    "ctas": {
+      "top": 518,
+      "bottom": 634,
+      "left": 22,
+      "right": 368,
+      "w": 346,
+      "h": 116
+    },
+    "hero": {
+      "top": 66,
+      "bottom": 786,
+      "left": 0,
+      "right": 390,
+      "w": 390,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 218,
+        "right": 294,
+        "left": 22
+      },
+      {
+        "top": 248,
+        "right": 332,
+        "left": 22
+      },
+      {
+        "top": 278,
+        "right": 316,
+        "left": 22
+      },
+      {
+        "top": 309,
+        "right": 89,
+        "left": 22
+      },
+      {
+        "top": 339,
+        "right": 316,
+        "left": 22
+      },
+      {
+        "top": 369,
+        "right": 215,
+        "left": 22
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 332,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 768,
+    "theme": "light",
+    "vw": 768,
+    "vh": 800,
+    "docScrollW": 768,
+    "h1": {
+      "top": 173,
+      "bottom": 531,
+      "left": 44,
+      "right": 724,
+      "w": 680,
+      "h": 358
+    },
+    "trust": {
+      "top": 556,
+      "bottom": 601,
+      "left": 44,
+      "right": 584,
+      "w": 540,
+      "h": 45
+    },
+    "ctas": {
+      "top": 627,
+      "bottom": 679,
+      "left": 44,
+      "right": 724,
+      "w": 680,
+      "h": 52
+    },
+    "hero": {
+      "top": 66,
+      "bottom": 786,
+      "left": 0,
+      "right": 768,
+      "w": 768,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 173,
+        "right": 578,
+        "left": 44
+      },
+      {
+        "top": 233,
+        "right": 653,
+        "left": 44
+      },
+      {
+        "top": 292,
+        "right": 623,
+        "left": 44
+      },
+      {
+        "top": 352,
+        "right": 175,
+        "left": 44
+      },
+      {
+        "top": 412,
+        "right": 622,
+        "left": 44
+      },
+      {
+        "top": 471,
+        "right": 423,
+        "left": 44
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 653,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 768,
+    "theme": "dark",
+    "vw": 768,
+    "vh": 800,
+    "docScrollW": 768,
+    "h1": {
+      "top": 173,
+      "bottom": 531,
+      "left": 44,
+      "right": 724,
+      "w": 680,
+      "h": 358
+    },
+    "trust": {
+      "top": 556,
+      "bottom": 601,
+      "left": 44,
+      "right": 584,
+      "w": 540,
+      "h": 45
+    },
+    "ctas": {
+      "top": 627,
+      "bottom": 679,
+      "left": 44,
+      "right": 724,
+      "w": 680,
+      "h": 52
+    },
+    "hero": {
+      "top": 66,
+      "bottom": 786,
+      "left": 0,
+      "right": 768,
+      "w": 768,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 173,
+        "right": 578,
+        "left": 44
+      },
+      {
+        "top": 233,
+        "right": 653,
+        "left": 44
+      },
+      {
+        "top": 292,
+        "right": 623,
+        "left": 44
+      },
+      {
+        "top": 352,
+        "right": 175,
+        "left": 44
+      },
+      {
+        "top": 412,
+        "right": 622,
+        "left": 44
+      },
+      {
+        "top": 471,
+        "right": 423,
+        "left": 44
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 653,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 1024,
+    "theme": "light",
+    "vw": 1024,
+    "vh": 800,
+    "docScrollW": 1024,
+    "h1": {
+      "top": 266,
+      "bottom": 456,
+      "left": 58,
+      "right": 966,
+      "w": 907,
+      "h": 189
+    },
+    "trust": {
+      "top": 481,
+      "bottom": 526,
+      "left": 58,
+      "right": 598,
+      "w": 540,
+      "h": 45
+    },
+    "ctas": {
+      "top": 552,
+      "bottom": 614,
+      "left": 58,
+      "right": 966,
+      "w": 907,
+      "h": 62
+    },
+    "hero": {
+      "top": 80,
+      "bottom": 800,
+      "left": 0,
+      "right": 1024,
+      "w": 1024,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 266,
+        "right": 482,
+        "left": 58
+      },
+      {
+        "top": 314,
+        "right": 541,
+        "left": 58
+      },
+      {
+        "top": 361,
+        "right": 632,
+        "left": 58
+      },
+      {
+        "top": 408,
+        "right": 828,
+        "left": 58
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 828,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 1024,
+    "theme": "dark",
+    "vw": 1024,
+    "vh": 800,
+    "docScrollW": 1024,
+    "h1": {
+      "top": 266,
+      "bottom": 456,
+      "left": 58,
+      "right": 966,
+      "w": 907,
+      "h": 189
+    },
+    "trust": {
+      "top": 481,
+      "bottom": 526,
+      "left": 58,
+      "right": 598,
+      "w": 540,
+      "h": 45
+    },
+    "ctas": {
+      "top": 552,
+      "bottom": 614,
+      "left": 58,
+      "right": 966,
+      "w": 907,
+      "h": 62
+    },
+    "hero": {
+      "top": 80,
+      "bottom": 800,
+      "left": 0,
+      "right": 1024,
+      "w": 1024,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 266,
+        "right": 482,
+        "left": 58
+      },
+      {
+        "top": 314,
+        "right": 541,
+        "left": 58
+      },
+      {
+        "top": 361,
+        "right": 632,
+        "left": 58
+      },
+      {
+        "top": 408,
+        "right": 828,
+        "left": 58
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 828,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 1280,
+    "theme": "light",
+    "vw": 1280,
+    "vh": 800,
+    "docScrollW": 1280,
+    "h1": {
+      "top": 241,
+      "bottom": 477,
+      "left": 73,
+      "right": 1207,
+      "w": 1134,
+      "h": 237
+    },
+    "trust": {
+      "top": 503,
+      "bottom": 552,
+      "left": 73,
+      "right": 663,
+      "w": 590,
+      "h": 49
+    },
+    "ctas": {
+      "top": 577,
+      "bottom": 639,
+      "left": 73,
+      "right": 1207,
+      "w": 1134,
+      "h": 62
+    },
+    "hero": {
+      "top": 80,
+      "bottom": 800,
+      "left": 0,
+      "right": 1280,
+      "w": 1280,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 241,
+        "right": 603,
+        "left": 73
+      },
+      {
+        "top": 300,
+        "right": 676,
+        "left": 73
+      },
+      {
+        "top": 359,
+        "right": 789,
+        "left": 73
+      },
+      {
+        "top": 418,
+        "right": 1035,
+        "left": 73
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 1035,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 1280,
+    "theme": "dark",
+    "vw": 1280,
+    "vh": 800,
+    "docScrollW": 1280,
+    "h1": {
+      "top": 241,
+      "bottom": 477,
+      "left": 73,
+      "right": 1207,
+      "w": 1134,
+      "h": 237
+    },
+    "trust": {
+      "top": 503,
+      "bottom": 552,
+      "left": 73,
+      "right": 663,
+      "w": 590,
+      "h": 49
+    },
+    "ctas": {
+      "top": 578,
+      "bottom": 640,
+      "left": 73,
+      "right": 1207,
+      "w": 1134,
+      "h": 62
+    },
+    "hero": {
+      "top": 80,
+      "bottom": 800,
+      "left": 0,
+      "right": 1280,
+      "w": 1280,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 241,
+        "right": 603,
+        "left": 73
+      },
+      {
+        "top": 300,
+        "right": 676,
+        "left": 73
+      },
+      {
+        "top": 359,
+        "right": 789,
+        "left": 73
+      },
+      {
+        "top": 418,
+        "right": 1035,
+        "left": 73
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 1035,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 1366,
+    "theme": "light",
+    "vw": 1366,
+    "vh": 800,
+    "docScrollW": 1366,
+    "h1": {
+      "top": 231,
+      "bottom": 483,
+      "left": 78,
+      "right": 1288,
+      "w": 1210,
+      "h": 252
+    },
+    "trust": {
+      "top": 509,
+      "bottom": 561,
+      "left": 78,
+      "right": 707,
+      "w": 629,
+      "h": 52
+    },
+    "ctas": {
+      "top": 587,
+      "bottom": 649,
+      "left": 78,
+      "right": 1288,
+      "w": 1210,
+      "h": 62
+    },
+    "hero": {
+      "top": 80,
+      "bottom": 800,
+      "left": 0,
+      "right": 1366,
+      "w": 1366,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 231,
+        "right": 643,
+        "left": 78
+      },
+      {
+        "top": 294,
+        "right": 722,
+        "left": 78
+      },
+      {
+        "top": 357,
+        "right": 842,
+        "left": 78
+      },
+      {
+        "top": 420,
+        "right": 1104,
+        "left": 78
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 1104,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 1366,
+    "theme": "dark",
+    "vw": 1366,
+    "vh": 800,
+    "docScrollW": 1366,
+    "h1": {
+      "top": 231,
+      "bottom": 483,
+      "left": 78,
+      "right": 1288,
+      "w": 1210,
+      "h": 252
+    },
+    "trust": {
+      "top": 509,
+      "bottom": 561,
+      "left": 78,
+      "right": 707,
+      "w": 629,
+      "h": 52
+    },
+    "ctas": {
+      "top": 587,
+      "bottom": 649,
+      "left": 78,
+      "right": 1288,
+      "w": 1210,
+      "h": 62
+    },
+    "hero": {
+      "top": 80,
+      "bottom": 800,
+      "left": 0,
+      "right": 1366,
+      "w": 1366,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 231,
+        "right": 643,
+        "left": 78
+      },
+      {
+        "top": 294,
+        "right": 722,
+        "left": 78
+      },
+      {
+        "top": 357,
+        "right": 842,
+        "left": 78
+      },
+      {
+        "top": 420,
+        "right": 1104,
+        "left": 78
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 1104,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 1440,
+    "theme": "light",
+    "vw": 1440,
+    "vh": 800,
+    "docScrollW": 1440,
+    "h1": {
+      "top": 223,
+      "bottom": 489,
+      "left": 82,
+      "right": 1358,
+      "w": 1276,
+      "h": 266
+    },
+    "trust": {
+      "top": 514,
+      "bottom": 570,
+      "left": 82,
+      "right": 746,
+      "w": 664,
+      "h": 55
+    },
+    "ctas": {
+      "top": 595,
+      "bottom": 657,
+      "left": 82,
+      "right": 1358,
+      "w": 1276,
+      "h": 62
+    },
+    "hero": {
+      "top": 80,
+      "bottom": 800,
+      "left": 0,
+      "right": 1440,
+      "w": 1440,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 223,
+        "right": 678,
+        "left": 82
+      },
+      {
+        "top": 289,
+        "right": 761,
+        "left": 82
+      },
+      {
+        "top": 356,
+        "right": 888,
+        "left": 82
+      },
+      {
+        "top": 422,
+        "right": 1164,
+        "left": 82
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 1164,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  },
+  {
+    "width": 1440,
+    "theme": "dark",
+    "vw": 1440,
+    "vh": 800,
+    "docScrollW": 1440,
+    "h1": {
+      "top": 223,
+      "bottom": 489,
+      "left": 82,
+      "right": 1358,
+      "w": 1276,
+      "h": 266
+    },
+    "trust": {
+      "top": 514,
+      "bottom": 570,
+      "left": 82,
+      "right": 746,
+      "w": 664,
+      "h": 55
+    },
+    "ctas": {
+      "top": 595,
+      "bottom": 657,
+      "left": 82,
+      "right": 1358,
+      "w": 1276,
+      "h": 62
+    },
+    "hero": {
+      "top": 80,
+      "bottom": 800,
+      "left": 0,
+      "right": 1440,
+      "w": 1440,
+      "h": 720
+    },
+    "lines": [
+      {
+        "top": 223,
+        "right": 678,
+        "left": 82
+      },
+      {
+        "top": 289,
+        "right": 761,
+        "left": 82
+      },
+      {
+        "top": 356,
+        "right": 888,
+        "left": 82
+      },
+      {
+        "top": 422,
+        "right": 1164,
+        "left": 82
+      }
+    ],
+    "card": null,
+    "trustOverlapsH1": false,
+    "h1ClipsRight": false,
+    "maxLineRight": 1164,
+    "fontLoaded": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Bricolage Grotesque",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter",
+      "Inter"
+    ]
+  }
+]

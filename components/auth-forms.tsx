@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { FieldError, FormMessage, useApiForm } from "./forms";
 import { unlockAudio } from "@/lib/sounds";
+import { safeNext } from "@/lib/safe-next";
 import { playLoginSuccessMp3, unlockMp3Audio } from "@/lib/mp3-sounds";
 
 /** Password input with a show/hide toggle (Round 7). The toggle is a
@@ -78,7 +79,7 @@ export function LoginForm() {
         const res = await form.submit("/api/auth/login", { email, password });
         // Round 7: MP3 login-success sound only when the login succeeded
         // (falls back to the synth chime). Register/confirm forms: no sound.
-        if (res.ok) { playLoginSuccessMp3(); router.push(next.startsWith("/") ? next : "/dashboard"); }
+        if (res.ok) { playLoginSuccessMp3(); router.push(safeNext(next, "/dashboard")); }
       }}
       className="animate-rise space-y-5"
       style={{ "--d": "80ms" } as React.CSSProperties}
@@ -178,7 +179,7 @@ export function ConfirmPasswordForm() {
       onSubmit={async (e) => {
         e.preventDefault();
         const res = await form.submit("/api/auth/confirm-password", { password });
-        if (res.ok) router.push(next.startsWith("/") ? next : "/admin");
+        if (res.ok) router.push(safeNext(next, "/admin"));
       }}
       className="space-y-5"
     >

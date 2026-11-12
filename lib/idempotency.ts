@@ -19,10 +19,23 @@ import { getSql, isDbConfigured } from "./db";
 import { sha256Hex } from "./crypto";
 import { ApiError } from "./errors";
 
-export interface IdempotencyRecord { key: string; payloadHash: string; responseStatus: number; responseBody: string; }
+export interface IdempotencyRecord { key: string; payloadHash: string; responseStatus: number; responseBody: string; /** ISO timestamp after which the record must not replay; null/undefined = no expiry (legacy rows). */ expiresAt?: string | null; }
 
 /** responseStatus 0 = claim placeholder: the order is still being created. */
 export const IDEMPOTENCY_IN_PROGRESS = 0;
+
+/** Idempotency keys live for 24 h; after that the key is free to reuse. */
+export const IDEMPOTENCY_TTL_MS = 24 * 3600 * 1000;
+
+/** True when the record carries an expiry that has passed. */
+function isExpired(rec: IdempotencyRecord): boolean {
+  return !!rec.expiresAt && Date.parse(rec.expiresAt) <= Date.now();
+}
+
+/** Fresh expiry stamp for a new claim / stored response. */
+function freshExpiresAt(): string {
+  return new Date(Date.now() + IDEMPOTENCY_TTL_MS).toISOString();
+}
 
 export interface IdempotencyStore {
   get(key: string): Promise<IdempotencyRecord | null>;
@@ -34,13 +47,21 @@ export interface IdempotencyStore {
 
 export class MemoryIdempotencyStore implements IdempotencyStore {
   private map = new Map<string, IdempotencyRecord>();
-  async get(key: string) { return this.map.get(key) ?? null; }
+  async get(key: string) {
+    const rec = this.map.get(key);
+    if (!rec) return null;
+    if (isExpired(rec)) { this.map.delete(key); return null; }
+    return rec;
+  }
   async claim(rec: IdempotencyRecord) {
-    if (this.map.has(rec.key)) return false;
-    this.map.set(rec.key, rec); return true;
+    const existing = this.map.get(rec.key);
+    if (existing && !isExpired(existing)) return false;
+    this.map.set(rec.key, { ...rec, expiresAt: rec.expiresAt ?? freshExpiresAt() });
+    return true;
   }
   async put(rec: IdempotencyRecord) {
-    this.map.set(rec.key, rec); return true;
+    this.map.set(rec.key, { ...rec, expiresAt: rec.expiresAt ?? freshExpiresAt() });
+    return true;
   }
 }
 
@@ -80,13 +101,22 @@ export async function pruneIdempotencyKeys(): Promise<number> {
 export class DbIdempotencyStore implements IdempotencyStore {
   async get(key: string) {
     const sql = getSql();
-    const rows = await sql`SELECT key, payload_hash AS "payloadHash", response_status AS "responseStatus", response_body AS "responseBody" FROM upi_idempotency_keys WHERE key = ${key}`;
+    const rows = await sql`SELECT key, payload_hash AS "payloadHash", response_status AS "responseStatus", response_body AS "responseBody", expires_at AS "expiresAt" FROM upi_idempotency_keys WHERE key = ${key} AND (expires_at IS NULL OR expires_at > NOW())`;
     const r = (rows as IdempotencyRecord[])[0];
     return r ?? null;
   }
   async claim(rec: IdempotencyRecord) {
     const sql = getSql();
     const hasExpires = await ensureExpiresColumn(sql);
+    if (hasExpires) {
+      // Clear an expired row for this key first: without this, the
+      // ON CONFLICT DO NOTHING below would lose to the stale row and the
+      // key could never be reclaimed (get() hides expired rows, but the
+      // row still exists for the unique-key conflict).
+      try {
+        await sql`DELETE FROM upi_idempotency_keys WHERE key = ${rec.key} AND expires_at < NOW()`;
+      } catch { /* best-effort; the insert below still decides ownership */ }
+    }
     const rows = hasExpires
       ? await sql`INSERT INTO upi_idempotency_keys (key, payload_hash, response_status, response_body, expires_at)
           VALUES (${rec.key}, ${rec.payloadHash}, ${rec.responseStatus}, ${rec.responseBody}, NOW() + INTERVAL '24 hours')
@@ -126,7 +156,7 @@ export function payloadHash(payload: unknown): string {
  */
 export async function checkIdempotency(store: IdempotencyStore, key: string, payload: unknown): Promise<{ status: number; body: unknown } | null> {
   const existing = await store.get(key);
-  if (!existing) return null;
+  if (!existing || isExpired(existing)) return null; // expired key is free to reuse (also skips the 409 below)
   if (existing.payloadHash !== payloadHash(payload)) {
     throw new ApiError(409, "Idempotency key reused with a different payload");
   }
@@ -158,7 +188,7 @@ export async function claimOrReplay(
 ): Promise<ClaimOutcome> {
   const hash = payloadHash(payload);
   const resolveExisting = async (rec: IdempotencyRecord | null): Promise<ClaimOutcome | null> => {
-    if (!rec) return null;
+    if (!rec || isExpired(rec)) return null; // expired record is absent: no replay, no 409, reclaimable
     if (rec.payloadHash !== hash) {
       throw new ApiError(409, "Idempotency key reused with a different payload");
     }
@@ -170,7 +200,7 @@ export async function claimOrReplay(
   const existing = await store.get(key);
   const replay = await resolveExisting(existing);
   if (replay) return replay;
-  if (!existing) {
+  if (!existing || isExpired(existing)) {
     const claimed = await store.claim({ key, payloadHash: hash, responseStatus: IDEMPOTENCY_IN_PROGRESS, responseBody: "" });
     if (claimed) return { kind: "claimed" };
     // Lost the race: another request claimed between get and claim.
@@ -182,8 +212,8 @@ export async function claimOrReplay(
     const rec = await store.get(key);
     const done = await resolveExisting(rec);
     if (done) return done;
-    if (!rec) {
-      // The claim vanished (pruned?) — try to own the key ourselves.
+    if (!rec || isExpired(rec)) {
+      // The claim vanished (pruned?) or expired — try to own the key ourselves.
       const claimed = await store.claim({ key, payloadHash: hash, responseStatus: IDEMPOTENCY_IN_PROGRESS, responseBody: "" });
       return claimed ? { kind: "claimed" } : { kind: "in-progress" };
     }

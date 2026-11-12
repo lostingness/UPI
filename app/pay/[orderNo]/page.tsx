@@ -22,8 +22,13 @@ export async function generateMetadata({ params }: { params: Promise<{ orderNo: 
   return { title: `Pay — ${orderNo} · UPI Gateway`, robots: { index: false, follow: false } };
 }
 
-export default async function PayPage({ params }: { params: Promise<{ orderNo: string }> }) {
+export default async function PayPage({ params, searchParams }: { params: Promise<{ orderNo: string }>; searchParams?: Promise<{ k?: string | string[] }> }) {
   const { orderNo } = await params;
+  // Round 10 (M1): the payer secret (?k=) is read server-side only and
+  // forwarded to getPayData, which mints pay tokens only when it matches
+  // the order's stored secret. `k` is never passed into any client prop.
+  const sp = searchParams ? await searchParams : {};
+  const payerKey = typeof sp.k === "string" ? sp.k : null;
   if (!dbConfigured()) {
     return (
       <main className="relative flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
@@ -32,7 +37,7 @@ export default async function PayPage({ params }: { params: Promise<{ orderNo: s
       </main>
     );
   }
-  const data = await getPayData(orderNo);
+  const data = await getPayData(orderNo, payerKey);
   if (!data) {
     return (
       <main className="relative flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">

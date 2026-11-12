@@ -1,0 +1,21 @@
+-- 017_payer_secret.sql — Round 10 (M1: pay-token:unauthenticated-mint).
+-- Canonical migration for fresh installs; the column is also lazily
+-- ensured on first order creation (lib/orders/payer-secret.ts
+-- ensurePayerSecretColumn), so a deployed instance self-heals if
+-- `npm run migrate` has not been run yet (same pattern as migration 013
+-- and lib/pay-token.ts ensureCheckoutStartsColumn).
+--
+-- DESIGN: at creation each order gets a random 32-hex payer secret
+-- (orders.payer_secret, NULL on legacy rows created before this fix).
+-- Merchant-facing serializations embed it in the payment URL as
+-- /pay/<order_no>?k=<secret>; the pay page mints payer-binding pay tokens
+-- ONLY when the render presents that secret (components/server-data.ts
+-- getPayData). An anonymous visitor who knows only the order_no gets no
+-- tokens, so UTR griefing, forced provider checks and hosted-checkout
+-- starts stay refused. The QR code encodes a UPI intent URI, NOT the
+-- pay-page URL, so the secret is never leaked by the QR. The secret is
+-- never sent to the pay page's `api` prop or any client prop.
+-- Legacy NULL-secret live orders are a bounded migration window: live
+-- orders expire within ~48h of creation, so they age out on their own.
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payer_secret TEXT;

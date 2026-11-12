@@ -53,3 +53,31 @@ export async function recordOutboxEvent(sql: Sql, order: OrderRow, event: string
   const existing = await sql`SELECT id, event_id, order_id, sequence, transition_key, event, environment, status FROM webhook_outbox WHERE transition_key = ${transitionKey}`;
   return (existing as OutboxRow[])[0] ?? null;
 }
+
+/**
+ * Round 10 (M3) — reconciler for lost order.paid events. The paid commit in
+ * markPaidInDb (and the UTR-review / admin-override paths) records
+ * order.paid via recordOutboxEvent, but if that INSERT fails after the paid
+ * commit the order stays paid with no webhook ever dispatched. This sweep
+ * finds paid orders with NO webhook_outbox row keyed 'paid:{id}' and records
+ * the event for each. Safe for all three paid paths (exactly one event per
+ * paid order is intended everywhere) and idempotent: recordOutboxEvent
+ * dedupes on transition_key (ON CONFLICT DO NOTHING), so a second run
+ * inserts 0. Best-effort per order — one bad row never aborts the sweep.
+ * Returns the number of events recorded. Bounded to 100 orders per run.
+ */
+const RECONCILE_PAID_LIMIT = 100;
+export async function reconcileMissingPaidEvents(sql: Sql): Promise<number> {
+  const missing = await sql`
+    SELECT o.* FROM orders o WHERE o.status = 'paid'
+      AND NOT EXISTS (SELECT 1 FROM webhook_outbox w WHERE w.transition_key = 'paid:' || o.id)
+    ORDER BY o.id ASC LIMIT ${RECONCILE_PAID_LIMIT}`;
+  let recorded = 0;
+  for (const order of missing as OrderRow[]) {
+    try {
+      const row = await recordOutboxEvent(sql, order, "order.paid");
+      if (row) recorded++;
+    } catch { /* best-effort per order — the next run retries */ }
+  }
+  return recorded;
+}

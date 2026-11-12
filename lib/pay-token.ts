@@ -183,28 +183,6 @@ export function payTokenFromRequest(req: Request, body?: unknown): string | null
   return null;
 }
 
-/**
- * PG return-redirect signal (H2): did this request plausibly arrive from a
- * payment gateway (as opposed to someone typing the return URL by hand)?
- * Paytm posts CHECKSUMHASH (+ TXNID); PhonePe redirects with
- * transactionId / merchantTransactionId. The signal only gates whether the
- * return may FORCE a provider check — the return never trusts PG-posted
- * data; the forced check re-verifies server-side against the provider.
- * Anything else falls back to the per-order rate limit below.
- */
-const PG_SIGNAL_KEYS = [
-  "checksumhash", "checksum", "txnid", "txn_id", "transactionid",
-  "merchanttransactionid", "responsecode", "orderid",
-];
-export function hasPgReturnSignal(req: Request, bodyText = ""): boolean {
-  try {
-    const params = new URL(req.url).searchParams;
-    for (const k of params.keys()) if (PG_SIGNAL_KEYS.includes(k.toLowerCase())) return true;
-  } catch { /* ignore */ }
-  const hay = bodyText.toLowerCase();
-  return PG_SIGNAL_KEYS.some((k) => hay.includes(`${k}=`) || hay.includes(`"${k}"`));
-}
-
 // --- In-memory store (tests): same issue / verify / consume semantics. ----
 export class MemoryPayTokenStore {
   private rows: { orderId: number; purpose: PayTokenPurpose; hash: string; expiresAt: number; usedAt: number | null }[] = [];

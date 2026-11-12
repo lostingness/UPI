@@ -17,6 +17,10 @@ export interface OrderRow {
    * Unique-Amount QR. Optional so pre-013 rows / older literals still
    * typecheck — code falls back to `amount` when it is NULL/undefined. */
   payable_amount?: string | null;
+  /** Round 10 (M1): random 32-hex payer secret minted at creation
+   * (migration 017, lib/orders/payer-secret.ts). NULL on legacy orders
+   * created before this fix. Never serialised to the pay page. */
+  payer_secret?: string | null;
   paid_at: string | null; expires_at: string | null; original_expires_at: string | null;
   last_checked_at: string | null; sandbox_simulated_at: string | null;
   webhook_event_sequence: number; verification_token: string | null;

@@ -114,6 +114,7 @@ export async function getMerchantOrderDetail(orderNo: string, userId: number): P
     order,
     account ? { provider: account.provider, upi_id: account.upi_id, payee_name: account.payee_name } : null,
     gatewayConfig.appUrl,
+    { includePayerSecret: true },
   );
   return {
     order, merchantName, webhookHistory, api,

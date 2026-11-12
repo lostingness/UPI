@@ -41,7 +41,7 @@ async function serializeCreatedOrder(order: OrderRow) {
   const account = order.payment_account_id
     ? first<Row>(await getSql()`SELECT provider, upi_id, payee_name FROM payment_accounts WHERE id = ${order.payment_account_id}`)
     : null;
-  return { success: true, data: toApiArray(order, account as never, gatewayConfig.appUrl) };
+  return { success: true, data: toApiArray(order, account as never, gatewayConfig.appUrl, { includePayerSecret: true }) };
 }
 
 async function finishCreate(
