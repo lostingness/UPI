@@ -10,7 +10,7 @@
 // stats, no fictional partners or testimonials anywhere. The hero
 // preview card is labelled an illustration, not a live order.
 // Halden CSS lives in the <style> below (globals.css is off-limits);
-// fonts are Inter Tight via app/fonts.css + app/layout.tsx.
+// fonts are Bricolage Grotesque + Inter via app/fonts.css + app/layout.tsx.
 import Link from "next/link";
 import { CreditCard, FlaskConical, Landmark, ReceiptText, ShieldCheck, Webhook } from "lucide-react";
 import { PublicNav, SiteFooter } from "@/components/layout";
@@ -34,7 +34,7 @@ const SHIP_URL =
 // HaldenReveals after mount), so no-JS / failed-hydration still shows
 // every word.
 const HALDEN_CSS = `
-.halden{--ink:#0b1d3a;--ink-2:#1d2f4f;--accent:#5b7cf0;--dot:#2fe0d0;--panel:#0e1f3d;--panel-line:rgba(255,255,255,.12);--gut:clamp(20px,5.7vw,82px);--ease:cubic-bezier(.22,.7,.2,1);font-family:"Inter Tight",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:clip}
+.halden{--ink:#0b1d3a;--ink-2:#1d2f4f;--accent:#5b7cf0;--dot:#2fe0d0;--panel:#0e1f3d;--panel-line:rgba(255,255,255,.12);--gut:clamp(20px,5.7vw,82px);--ease:cubic-bezier(.22,.7,.2,1);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:clip}
 .atmo{position:fixed;inset:0;z-index:0;pointer-events:none;background:#fff}
 .atmo canvas{position:absolute;inset:0;width:100%;height:100%}
 @keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -79,28 +79,28 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
    hero logo grid is gone (it duplicated the marquee) and the freed
    bottom-right corner holds the example-order preview card. */
 .halden-hero{position:relative;z-index:1;height:calc(100vh - 80px);height:calc(100svh - 80px);min-height:560px}
-#h1{position:absolute;top:20vh;left:var(--gut);right:var(--gut);margin:0;font-weight:400;font-size:clamp(34px,4.4vw,64px);line-height:1.03;letter-spacing:-.035em;color:var(--ink);white-space:nowrap}
+#h1{position:absolute;top:20vh;left:var(--gut);right:var(--gut);margin:0;font-family:var(--font-display);font-weight:400;font-size:clamp(34px,4.4vw,64px);line-height:1.03;letter-spacing:-.035em;color:var(--ink);white-space:nowrap}
 /* Round 7 integration: the 380px reserve is the preview card, but the
    % in max-width resolves against the FULL hero width while the text
    starts at left:var(--gut) — so the old calc(100% - 380px) let the
    line run ~106px under the card at 1280px. Subtract both gutters too. */
 .trust{position:absolute;top:58vh;left:var(--gut);right:var(--gut);margin:0;font-size:clamp(15px,1.28vw,19px);letter-spacing:-.015em;color:var(--ink-2);max-width:calc(100% - 380px - 2 * var(--gut))}
 .hero-ctas{position:absolute;left:var(--gut);bottom:7.5vh;display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:calc(100% - 2*var(--gut))}
-/* --- hero preview card: an EXAMPLE order, labelled illustration --- */
+/* --- hero preview card: an EXAMPLE order, labelled illustration.
+   Round 7 UI: the QR motif is GONE from the hero (the QR belongs on the
+   pay page, not the landing hero). The card is now a compact order-status
+   strip — order no, amount, unique-QR payable, paid badge — same 340px
+   footprint, so the .trust 380px reserve below stays correct. --- */
 .hero-preview{position:absolute;right:var(--gut);bottom:6vh;width:min(340px,36vw);background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border-radius:20px;padding:14px 16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 16px 40px -18px rgba(11,29,58,.35);color:var(--ink)}
 .hp-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .hp-title{margin:0;font-size:12.5px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
 .hp-tag{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#3b5bdb;background:rgba(91,124,240,.12);border-radius:999px;padding:3px 9px}
-.hp-body{display:flex;gap:14px;margin-top:12px;align-items:flex-start}
-.hp-qr{flex:none;width:88px;height:88px;border-radius:10px;background:#fff;padding:7px;box-shadow:inset 0 0 0 1px rgba(11,29,58,.1)}
-.hp-qr svg{display:block;width:100%;height:100%}
-.hp-rows{margin:0;display:grid;gap:7px;font-size:12.5px;line-height:1.35}
+.hp-rows{margin:12px 0 0;display:grid;gap:7px;font-size:12.5px;line-height:1.35}
 .hp-rows dt{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#5a6b8a}
 .hp-rows dd{margin:1px 0 0;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
 .hp-rows .mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;word-break:break-all}
 .hp-foot{margin:12px 0 0;padding-top:10px;border-top:1px solid rgba(11,29,58,.08);display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2)}
 .hp-dot{width:8px;height:8px;border-radius:999px;background:#16a34a;flex:none}
-.hp-note{margin:10px 0 0;font-size:11px;line-height:1.45;color:#5a6b8a}
 /* --- scene 2: pinned statement --- */
 /* Round 7: 200vh (was 306vh) — the 4-line reveal no longer needs three
    viewports of scrolling to complete; the letter-reveal divisor in
@@ -111,12 +111,12 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
    bowl is near-full flood by the time the split arrives. */
 .statement{position:relative;z-index:1;height:200vh;margin-top:-31vh;pointer-events:none}
 .stmt-pin{position:sticky;top:0;height:100vh}
-#stmt{position:absolute;top:41.5vh;left:0;right:0;margin:0;text-align:center;font-weight:400;font-size:clamp(20px,2.8vw,42px);line-height:1.16;letter-spacing:-.03em;color:var(--ink);white-space:nowrap;will-change:transform}
+#stmt{position:absolute;top:41.5vh;left:0;right:0;margin:0;text-align:center;font-family:var(--font-display);font-weight:400;font-size:clamp(20px,2.8vw,42px);line-height:1.16;letter-spacing:-.03em;color:var(--ink);white-space:nowrap;will-change:transform}
 /* --- scene 3: dark split --- */
 .split{position:relative;z-index:2;background:var(--panel);color:#fff;min-height:100vh;display:grid;grid-template-columns:58.3% 41.7%}
 .split-l{position:relative;padding-left:var(--gut)}
 .split-l::before{content:"";position:absolute;left:var(--gut);top:0;bottom:0;width:1px;background:var(--panel-line)}
-#h2{margin:0;padding:21vh 0 0 6.2vw;font-weight:400;font-size:clamp(32px,3.15vw,48px);line-height:1.08;letter-spacing:-.03em;color:#fff}
+#h2{margin:0;padding:21vh 0 0 6.2vw;font-family:var(--font-display);font-weight:400;font-size:clamp(32px,3.15vw,48px);line-height:1.08;letter-spacing:-.03em;color:#fff}
 #row{margin-top:6.4vh;border-top:1px solid var(--panel-line);display:grid;grid-template-columns:1fr 1.05fr;gap:24px;padding:3vh 6vw 0 6.2vw;opacity:0;transform:translateY(14px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
 #row.is-visible{opacity:1;transform:none}
 #row h3{margin:0;font-weight:400;font-size:clamp(17px,1.4vw,21px);color:#fff}
@@ -143,8 +143,6 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
   /* Preview card sits in the freed slot between the trust line and the
      CTAs (portrait phones only — hidden on short/landscape screens). */
   .hero-preview{left:var(--gut);right:var(--gut);top:52vh;bottom:auto;width:auto;padding:13px 15px}
-  .hp-qr{width:84px;height:84px}
-  .hp-note{display:none}
   #stmt{white-space:normal;font-size:23px;max-width:15em;margin-inline:auto}
   #stmt br{display:none}
   .split{grid-template-columns:1fr;grid-template-rows:auto 70vh}
@@ -214,43 +212,6 @@ function SectionTitle({ children, animated = false }: { children: React.ReactNod
   );
 }
 
-/**
- * Decorative QR-style motif for the hero preview card (Round 7). It is
- * NOT a scannable QR code — a fixed 15×15 pattern with finder squares
- * at three corners and deterministic filler. The card is labelled an
- * illustration; nothing here should ever be scanned or paid against.
- */
-function QrMotif() {
-  const N = 15;
-  const cells: { x: number; y: number }[] = [];
-  const finder = (ox: number, oy: number) => {
-    for (let y = 0; y < 7; y++) {
-      for (let x = 0; x < 7; x++) {
-        const edge = x === 0 || x === 6 || y === 0 || y === 6;
-        const core = x >= 2 && x <= 4 && y >= 2 && y <= 4;
-        if (edge || core) cells.push({ x: ox + x, y: oy + y });
-      }
-    }
-  };
-  finder(0, 0);
-  finder(N - 7, 0);
-  finder(0, N - 7);
-  for (let y = 0; y < N; y++) {
-    for (let x = 0; x < N; x++) {
-      const inFinder = (x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8);
-      if (inFinder) continue;
-      if ((x * 7 + y * 13 + 3) % 5 < 2) cells.push({ x, y });
-    }
-  }
-  return (
-    <svg viewBox={`0 0 ${N} ${N}`} aria-hidden="true" focusable="false">
-      {cells.map((c, i) => (
-        <rect key={i} x={c.x} y={c.y} width="1" height="1" fill="#0b1d3a" />
-      ))}
-    </svg>
-  );
-}
-
 const CREATE_ORDER_EXAMPLE = `curl -X POST $APP_URL/api/v1/orders \\
   -H "X-Api-Key: $UPI_API_KEY" \\
   -H "X-Api-Secret: $UPI_API_SECRET" \\
@@ -307,25 +268,21 @@ export default async function Home() {
               <p className="hp-title">Example order</p>
               <span className="hp-tag">Illustration</span>
             </div>
-            <div className="hp-body">
-              <div className="hp-qr" aria-hidden="true"><QrMotif /></div>
-              <dl className="hp-rows">
-                <div>
-                  <dt>Order</dt>
-                  <dd className="mono">ORD20261111A1B2C3</dd>
-                </div>
-                <div>
-                  <dt>Amount</dt>
-                  <dd>₹500.00</dd>
-                </div>
-                <div>
-                  <dt>Unique QR payable</dt>
-                  <dd>₹500.01</dd>
-                </div>
-              </dl>
-            </div>
+            <dl className="hp-rows">
+              <div>
+                <dt>Order</dt>
+                <dd className="mono">ORD20261111A1B2C3</dd>
+              </div>
+              <div>
+                <dt>Amount</dt>
+                <dd>₹500.00</dd>
+              </div>
+              <div>
+                <dt>Unique QR payable</dt>
+                <dd>₹500.01</dd>
+              </div>
+            </dl>
             <p className="hp-foot"><span className="hp-dot" aria-hidden="true" /> Paid — provider-verified</p>
-            <p className="hp-note">Example only — decorative motif, not a scannable QR.</p>
           </aside>
         </section>
 

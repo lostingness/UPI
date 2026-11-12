@@ -112,8 +112,31 @@ function useCountdown(expiresAt: string | null, createdAt: string, onExpire?: ()
   }, [expiresAt]);
   const mm = String(Math.floor(left / 60)).padStart(2, "0");
   const ss = String(left % 60).padStart(2, "0");
-  return { left, display: `${mm}:${ss}` };
+  // Round 7 UI: total is exposed for the TimeBar (fill = left/total).
+  return { left, total, display: `${mm}:${ss}` };
 }
+
+// Round 7 UI — pay-page motion. Tasteful only: icon entrance, check
+// draw-in, waiting dots, sheen sweep, QR frame breathing, urgent-chip
+// pulse. ALL of it is disabled under prefers-reduced-motion. Nothing
+// here touches payment logic — pure presentation.
+const PAY_CSS = `
+@keyframes pay-pop{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
+@keyframes pay-draw{from{stroke-dashoffset:24}to{stroke-dashoffset:0}}
+@keyframes pay-dot{0%,100%{opacity:.35;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+@keyframes pay-sheen{from{transform:translateX(-140%)}to{transform:translateX(240%)}}
+@keyframes pay-breathe{0%,100%{box-shadow:0 0 0 0 rgba(242,101,34,0)}50%{box-shadow:0 0 0 7px rgba(242,101,34,.09)}}
+@keyframes pay-chip{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.pay-pop{animation:pay-pop .45s cubic-bezier(.22,1,.36,1) both}
+.pay-draw{stroke-dasharray:24;stroke-dashoffset:24;animation:pay-draw .5s ease-out .3s forwards}
+.pay-dot{animation:pay-dot 1.1s ease-in-out infinite}
+.pay-dot:nth-child(2){animation-delay:.15s}
+.pay-dot:nth-child(3){animation-delay:.3s}
+.pay-sheen{position:absolute;inset:0;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent);animation:pay-sheen 2.8s ease-in-out infinite}
+.pay-breathe{animation:pay-breathe 3.2s ease-in-out infinite}
+.pay-chip-urgent{animation:pay-chip 1s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.pay-pop,.pay-draw,.pay-dot,.pay-sheen,.pay-breathe,.pay-chip-urgent{animation:none!important}.pay-draw{stroke-dashoffset:0}}
+`;
 
 // Small inline countdown chip (replaces the old 56px timer ring): sits
 // next to the merchant name in the compact header.
@@ -124,7 +147,7 @@ function CountdownChip({ display, left }: { display: string; left: number }) {
       title={urgent ? "Less than a minute left — this QR expires soon" : "Time left before this QR expires"}
       className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 font-mono text-xs font-semibold ring-1 ${
         urgent
-          ? "bg-[var(--accent)]/10 text-[var(--accent-text)] ring-[var(--accent)]/40"
+          ? "pay-chip-urgent bg-[var(--accent)]/10 text-[var(--accent-text)] ring-[var(--accent)]/40"
           : "bg-[var(--surface)] text-[var(--muted)] ring-[var(--border)]"
       }`}
     >
@@ -134,42 +157,75 @@ function CountdownChip({ display, left }: { display: string; left: number }) {
   );
 }
 
+// Thin time-remaining bar under the summary header (pending only).
+// Fill = left/total; turns accent + pulses under 60 s. Pure display —
+// the countdown hook above is the only source of truth.
+function TimeBar({ left, total }: { left: number; total: number }) {
+  const pct = Math.max(0, Math.min(100, (left / Math.max(1, total)) * 100));
+  const urgent = left < 60;
+  return (
+    <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-[var(--surface)] ring-1 ring-[var(--border)]" role="progressbar" aria-valuenow={left} aria-valuemin={0} aria-valuemax={total} aria-label="Time left before this QR expires">
+      <div className={`h-full rounded-full transition-[width] duration-1000 ease-linear ${urgent ? "bg-[var(--accent)]" : "bg-[var(--accent-text)]"}`} style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
 function CopyText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
-      type="button" className="btn btn-secondary btn-sm shrink-0"
+      type="button"
+      className={`btn btn-sm shrink-0 transition-colors ${copied ? "bg-emerald-700 text-white hover:bg-emerald-800" : "btn-secondary"}`}
       onClick={async () => {
         try { await navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ }
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
     >
-      {copied ? "Copied ✓" : "Copy"}
+      {copied ? (
+        <>
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4.5 12.5 5 5 10-11" /></svg>
+          Copied
+        </>
+      ) : "Copy"}
     </button>
   );
 }
 
 // The single row of UPI-app deep links (GPay / PhonePe / Paytm / BHIM).
 // This is the ONLY deep-link block — the old duplicate md:hidden big CTA
-// + 3-button grid was removed in Round 4.
+// + 3-button grid was removed in Round 4. Round 7 UI: larger touch
+// targets, a subtle brand tint per app, hover lift — hrefs unchanged.
+const APP_TINTS: Record<string, string> = {
+  GPay: "bg-[#4285f4]/10 ring-[#4285f4]/30",
+  PhonePe: "bg-[#5f259f]/10 ring-[#5f259f]/30",
+  Paytm: "bg-[#00baf2]/10 ring-[#00baf2]/30",
+  BHIM: "bg-[#ed752e]/10 ring-[#ed752e]/30",
+};
 function AppButtons({ appLinks }: { appLinks: { name: string; href: string; logo: string }[] }) {
   return (
-    <div className="flex flex-wrap justify-center gap-1">
+    <div className="flex flex-wrap justify-center gap-2">
       {appLinks.map((a) => (
-        <a key={a.name} href={a.href} style={{ touchAction: "manipulation" }} className="flex min-h-9 items-center gap-1 rounded-full bg-[var(--surface-2)] px-2.5 py-1.5 text-[11px] font-medium whitespace-nowrap text-[var(--text)] ring-1 ring-[var(--border)] transition hover:brightness-95">
-          <Image src={a.logo} alt={a.name} width={14} height={14} className="rounded-sm" />{a.name}
+        <a key={a.name} href={a.href} style={{ touchAction: "manipulation" }} className={`flex min-h-11 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold whitespace-nowrap text-[var(--text)] ring-1 transition duration-150 hover:-translate-y-0.5 active:scale-[0.97] ${APP_TINTS[a.name] ?? "bg-[var(--surface-2)] ring-[var(--border)]"}`}>
+          <Image src={a.logo} alt={a.name} width={16} height={16} className="rounded-sm" />{a.name}
         </a>
       ))}
     </div>
   );
 }
 
+// Waiting strip — pulsing dots + a slow sheen sweep instead of the old
+// spinner. The text prop is unchanged (status-driven).
 function WaitingStrip({ text }: { text: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--muted)] ring-1 ring-[var(--border)]">
-      <span className="inline-block h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-[var(--faint)] border-t-[var(--accent-text)]" />
+    <div className="relative flex items-center justify-center gap-2.5 overflow-hidden rounded-xl bg-[var(--surface-2)] px-3 py-2.5 text-xs text-[var(--muted)] ring-1 ring-[var(--border)]">
+      <span className="flex shrink-0 gap-1" aria-hidden="true">
+        <span className="pay-dot h-1.5 w-1.5 rounded-full bg-[var(--accent-text)]" />
+        <span className="pay-dot h-1.5 w-1.5 rounded-full bg-[var(--accent-text)]" />
+        <span className="pay-dot h-1.5 w-1.5 rounded-full bg-[var(--accent-text)]" />
+      </span>
       <span className="truncate">{text}</span>
+      <span className="pay-sheen" aria-hidden="true" />
     </div>
   );
 }
@@ -188,7 +244,7 @@ export default function PayClient(props: PayClientProps) {
   // below re-runs and refreshes the status immediately instead of
   // waiting up to 4 s for the next scheduled poll.
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const { display, left } = useCountdown(props.expiresAt, props.createdAt, () => setRefreshNonce((n) => n + 1));
+  const { display, left, total } = useCountdown(props.expiresAt, props.createdAt, () => setRefreshNonce((n) => n + 1));
   const utrForm = useApiForm();
   const [utr, setUtr] = useState("");
 
@@ -281,17 +337,18 @@ export default function PayClient(props: PayClientProps) {
 
   return (
     <div className="grid bg-[var(--surface)] text-[var(--text)] md:grid-cols-5">
+      <style>{PAY_CSS}</style>
       {/* Compact summary header — on mobile this is one tight block (payee,
           amount, countdown chip, one meta line); the old dl rows + timer
           ring block are gone. */}
       <div className="animate-rise bg-[var(--surface-2)] px-4 py-3 md:col-span-2 md:px-5 md:py-5">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--accent-strong)] text-sm font-semibold text-[var(--accent-ink)]">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--accent-strong)] text-sm font-semibold text-[var(--accent-ink)] shadow-[0_2px_10px_-2px_var(--accent-strong)] ring-2 ring-[var(--accent)]/25">
             {(props.merchantName[0] ?? "?").toUpperCase()}
           </span>
           <div className="min-w-0 flex-1">
             <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--faint)]">Paying to</div>
-            <div className="truncate text-sm font-semibold">{props.merchantName}</div>
+            <div className="truncate font-display text-sm font-semibold">{props.merchantName}</div>
           </div>
           {status === "pending" && props.expiresAt && <CountdownChip display={display} left={left} />}
         </div>
@@ -300,7 +357,7 @@ export default function PayClient(props: PayClientProps) {
             <>
               <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-text)]">Pay exactly</div>
               <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
-                <span className="font-mono text-2xl font-semibold leading-none tabular-nums">₹{fmt(payAmount)}</span>
+                <span className="font-display text-[28px] font-bold leading-none tabular-nums">₹{fmt(payAmount)}</span>
                 <span className="font-mono text-xs tabular-nums text-[var(--muted)]">Order ₹{fmt(props.amount)}</span>
               </div>
               <p className="mt-1 text-[11px] leading-snug text-[var(--muted)]">
@@ -310,7 +367,7 @@ export default function PayClient(props: PayClientProps) {
           ) : (
             <>
               <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--faint)]">Amount</div>
-              <div className="mt-0.5 font-mono text-2xl font-semibold leading-none tabular-nums">
+              <div className="mt-0.5 font-display text-[28px] font-bold leading-none tabular-nums">
                 ₹{fmt(props.amount)}
               </div>
             </>
@@ -320,14 +377,15 @@ export default function PayClient(props: PayClientProps) {
         <p className="mt-2 truncate font-mono text-[11px] text-[var(--faint)]">
           {props.orderNo}{props.upiId ? ` · ${props.upiId}` : ""}{props.customerName ? ` · ${props.customerName}` : ""}
         </p>
+        {status === "pending" && props.expiresAt && <TimeBar left={left} total={total} />}
       </div>
 
       {/* Action area */}
       <div className="animate-rise flex flex-col bg-[var(--surface)] px-4 py-3 md:col-span-3 md:px-5 md:py-5">
         {status === "paid" && (
           <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
-            <div className="grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
-              <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="#34d399" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="m8 12.4 2.7 2.7L16.4 9.4" /></svg>
+            <div className="pay-pop grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
+              <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="#34d399" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path className="pay-draw" d="m8 12.4 2.7 2.7L16.4 9.4" /></svg>
             </div>
             <h1 className="mt-3 text-xl font-semibold">Payment successful</h1>
             <p className="mt-1 text-sm text-[var(--muted)]">₹{fmt(payAmount)} paid to {props.merchantName}</p>
@@ -342,7 +400,7 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "review" && (
           <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
-            <div className="grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
+            <div className="pay-pop grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
               <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="#38bdf8" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="M12 7v5.2l3.2 2" /></svg>
             </div>
             <h1 className="mt-3 text-xl font-semibold">Verifying your payment</h1>
@@ -357,7 +415,7 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "expired" && (
           <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
-            <div className="grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
+            <div className="pay-pop grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
               <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="#fbbf24" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
             </div>
             <h1 className="mt-3 text-xl font-semibold">Payment link expired</h1>
@@ -387,7 +445,7 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "failed" && (
           <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
-            <div className="grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
+            <div className="pay-pop grid h-14 w-14 place-items-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
               <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="#f87171" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25" /><path d="m9.2 9.2 5.6 5.6M14.8 9.2l-5.6 5.6" /></svg>
             </div>
             <h1 className="mt-3 text-xl font-semibold">Payment failed</h1>
@@ -397,7 +455,7 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "pending" && props.hosted && (
           <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
-            <div className={`grid h-14 w-14 place-items-center rounded-2xl ${props.pgName === "PhonePe" ? "bg-[#5f259f] text-white" : "bg-[#00baf2] text-[#111111]"}`}>
+            <div className={`pay-pop grid h-14 w-14 place-items-center rounded-2xl ${props.pgName === "PhonePe" ? "bg-[#5f259f] text-white" : "bg-[#00baf2] text-[#111111]"}`}>
               {/* Round 5: white on Paytm #00baf2 is 2.26:1 (FAIL); #111 is 8.37:1.
                   PhonePe #5f259f keeps white (9.33:1). */}
               <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
@@ -429,9 +487,9 @@ export default function PayClient(props: PayClientProps) {
 
         {status === "pending" && !props.hosted && (
           <>
-            <h1 className="hidden text-center text-[15px] font-semibold md:block">Scan &amp; pay with any UPI app</h1>
+            <h1 className="text-center font-display text-[15px] font-semibold">Scan &amp; pay with any UPI app</h1>
             {!qrFailed && props.upiIntent ? (
-              <div className="animate-qr relative mx-auto mt-2.5 rounded-xl bg-white p-2 shadow-[var(--shadow)] ring-1 ring-[var(--border)]">
+              <div className="pay-breathe animate-qr relative mx-auto mt-2.5 rounded-xl bg-white p-2 shadow-[var(--shadow)] ring-1 ring-[var(--border)]">
                 <span className="absolute -left-px -top-px h-4 w-4 rounded-tl-xl border-l-[3px] border-t-[3px] border-[var(--accent)]" />
                 <span className="absolute -right-px -top-px h-4 w-4 rounded-tr-xl border-r-[3px] border-t-[3px] border-[var(--accent)]" />
                 <span className="absolute -bottom-px -left-px h-4 w-4 rounded-bl-xl border-b-[3px] border-l-[3px] border-[var(--accent)]" />
@@ -475,7 +533,7 @@ export function UtrForm({ orderNo, attemptsLeft, reviewNote, payToken }: { order
   const [utr, setUtr] = useState("");
   return (
     <form
-      className="rounded-xl bg-[var(--surface-2)] p-3 text-left ring-1 ring-[var(--border)]"
+      className="rounded-2xl bg-[var(--surface-2)] p-3 text-left ring-1 ring-[var(--border)] transition-shadow focus-within:ring-2 focus-within:ring-[var(--accent-text)]/40"
       onSubmit={async (e) => {
         e.preventDefault();
         // Round 7 (H1): the single-use UTR token travels with the submit.

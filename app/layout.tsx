@@ -1,5 +1,6 @@
-// Root layout — Halden type (Round 6, see app/fonts.css): Inter Tight
-// 400/500/600 loaded at runtime via <link> — NOT next/font/google
+// Root layout — Round 7 UI type (see app/fonts.css): Bricolage
+// Grotesque 400/500/600/700 (display) + Inter 400/500/600 (body/UI),
+// loaded at runtime via <link> — NOT next/font/google
 // (it crashed a Vercel build on another project of his). ThemeScript
 // runs in <head> pre-paint (no theme flash); BlurOverlay mounts once
 // for the click-blur beat.
@@ -10,7 +11,7 @@ import { ThemeScript } from "@/components/theme-script";
 import { BlurOverlay } from "@/components/blur-overlay";
 
 const GOOGLE_FONTS_HREF =
-  "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap";
+  "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap";
 
 export const metadata: Metadata = {
   title: "UPI Gateway",
@@ -31,8 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta name="theme-color" content="#EFEFEF" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#020816" media="(prefers-color-scheme: dark)" />
-        {/* Round 6 Google Fonts — preconnect + stylesheet (Inter Tight
-            only; the Round 5 Fraunces / Space Grotesk / JetBrains Mono
+        {/* Round 7 UI Google Fonts — preconnect + stylesheet
+            (Bricolage Grotesque + Inter; the Round 6 Inter Tight link
+            and the Round 5 Fraunces / Space Grotesk / JetBrains Mono
             links are gone). If the font host is unreachable the
             fonts.css system fallbacks apply and the layout is unchanged.
             CSP allows these hosts in middleware.ts (style-src +

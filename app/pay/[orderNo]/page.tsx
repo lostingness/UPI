@@ -53,10 +53,18 @@ export default async function PayPage({ params }: { params: Promise<{ orderNo: s
   const { order, account } = data;
   const api = data.api as Record<string, unknown>;
   return (
-    <main className="relative flex min-h-screen flex-col bg-[var(--bg)]">
+    <main className="relative flex min-h-screen flex-col overflow-hidden bg-[var(--bg)]">
       <PayThemeToggle />
-      <div className="flex flex-1 items-center justify-center p-3 sm:p-8">
-        <div className="w-full max-w-3xl overflow-hidden rounded-[20px] bg-[var(--surface)] shadow-[var(--shadow)] ring-1 ring-[var(--border)]">
+      {/* Round 7 UI: soft ambient glow behind the checkout card — the
+          same cyan/violet wash as the landing hero, kept faint so the
+          QR stays the focus. Pure decoration, pointer-events none. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-[#5b7cf0]/15 blur-3xl dark:bg-[#5b7cf0]/25" />
+        <div className="absolute -bottom-32 -left-20 h-64 w-96 rounded-full bg-[#2fe0d0]/15 blur-3xl dark:bg-[#2fe0d0]/20" />
+        <div className="absolute -right-20 top-1/3 h-64 w-80 rounded-full bg-[#f26522]/10 blur-3xl dark:bg-[#f26522]/15" />
+      </div>
+      <div className="relative flex flex-1 items-center justify-center p-3 sm:p-8">
+        <div className="w-full max-w-3xl overflow-hidden rounded-[24px] bg-[var(--surface)] shadow-[0_24px_64px_-24px_rgb(11_29_58/0.35)] ring-1 ring-[var(--border)]">
           <div className="h-[3px] bg-gradient-to-r from-[#f93f28] via-[#f2b380] to-[#f93f28]" aria-hidden="true" />
           {/* redirectUrl below is server-allowlisted only (getPayData):
               null unless paid AND redirect_url passes the merchant's
@@ -92,7 +100,7 @@ export default async function PayPage({ params }: { params: Promise<{ orderNo: s
       </div>
       {/* Hidden below md: on a phone the pay screen must fit one viewport,
           and the footer is what pushed it over. Desktop keeps it. */}
-      <footer className="hidden flex-col items-center gap-1.5 pb-6 text-xs text-[var(--faint)] md:flex">
+      <footer className="relative hidden flex-col items-center gap-1.5 pb-6 text-xs text-[var(--faint)] md:flex">
         <div className="flex items-center gap-1.5">
           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
           Secured by <span className="font-medium text-[var(--muted)]">UPI Gateway</span>

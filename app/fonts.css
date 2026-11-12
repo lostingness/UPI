@@ -1,36 +1,42 @@
-/* Round 6 — Halden: Inter Tight everywhere (Worker A).
-   UI text + display + headings: Inter Tight 400/500/600, loaded at
-   runtime via <link> in app/layout.tsx — NOT next/font/google (that
-   crashed a Vercel build on another project of his). This REPLACES the
-   Round 5 Fraunces + Space Grotesk + JetBrains Mono stacks: those font
-   links are gone from layout.tsx. If Google Fonts is unreachable the
+/* Round 7 UI — Bricolage Grotesque (display) + Inter (body/UI).
+   This REPLACES the Round 6 Inter Tight stack (and the Round 5
+   Fraunces + Space Grotesk + JetBrains Mono stacks before it).
+   Why this pairing: Bricolage is a characterful open-source grotesque
+   with distinctive letterforms (open apertures, quirky 'a'/'g') that
+   gives headlines a recognisable voice at large sizes without going
+   decorative — it reads as a payment product, not a poster. Inter is
+   the neutral, highly readable UI standard for body text, labels and
+   amounts-adjacent copy. Both load at runtime via <link> in
+   app/layout.tsx — NOT next/font/google (that crashed a Vercel build
+   on another project of his). If Google Fonts is unreachable the
    stacks below fall back to system fonts and the layout is unchanged.
    Mono (amounts, order IDs, keys, code) is a plain system stack now —
    no Google font — so code stays tabular without a font download.
    This file is imported AFTER globals.css, so these unlayered :root rules
    win over the @theme system stacks in globals.css (unlayered author CSS
-   beats layered CSS). Do NOT move these rules into globals.css — another
-   worker owns that file. */
+   beats layered CSS). Do NOT move these rules into globals.css. */
 :root {
-  --font-sans: "Inter Tight", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Inter Tight", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Bricolage Grotesque", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
-/* Body + UI text use Inter Tight. Tailwind's preflight inherits the
+/* Body + UI text use Inter. Tailwind's preflight inherits the
    font from <html>; set it explicitly on <body> so it is certain. */
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Headings + wordmark use Inter Tight (no serif any more). */
+/* Headings + wordmark use Bricolage Grotesque. Bricolage runs a touch
+   wider than Inter Tight, so headings track slightly tighter (-0.02em)
+   to keep the same line lengths. */
 h1,
 h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 /* Amounts, IDs and keys read in system mono: anything tabular-numeric
