@@ -18,7 +18,7 @@ It is built for:
 - **Developers** who want a simple `POST /api/v1/orders` API, signed webhooks, and a sandbox to test with — no real money, no provider calls.
 - **Anyone who wants to own their data** — orders, accounts, and logs live in your own Neon Postgres database.
 
-Tech: Next.js 16 + TypeScript (App Router) on Vercel, Neon Postgres, no Supabase, no PHP. This is a port of the Laravel 12 original ([`mynkdev-21/upi-gateway`](https://github.com/mynkdev-21/upi-gateway), MIT, commit `7189511`).
+Tech: Next.js 16 + TypeScript (App Router) on Vercel, Neon Postgres, no Supabase, no PHP.
 
 ## The one rule
 
@@ -239,12 +239,11 @@ npm test            # vitest run
 
 ## License
 
-MIT — Copyright (c) 2026 Mayank Singh; Copyright (c) 2026 Mohsin Khan. See [`LICENSE`](LICENSE).
+MIT — Copyright (c) 2026 Mohit. See [`LICENSE`](LICENSE).
 
 ## Credits
 
-- Original Laravel 12 project: [`mynkdev-21/upi-gateway`](https://github.com/mynkdev-21/upi-gateway) (MIT) — this is a Next.js + TypeScript + Neon Postgres port of that work, keeping its verification rules, webhook format, and API shape.
-- The live deployment, redesign, and this port were built for the merchant-facing release by Mohit.
+The live deployment, redesign, and this port were built for the merchant-facing release by Mohit.
 
 ---
 
