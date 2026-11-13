@@ -51,7 +51,12 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
 .lr-armed-word.lr-done .hl-word{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.lr-armed .hl-char,.lr-armed-word .hl-word{opacity:1!important;transform:none!important;transition:none}}
 /* --- dot-arrow button --- */
-.hbtn{position:relative;display:inline-flex;align-items:center;height:42px;padding:0 46px 0 18px;border-radius:999px;background:var(--ink);color:#fff;font-size:13.5px;font-weight:500;letter-spacing:-.01em;white-space:nowrap;text-decoration:none;touch-action:manipulation}
+.hbtn{position:relative;display:inline-flex;align-items:center;height:42px;padding:0 46px 0 18px;border-radius:999px;background:var(--ink);color:#fff;font-size:13.5px;font-weight:500;letter-spacing:-.01em;white-space:nowrap;text-decoration:none;touch-action:manipulation;box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 8px 24px -12px rgba(11,29,58,.35)}
+/* Round 11: liquid-glass sheen on the solid primary CTA — a top-edge
+   radial highlight only (the fill stays opaque navy, so no
+   backdrop-filter here); the label span sits above the sheen. */
+.hbtn::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(90% 70% at 50% 0%,rgba(255,255,255,.28),rgba(255,255,255,0) 60%)}
+.hbtn>span:not(.hdot){position:relative;z-index:1}
 .hbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hdot{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:999px;background:var(--dot);box-shadow:0 0 10px rgba(47,224,208,.7);display:grid;place-items:center;transition:width .45s var(--ease),height .45s var(--ease),right .45s var(--ease),box-shadow .45s var(--ease)}
 .hdot svg{width:12px;height:12px;opacity:0;transform:translateX(-4px);transition:opacity .3s ease .05s,transform .3s ease .05s}
@@ -62,9 +67,33 @@ body.ready .fade-up{animation:fu .9s var(--ease) var(--d,0s) both}
 .hbtn.lg .hdot svg{width:16px;height:16px}
 .hbtn.lg:hover .hdot{width:48px;height:48px;right:7px}
 /* --- secondary ghost CTA (Round 7, "View docs") --- */
-.hbtn-ghost{display:inline-flex;align-items:center;height:62px;padding:0 28px;border-radius:999px;background:transparent;color:var(--ink);font-size:17px;font-weight:500;letter-spacing:-.01em;text-decoration:none;box-shadow:inset 0 0 0 1px rgba(11,29,58,.25);transition:background .3s var(--ease),box-shadow .3s var(--ease);touch-action:manipulation;white-space:nowrap}
-.hbtn-ghost:hover{background:rgba(11,29,58,.06);box-shadow:inset 0 0 0 1px rgba(11,29,58,.45)}
+/* Round 11: liquid glass — the hero is always light (the bowl canvas),
+   so the tint is white-based in BOTH themes (a dark --surface tint
+   would put dark ink text on a dark chip in dark mode). Translucent
+   white + blur + specular insets + gradient border; the refraction
+   gradient sits at the top edge, under the text. */
+.hbtn-ghost{position:relative;display:inline-flex;align-items:center;height:62px;padding:0 28px;border-radius:999px;background:radial-gradient(120% 100% at 50% 0%,rgba(255,255,255,.7),rgba(255,255,255,0) 55%),rgba(255,255,255,.72);-webkit-backdrop-filter:blur(16px) saturate(1.5);backdrop-filter:blur(16px) saturate(1.5);color:var(--ink);font-size:17px;font-weight:500;letter-spacing:-.01em;text-decoration:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(11,29,58,.06),0 8px 24px -12px rgba(11,29,58,.18);transition:background .3s var(--ease),box-shadow .3s var(--ease);touch-action:manipulation;white-space:nowrap}
+.hbtn-ghost::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.8),rgba(255,255,255,.1) 40%,rgba(11,29,58,.08) 75%,rgba(255,255,255,.4));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;}
+.hbtn-ghost:hover{background:radial-gradient(120% 100% at 50% 0%,rgba(255,255,255,.85),rgba(255,255,255,0) 55%),rgba(255,255,255,.82);box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -1px 0 rgba(11,29,58,.08),0 8px 24px -12px rgba(11,29,58,.22)}
 .hbtn-ghost:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* Round 11: real refraction on the ghost CTA backdrop only (same
+   @supports guard as the nav pill — Chrome 158 and Firefox honour
+   url() in backdrop-filter; Safari fails the test and keeps the
+   blur-only rule, so the blur is never lost).
+   The filter is defined inline in the JSX below. */
+@supports (backdrop-filter:url(#halden-liquid-refract)){.hbtn-ghost{backdrop-filter:url(#halden-liquid-refract) blur(16px) saturate(1.5);}}
+/* --- Round 11: liquid glass for landing cards --- */
+/* .card-glass layers OVER the global .card (kept, so the solid card
+   remains the fallback): translucent surface + blur + specular insets
+   + gradient border via mask-composite. Scoped under .halden, so
+   dashboard / pay / auth cards are untouched. The blur reads subtly
+   here — the sections sit on solid --surface — the material comes
+   through the translucency, highlights and edge. No animation, no
+   shimmer, so nothing to disable under prefers-reduced-motion. */
+.halden .card-glass{position:relative;background:color-mix(in srgb,var(--surface) 72%,transparent);-webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -1px 0 rgba(0,0,0,.04),0 1px 0 rgba(11,29,58,.03),0 10px 30px -18px rgba(11,29,58,.22)}
+.halden .card-glass::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.7),rgba(255,255,255,.08) 40%,rgba(0,0,0,.06) 75%,rgba(255,255,255,.35));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;}
+html.dark .halden .card-glass{background:color-mix(in srgb,var(--surface) 78%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -1px 0 rgba(0,0,0,.3),0 1px 0 rgba(255,255,255,.06),0 10px 30px -18px rgba(0,0,0,.6)}
+html.dark .halden .card-glass::before{background:linear-gradient(135deg,rgba(255,255,255,.26),rgba(255,255,255,.05) 40%,rgba(0,0,0,.2) 75%,rgba(255,255,255,.12))}
 /* --- scene 1: hero --- */
 /* Round 8: the hero is IN-FLOW flex (was absolute-positioned #h1 /
    .trust / .hero-ctas). Absolute vh positions collided
@@ -214,6 +243,17 @@ export default async function Home() {
   return (
     <div className="halden flex min-h-screen flex-col">
       <style>{HALDEN_CSS}</style>
+      {/* Round 11: refraction filter for the ghost CTA backdrop only
+          (see the @supports rule in HALDEN_CSS). Zero-size — no layout
+          impact. */}
+      <svg aria-hidden="true" focusable="false" width="0" height="0" style={{ position: "absolute" }}>
+        <defs>
+          <filter id="halden-liquid-refract" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="2" seed="7" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
       <PublicNav user={user} />
       <main className="flex-1">
         <BowlGlow />
@@ -335,7 +375,7 @@ export default async function Home() {
                 <LetterReveal variant="word">Every order gets its own QR with the exact amount encoded. For a counter or a printed sign, use one shared QR instead.</LetterReveal>
               </p>
               <div className="mt-10 grid gap-4 lg:grid-cols-2">
-                <div className="card p-6">
+                <div className="card card-glass p-6">
                   <p className="font-mono text-xs text-[var(--accent-text)]">ORD…</p>
                   <h3 className="mt-2 text-lg font-medium text-[var(--text)]">Unique amount QR</h3>
                   <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
@@ -348,7 +388,7 @@ export default async function Home() {
                     <div className="flex justify-between gap-4 border-t border-[var(--border)] pt-2"><dt className="text-[var(--faint)]">Matching</dt><dd className="text-right text-[var(--text)]">Exact amount + order ID</dd></div>
                   </dl>
                 </div>
-                <div className="card p-6 lg:mt-8">
+                <div className="card card-glass p-6 lg:mt-8">
                   <p className="font-mono text-xs text-[var(--accent-text)]">One QR</p>
                   <h3 className="mt-2 text-lg font-medium text-[var(--text)]">Same amount QR</h3>
                   <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
@@ -373,7 +413,7 @@ export default async function Home() {
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {FEATURES.map(([title, body], i) => (
                 <Reveal key={title} delay={i * 40} className="h-full">
-                  <div className="card h-full p-5">
+                  <div className="card card-glass h-full p-5">
                     <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--surface-2)] text-[var(--accent-text)] ring-1 ring-[var(--border)]" aria-hidden="true">{FEATURE_ICONS[i]}</span>
                     <h3 className="mt-4 text-base font-medium text-[var(--text)]">{title}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{body}</p>
@@ -396,7 +436,7 @@ export default async function Home() {
                   ["Allowlisted redirects", "Customers return only to domains you listed. Anything else is refused."],
                   ["Audited admin actions", "Manual overrides and lease recovery are written to the audit log with who and why."],
                 ].map(([t, b]) => (
-                  <div key={t} className="card p-5">
+                  <div key={t} className="card card-glass p-5">
                     <h3 className="text-base font-medium text-[var(--text)]">{t}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{b}</p>
                   </div>
@@ -442,7 +482,7 @@ export default async function Home() {
               <div className="mt-8 grid gap-4 md:grid-cols-2">
                 {FAQS.map(([q, a]) => <FaqItem key={q} q={q} a={a} />)}
               </div>
-              <div className="card mt-10 flex flex-col items-center gap-4 p-8 text-center sm:flex-row sm:justify-between sm:text-left">
+              <div className="card card-glass mt-10 flex flex-col items-center gap-4 p-8 text-center sm:flex-row sm:justify-between sm:text-left">
                 <div>
                   <h3 className="text-lg font-medium text-[var(--text)]">Start accepting UPI payments today</h3>
                   <p className="mt-1 text-sm text-[var(--muted)]">Setup takes a few minutes — database, admin account, first payment link.</p>

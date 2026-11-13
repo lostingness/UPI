@@ -31,7 +31,15 @@ const BRAND_ROWS_CSS = `
 .brand-row + .brand-row{border-top:1px solid var(--border)}
 .brand-row-label{margin:0;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
 .brand-chips{display:flex;flex-wrap:wrap;gap:10px}
-.brand-chip{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 18px 0 10px;border-radius:999px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border);white-space:nowrap}
+/* Round 11: liquid glass chips — translucent surface + blur, specular
+   top edge / bottom shade, gradient border via the mask-composite ring
+   (same language as .liquid-glass). The white plate behind each brand
+   SVG is unchanged, so the dark-on-transparent wordmarks stay legible
+   in both themes. */
+.brand-chip{position:relative;display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 18px 0 10px;border-radius:999px;background:color-mix(in srgb,var(--surface) 68%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(0,0,0,.04),inset 0 0 0 1px var(--border),var(--shadow);white-space:nowrap}
+.brand-chip::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.65),rgba(255,255,255,.08) 40%,rgba(0,0,0,.06) 75%,rgba(255,255,255,.3));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;}
+html.dark .brand-chip{box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -1px 0 rgba(0,0,0,.3),inset 0 0 0 1px var(--border),var(--shadow);}
+html.dark .brand-chip::before{background:linear-gradient(135deg,rgba(255,255,255,.24),rgba(255,255,255,.05) 40%,rgba(0,0,0,.2) 75%,rgba(255,255,255,.12));}
 /* Round 9: the official brand SVGs are wide wordmarks (GPay 2.67:1,
    Paytm 3.19:1, PhonePe 3.30:1; BHIM stays the old 1:1 square). They
    render at ONE uniform content height with width:auto so no mark is

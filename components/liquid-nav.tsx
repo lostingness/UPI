@@ -64,9 +64,11 @@
 //
 // Colours go only through the semantic theme tokens (var(--text),
 // var(--muted), --surface...) except the spec-fixed Halden values:
-// pill #fff, ink #0b1d3a, cyan dot #2fe0d0, periwinkle #5b7cf0. Dark
-// theme pill is a dark glass (rgba(20,26,46,.85) + blur). Link/muted
-// text keeps Round 5 AA contrast in both themes.
+// pill glass over --nav-bg, ink #0b1d3a, cyan dot #2fe0d0, periwinkle
+// #5b7cf0. Round 11: the light pill is liquid glass (translucent
+// --nav-bg + blur 20px saturate 1.6 + specular insets + gradient
+// border); the dark pill keeps its dark glass, refined to match.
+// Link/muted text keeps Round 5 AA contrast in both themes.
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -159,9 +161,37 @@ function groupLinks(links: LiquidNavLink[]): { label: string | null; links: Liqu
 const HALDEN_NAV_CSS = `
 #nav{--ease:cubic-bezier(.22,.7,.2,1);--gut:clamp(20px,5.7vw,82px);position:fixed;z-index:50;top:20px;left:var(--gut);right:var(--gut);font-family:var(--font-sans);}
 .halden-nav-spacer{height:80px;}
-#nav .halden-pill{position:relative;display:flex;align-items:center;height:60px;padding:0 84px 0 22px;border-radius:999px;background:#fff;box-shadow:0 1px 0 rgba(11,29,58,.04),0 10px 30px -18px rgba(11,29,58,.25);animation:navin .9s cubic-bezier(.22,.7,.2,1) .15s both;}
+#nav .halden-pill{position:relative;display:flex;align-items:center;height:60px;padding:0 84px 0 22px;border-radius:999px;background:radial-gradient(120% 90% at 12% 0%,rgba(255,255,255,.85),rgba(255,255,255,0) 55%),radial-gradient(120% 90% at 88% 0%,rgba(255,255,255,.5),rgba(255,255,255,0) 50%),radial-gradient(140% 120% at 50% 115%,rgba(11,29,58,.06),rgba(11,29,58,0) 55%),var(--nav-bg);-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.75),inset 0 -1px 0 rgba(11,29,58,.06),0 1px 0 rgba(11,29,58,.04),0 10px 30px -18px rgba(11,29,58,.25);animation:navin .9s cubic-bezier(.22,.7,.2,1) .15s both;}
+/* Round 11: liquid glass — the light pill is now translucent
+   (var(--nav-bg) = rgba(255,255,255,.72)) with blur + saturate, a
+   specular top edge / bottom shade, edge-refraction radial gradients
+   in the background stack (painted under the text, so they can never
+   hurt readability), and the thin gradient border via the same
+   mask-composite ring .liquid-glass uses. Height, padding, top offset
+   and the CTA morph are untouched. */
+#nav .halden-pill::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(255,255,255,.12) 40%,rgba(11,29,58,.08) 75%,rgba(255,255,255,.4));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;}
 @keyframes navin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-html.dark #nav .halden-pill{background:rgba(20,26,46,.85);-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 1px 0 rgba(255,255,255,.07),0 10px 30px -18px rgba(0,0,0,.65),inset 0 0 0 1px rgba(255,255,255,.08);}
+html.dark #nav .halden-pill{background:radial-gradient(120% 90% at 12% 0%,rgba(255,255,255,.16),rgba(255,255,255,0) 55%),radial-gradient(120% 90% at 88% 0%,rgba(255,255,255,.09),rgba(255,255,255,0) 50%),radial-gradient(140% 120% at 50% 115%,rgba(0,0,0,.28),rgba(0,0,0,0) 55%),var(--nav-bg);-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 -1px 0 rgba(0,0,0,.3),0 1px 0 rgba(255,255,255,.07),0 10px 30px -18px rgba(0,0,0,.65);}
+html.dark #nav .halden-pill::before{background:linear-gradient(135deg,rgba(255,255,255,.28),rgba(255,255,255,.06) 40%,rgba(0,0,0,.2) 75%,rgba(255,255,255,.14));}
+/* Round 11: real refraction — an SVG feTurbulence + feDisplacementMap
+   filter (defined inline in the JSX below) applied to the BACKDROP
+   only, via backdrop-filter:url(). Chrome 158 honours url() in
+   backdrop-filter (CSS.supports returns true), so the displacement
+   applies in Chrome and Firefox; Safari still fails this @supports
+   test and keeps the blur-only rule above, so the blur is never lost.
+   The displacement (scale 6) bends only the backdrop — the pill's text
+   is never displaced. The dark pill keeps blur-only (its
+   higher-specificity rule wins) — adding displacement there is a
+   follow-up, not part of this round. No animation, so no reduced-motion
+   handling needed. */
+@supports (backdrop-filter:url(#nav-liquid-refract)){#nav .halden-pill{backdrop-filter:url(#nav-liquid-refract) blur(20px) saturate(1.6);}}
+/* Round 11: mobile sheet edge treatment — the sheet is the scroll
+   container, so a ::before gradient ring would scroll with its content;
+   the edge is refined with inset highlights + a soft 1px inset ring
+   instead (same specular language as the pill). Sheet mechanics,
+   backdrop and <details> behaviour are untouched. */
+#nav .nav-sheet{box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -1px 0 rgba(0,0,0,.05),inset 0 0 0 1px rgba(255,255,255,.28),var(--shadow);}
+html.dark #nav .nav-sheet{box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.1),var(--shadow);}
 #nav .halden-brand{display:flex;flex:none;align-items:center;gap:9px;color:var(--text);text-decoration:none;}
 #nav .halden-brand-name{font-size:17px;font-weight:500;letter-spacing:-.02em;color:var(--text);white-space:nowrap;}
 #nav .halden-centre{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;align-items:center;gap:31px;}
@@ -360,6 +390,18 @@ export function LiquidNav({
           top offset + height (20+60 desktop, 12+54 mobile). */}
       <div className="halden-nav-spacer" aria-hidden="true" />
       <div id="nav" data-testid="halden-nav" data-variant={variant} className={ctaOn ? "on" : undefined}>
+        {/* Round 11: refraction filter for the pill backdrop only (see
+            the @supports rule in HALDEN_NAV_CSS). Zero-size, absolutely
+            positioned — no layout impact, and no filter/backdrop-filter
+            ever lands on #nav itself (see header note). */}
+        <svg aria-hidden="true" focusable="false" width="0" height="0" style={{ position: "absolute" }}>
+          <defs>
+            <filter id="nav-liquid-refract" x="-5%" y="-5%" width="110%" height="110%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="2" seed="7" result="noise" />
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+          </defs>
+        </svg>
         <div data-testid="liquid-nav-pill" className="halden-pill">
           <Link href="/" className="halden-brand touch-manipulation" aria-label="UPI Gateway — home">
             <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
